@@ -1,0 +1,17 @@
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Build
+backend/build/
+backend/.gradle/
+backend/.jqwik-database
+
+# Environment
+backend/.env
+.env
+
+# OS
+.DS_Store
+Thumbs.db

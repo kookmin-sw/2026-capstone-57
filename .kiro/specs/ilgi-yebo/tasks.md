@@ -1,0 +1,426 @@
+# 구현 계획: 일기예보 (ilgi-yebo)
+
+## 개요
+
+일기예보 서비스의 백엔드 및 데이터 계층을 Spring Boot (Java)로 구현한다. 데이터베이스 스키마 → 핵심 도메인 서비스 → 매칭 엔진 → 상호작용 흐름 → 경험치/안전/알림 순으로 점진적으로 구축하며, 각 단계에서 속성 기반 테스트(jqwik)로 정확성을 검증한다.
+
+## 태스크
+
+- [x] 1. 프로젝트 초기 설정 및 데이터베이스 스키마 구성
+  - [x] 1.1 Spring Boot 프로젝트 구조 생성 및 의존성 설정
+    - Spring Boot 프로젝트 초기화 (Java 17+, Gradle)
+    - 의존성: Spring Web, Spring Data JPA, Spring Security, Spring WebSocket, Spring AMQP, Spring Data Redis, MySQL Driver (mysql-connector-j), Flyway (DB 마이그레이션), jqwik (PBT), JUnit 5, Mockito, AWS SDK for Java v2 (Bedrock Runtime)
+    - 디렉토리 구조 (Spring Boot 컨벤션):
+      ```
+      src/main/java/com/ilgiyebo/
+        config/          # Spring 설정 (Security, Redis, AMQP, Bedrock 등)
+        domain/          # JPA 엔티티 (도메인 모델)
+        repository/      # Spring Data JPA Repository
+        service/         # 비즈니스 로직 서비스
+        controller/      # REST API 컨트롤러
+        dto/             # 요청/응답 DTO (Java record)
+        scheduler/       # Spring Scheduler (배치 매칭, 리마인더)
+        util/            # 유틸리티 클래스
+      src/main/resources/
+        db/migration/    # Flyway 마이그레이션 SQL
+        application.yml  # Spring Boot 설정
+      src/test/java/com/ilgiyebo/
+        service/         # 서비스 단위 테스트
+        property/        # jqwik 속성 기반 테스트
+        integration/     # 통합 테스트
+      ```
+    - _요구사항: 전체_
+
+  - [x] 1.2 데이터베이스 마이그레이션 및 스키마 생성
+    - Flyway 마이그레이션 SQL (MySQL 문법)로 모든 테이블 생성 (USER, SLOT, MATCH, INTERACTION, DIARY_ENTRY, PLAN_ENTRY, TIMETABLE_ENTRY, CHAT_SESSION, CHAT_MESSAGE, GAME_SESSION, MISSION, REVIEW, REVIEW_SESSION, AI_REVIEW_QUESTION, HINT_QUESTION, EXP_HISTORY, REPORT, BLOCK, NOTIFICATION_SETTING, CAMPUS_BUILDING, CAMPUS_PATH, CAMPUS_VENUE)
+    - UUID는 BINARY(16) 타입으로 저장, PostgreSQL 배열 타입 대신 JSON 타입 사용
+    - USER 테이블에 name (VARCHAR), major (VARCHAR), birth_date (DATE), gender (ENUM) 컬럼 포함
+    - SLOT 테이블에 match_preferences (JSON) 컬럼 포함
+    - MATCH 테이블에 cycle_extended (BOOLEAN), extension_status (ENUM), extension_requested_by (BINARY(16)) 컬럼 포함
+    - 설계 문서의 인덱스 전략에 따른 인덱스 생성 (MySQL 호환)
+    - UNIQUE 제약 조건 설정 (DIARY_ENTRY: user_id+entry_date, PLAN_ENTRY: user_id+entry_date, BLOCK: user_id+blocked_user_id, REVIEW_SESSION: interaction_id+user_id, CAMPUS_PATH: from_building_id+to_building_id)
+    - _요구사항: 전체_
+
+  - [x] 1.3 JPA 엔티티 및 공통 타입 정의
+    - 설계 문서의 모든 데이터 모델을 `domain/` 하위에 JPA 엔티티(@Entity)로 정의 (AIService, CampusDataService 관련 포함)
+    - USER 엔티티에 name (String), major (String), birthDate (LocalDate), gender (Gender enum) 필드 추가
+    - SLOT 엔티티에 matchPreferences (MatchPreferences JSON) 필드 추가
+    - MATCH 엔티티에 cycleExtended (boolean), extensionStatus (ExtensionStatus enum), extensionRequestedBy (UUID) 필드 추가
+    - MatchPreferences record 정의 (minAge, maxAge, genderPreference)
+    - UUID를 BINARY(16)으로 매핑하는 커스텀 타입 또는 JPA AttributeConverter 설정
+    - JSON 컬럼 매핑을 위한 JPA AttributeConverter 설정 (배열 타입 대체)
+    - 공통 DTO (Java record), enum, 유틸리티 타입 정의
+    - Spring Data JPA Repository 인터페이스 정의
+    - application.yml에 MySQL dialect 설정 (org.hibernate.dialect.MySQLDialect)
+    - _요구사항: 전체_
+
+- [ ] 2. 인증 및 사용자 서비스 구현
+  - [x] 2.1 AuthService 구현
+    - `sendVerification`: 대학 이메일 도메인 검증 후 인증 코드 발송 (EmailService 인터페이스를 통해 발송)
+    - EmailService 인터페이스 정의 및 MailtrapEmailService 구현체 작성 (MVP 단계)
+    - SesEmailService 구현체 스텁 작성 (프로덕션 전환 대비)
+    - `verifyAndCreateUser`: 인증 코드 확인 및 사용자 생성
+    - `login`: 이메일/비밀번호 로그인, Spring Security + JWT 토큰 발급
+    - 허용 대학 도메인 목록 관리, 정지 계정 로그인 차단
+    - _요구사항: 1.1, 1.2, 1.5_
+
+  - [ ]* 2.2 Property 1 속성 테스트: 대학 이메일 도메인 검증
+    - **Property 1: 대학 이메일 도메인 검증**
+    - jqwik `@Property(tries = 100)` + `@ForAll` 임의의 이메일 문자열에 대해 허용 도메인만 인증 허용 검증
+    - **검증 대상: 요구사항 1.1**
+
+  - [ ] 2.3 UserService 구현
+    - `setupProfile`: 프로필 설정 (이름, 전공, 취미, 관심사, 성격 유형, 이상형, 생년월일, 성별) + Bean Validation 필수 필드 검증
+    - MVP 단계: 사용자가 이름(name)과 전공(major)을 직접 입력
+    - EmailParsingService 인터페이스 정의 (대학별 이메일 파싱 규칙 관리, SES 도입 후 활성화 대비)
+    - 이메일 파싱 활성화 시: 인증 완료된 이메일에서 이름/전공 자동 추출하여 프로필에 사전 입력
+    - `getProfile`, `updateProfile`: 프로필 조회/수정
+    - 프로필 설정 완료 시 초기 슬롯 1개 자동 부여 (MatchingService.unlockSlot 연동)
+    - _요구사항: 1.2, 1.3, 1.4, 1.6, 1.7, 1.8_
+
+  - [ ]* 2.4 Property 2, 3, 44, 45 속성 테스트: 프로필 필수 필드, 초기 슬롯, 이메일 파싱, 이메일 서비스
+    - **Property 2: 프로필 필수 필드 불변식** (이름, 전공, 생년월일, 성별 포함)
+    - **Property 3: 신규 사용자 초기 슬롯 부여**
+    - **Property 44: 이메일 파싱 라운드트립** (대학 이메일에서 이름/전공 파싱 검증)
+    - **Property 45: 이메일 서비스 추상화 불변식** (Mailtrap/SES 구현체 동작 검증)
+    - **검증 대상: 요구사항 1.3, 1.4, 1.5, 1.6, 1.8**
+
+- [ ] 3. 플래너 및 일기 서비스 구현
+  - [ ] 3.1 PlannerService 구현
+    - `createDailyPlan`: 일일 플래너 작성 (JPA upsert 방식)
+    - `registerTimetable`: 시간표 일괄 등록
+    - `getDailyPlan`: 특정 날짜 플래너 조회
+    - `extractRouteInfo`: 동선 정보 추출 (AIService.inferRoute 연동, 캠퍼스 공간 데이터 기반 이동 경로 추론)
+    - 플래너 미작성 시 시간표 기반 대체 (AIService에 시간표 데이터 전달)
+    - 3일 이상 미작성 시 알림 트리거 로직
+    - _요구사항: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
+
+  - [ ]* 3.2 Property 4, 5, 6 속성 테스트: 플래너 관련
+    - **Property 4: 플래너 데이터 라운드트립**
+    - **Property 5: 플래너 미작성 시 알림 트리거**
+    - **Property 6: 플래너 미작성 시 시간표 기반 동선 대체 (AIService 연동)**
+    - **검증 대상: 요구사항 2.2, 2.3, 2.4, 2.5, 2.6**
+
+  - [ ] 3.3 DiaryService 구현
+    - `createEntry`: 일기 작성 (upsert, 빈 내용 검증, 감정 태그 선택)
+    - `getEntries`: 일기 목록 조회 (본인만 접근 가능, Spring Data JPA Pageable)
+    - `getStreak`: 연속 작성 일수 계산
+    - `getEmotionTrend`: 감정 변화 추이 조회
+    - 일기 작성 시 경험치 부여 연동, 연속 작성 보너스 경험치 로직
+    - _요구사항: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+  - [ ]* 3.4 Property 7, 8, 9, 10 속성 테스트: 일기 관련
+    - **Property 7: 개인 기록 접근 제어**
+    - **Property 8: 감정 추이 데이터 정확성**
+    - **Property 9: 활동별 경험치 부여**
+    - **Property 10: 연속 일기 작성 보너스**
+    - **검증 대상: 요구사항 3.2, 3.3, 3.4, 3.5, 9.4, 10.1**
+
+- [ ] 4. 체크포인트 - 기본 서비스 검증
+  - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
+
+- [ ] 5. 매칭 서비스 구현
+  - [ ] 5.1 슬롯 관리 구현
+    - `getSlots`: 사용자별 슬롯 목록 조회 (Spring Data JPA)
+    - `unlockSlot`: 새 슬롯 해금 (레벨업 보상 연동)
+    - `updateSlotAttributes`: 슬롯 속성(취미, 관심사, 이상형) 수정
+    - `updateMatchPreferences`: 슬롯별 매칭 범위 설정(선호 나이 범위, 선호 성별) 수정
+    - _요구사항: 4.6, 4.7, 4.14_
+
+  - [ ] 5.2 매칭 점수 계산 엔진 구현
+    - `calculateMatchScore`: 슬롯 속성 일치도 점수 계산
+    - `calculateRouteOverlap`: AI 기반 동선 교집합 점수 계산 (AIService.calculateRouteMatchScore 연동, 캠퍼스 공간 데이터 활용)
+    - 차단 목록 필터링 로직
+    - 매칭 범위 설정(나이, 성별) 필터링 로직: 후보 사용자의 나이(생년월일 기반 계산)와 성별이 요청자의 매칭_범위_설정에 부합하는지 검증
+    - 매칭 범위 미설정 시 필터링 미적용 로직
+    - _요구사항: 4.7, 4.8, 4.14, 4.15, 4.16, 11.3_
+
+  - [ ]* 5.3 Property 14, 26 속성 테스트: 매칭 점수 및 차단 필터
+    - **Property 14: 매칭 점수 - 속성 및 동선 우선순위**
+    - **Property 26: 차단된 사용자 매칭 방지**
+    - **Property 42: 매칭 범위 설정 - 나이/성별 필터링**
+    - **Property 43: 매칭 범위 미설정 시 제한 없음**
+    - **검증 대상: 요구사항 4.7, 4.8, 4.14, 4.15, 4.16, 11.3**
+
+  - [ ] 5.4 배치 매칭 실행 로직 구현
+    - `executeBatchMatching`: 자정 배치 매칭 전체 흐름 (Spring @Scheduled 또는 Spring Batch)
+    - 빈 슬롯 필터링, 활성 매칭 3일 주기 건너뛰기
+    - 빠른 매칭 풀 우선 처리 → 일반 풀 매칭
+    - 매칭 범위 설정(나이, 성별) 기반 후보 필터링 적용
+    - 매칭 성사 시 양쪽 알림 전송 (NotificationService 연동)
+    - 매칭 주기(cycle_start_date, cycle_end_date = +3일) 설정
+    - 매칭 실패 슬롯 기록
+    - `requestMatchCycleExtension`: 매칭 주기 연장 요청 (상대방에게 동의 요청 알림 전송)
+    - `respondToMatchCycleExtension`: 매칭 주기 연장 동의/거부 처리 (양쪽 동의 시 cycle_end_date +3일 연장, 거부 시 기존 주기 유지)
+    - _요구사항: 4.1, 4.2, 4.3, 4.4, 4.5, 4.9, 4.10, 4.11, 4.12, 4.13, 4.14, 4.15, 4.16, 13.2, 13.4_
+
+  - [ ]* 5.5 Property 11, 12, 15, 30, 41 속성 테스트: 배치 매칭 규칙
+    - **Property 11: 배치 매칭 - 빈 슬롯 매칭 규칙**
+    - **Property 12: 매칭 주기 불변식**
+    - **Property 15: 매칭 성사 시 양쪽 알림 전송**
+    - **Property 30: 빠른 매칭 풀 우선 매칭**
+    - **Property 41: 매칭 주기 연장 - 양쪽 동의 필수**
+    - **검증 대상: 요구사항 4.2, 4.3, 4.4, 4.5, 4.9, 4.11, 4.12, 4.13, 12.1, 13.2, 13.4**
+
+  - [ ] 5.6 빠른 매칭 요청 구현
+    - `requestQuickMatch`: 슬롯에 빠른 매칭 플래그 설정
+    - 빠른 매칭 성사 시 4단계 즉시 해금 (InteractionService 연동)
+    - 빠른 매칭 시 건너뛴 단계(1~3) 경험치 미부여 로직
+    - _요구사항: 13.1, 13.3, 13.5, 13.6, 13.7_
+
+  - [ ]* 5.7 Property 31, 32 속성 테스트: 빠른 매칭
+    - **Property 31: 빠른 매칭 시 4단계 즉시 해금**
+    - **Property 32: 빠른 매칭 시 건너뛴 단계 경험치 미부여**
+    - **검증 대상: 요구사항 13.3, 13.6**
+
+- [ ] 6. 체크포인트 - 매칭 엔진 검증
+  - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
+
+- [ ] 7. 단계별 상호작용 서비스 구현 (1~2단계)
+  - [ ] 7.1 InteractionService 핵심 로직 구현
+    - `getInteractionState`: 현재 상호작용 상태 조회
+    - `respondToStageAdvance`: 단계 진행 동의/거부 처리
+    - `terminateMatch`: 매칭 종료 (거부, 기한 만료, 신고 등)
+    - 단계 전환 규칙 구현 (양쪽 완료 조건 충족 시 다음 단계 해금)
+    - _요구사항: 5.4, 6.3, 6.4, 7.3, 8.3_
+
+  - [ ]* 7.2 Property 17, 19 속성 테스트: 단계 전환 및 거부
+    - **Property 17: 단계 전환 규칙**
+    - **Property 19: 거부 시 매칭 종료**
+    - **검증 대상: 요구사항 5.4, 6.3, 6.4, 7.3, 8.3**
+
+  - [ ] 7.3 퀴즈 단계 (1단계) 구현
+    - AI 기반 상대방 프로필 퀴즈 생성 (AIService.generateQuiz 연동, 최소 5문항)
+    - 퀴즈 완료 시 정답률 및 상대방 요약 정보 제공
+    - 양쪽 퀴즈 완료 시 2단계 해금
+    - _요구사항: 5.1, 5.2, 5.3, 5.4_
+
+  - [ ]* 7.4 Property 16 속성 테스트: 퀴즈 불변식
+    - **Property 16: 퀴즈 불변식**
+    - **검증 대상: 요구사항 5.2, 5.3**
+
+  - [ ] 7.5 힌트 질문 기능 구현
+    - `sendHintQuestion`: 퀴즈 단계에서만 힌트 질문 전송 가능
+    - `answerHintQuestion`: 힌트 질문 답변 처리
+    - `getHintQuestions`: 힌트 질문/답변 목록 조회
+    - 질문 전송 시 상대방 알림, 답변 시 질문자 알림 (NotificationService 연동)
+    - 비동기 처리 (실시간 채팅 아닌 질문-답변 형태)
+    - _요구사항: 5.5, 5.6, 5.7, 5.8_
+
+  - [ ]* 7.6 Property 33, 34 속성 테스트: 힌트 질문
+    - **Property 33: 힌트 질문 비동기 처리**
+    - **Property 34: 힌트 질문은 퀴즈 단계에서만 가능**
+    - **검증 대상: 요구사항 5.5, 5.6, 5.7, 5.8**
+
+  - [ ] 7.7 채팅 단계 (2단계) 구현
+    - `startChatSession`: 30분 제한 채팅 세션 생성
+    - `sendMessage`: 메시지 전송 (Spring WebSocket + Redis 기반 실시간 처리)
+    - `getIcebreakerQuestion`: 아이스브레이킹 질문 제안
+    - `getMessages`: 채팅 이력 조회
+    - 제한 시간 종료 시 자동 세션 종료 및 3단계 해금 확인
+    - _요구사항: 6.1, 6.2, 6.3, 6.4_
+
+  - [ ]* 7.8 Property 18 속성 테스트: 채팅 시간 제한
+    - **Property 18: 채팅 세션 시간 제한**
+    - **검증 대상: 요구사항 6.1**
+
+- [ ] 8. 단계별 상호작용 서비스 구현 (3~5단계)
+  - [ ] 8.1 게임 단계 (3단계) 구현
+    - `getAvailableGames`: 최소 3가지 게임 목록 제공
+    - `createGameSession`: 게임 세션 생성 (Spring Data Redis 기반 상태 관리)
+    - `processGameAction`: 게임 액션 처리
+    - `completeGame`: 게임 완료 시 양쪽 친밀도 점수 부여
+    - 게임 완료 후 4단계 해금 확인
+    - _요구사항: 7.1, 7.2, 7.3, 7.4_
+
+  - [ ]* 8.2 Property 20 속성 테스트: 게임 친밀도 부여
+    - **Property 20: 게임 완료 시 친밀도 부여**
+    - **검증 대상: 요구사항 7.2**
+
+  - [ ] 8.3 미션 단계 (4단계) 구현
+    - `generateMission`: AI 기반 동선 교집합 + 캠퍼스 공간 데이터(장소 특성, 운영시간) 기반 오프라인 미션 생성 (AIService.generateMission 연동, 장소/활동 필수)
+    - `confirmMission`: 양쪽 미션 수행 확인 시 5단계 해금
+    - `extendMissionDeadline`: 미션 기한 1회 연장 (이미 연장된 경우 거부)
+    - 미션 기한 만료 처리 (연장 미사용 시 연장 옵션, 연장 후 만료 시 매칭 종료)
+    - _요구사항: 8.1, 8.2, 8.3, 8.4_
+
+  - [ ]* 8.4 Property 21, 22 속성 테스트: 미션 관련
+    - **Property 21: 미션 생성 불변식**
+    - **Property 22: 미션 연장 1회 제한**
+    - **검증 대상: 요구사항 8.1, 8.2, 8.4, 13.5**
+
+  - [ ] 8.5 회고 단계 (5단계) 구현
+    - `selectReviewMode`: AI 기반 / 직접 작성 모드 선택
+    - AI 기반 모드: `getAIQuestions` (AIService.generateReviewQuestions 연동) → `answerAIQuestion` → `generateReview` (AIService.generateReviewContent 연동) → `editGeneratedReview`
+    - 직접 작성 모드: `submitDirectReview` (만족도 1~5, 느낀 점, 재만남 의사 필수)
+    - `getReview`: 회고 조회 (본인만 열람 가능)
+    - 회고 완료 시 양쪽 경험치 부여
+    - _요구사항: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8_
+
+  - [ ]* 8.6 Property 23, 35, 36 속성 테스트: 회고 관련
+    - **Property 23: 회고 필수 필드 불변식**
+    - **Property 35: AI 회고 글 생성 라운드트립**
+    - **Property 36: 회고 작성 모드 선택 불변식**
+    - **검증 대상: 요구사항 9.1, 9.2, 9.3, 9.4, 9.5, 9.6**
+
+- [ ] 9. 체크포인트 - 상호작용 흐름 검증
+  - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
+
+- [ ] 10. 경험치 및 성장 시스템 구현
+  - [ ] 10.1 ExperienceService 구현
+    - `grantExperience`: 활동별 경험치 부여 (일기, 플래너, 퀴즈, 채팅, 게임, 미션, 회고)
+    - `getExperienceInfo`: 누적 경험치, 현재 레벨, 다음 레벨까지 필요 경험치 조회
+    - `getExpHistory`: 경험치 획득 내역 조회 (Spring Data JPA Pageable)
+    - `checkAndProcessLevelUp`: 레벨업 조건 확인 및 보상 처리 (슬롯 해금 등)
+    - 레벨업 시 알림 전송 (NotificationService 연동)
+    - _요구사항: 10.1, 10.2, 10.3, 10.4_
+
+  - [ ]* 10.2 Property 9, 13, 24 속성 테스트: 경험치 시스템
+    - **Property 9: 활동별 경험치 부여**
+    - **Property 13: 경험치 기반 슬롯 해금**
+    - **Property 24: 경험치 조회 라운드트립**
+    - **검증 대상: 요구사항 10.1, 10.2, 10.3, 10.4**
+
+- [ ] 11. 안전 및 신고 서비스 구현
+  - [ ] 11.1 SafetyService 구현
+    - `reportUser`: 신고 접수 (자기 자신 신고 방지, 매칭 즉시 중단)
+    - `blockUser`: 사용자 차단 (멱등 처리)
+    - `getBlockedUsers`: 차단 목록 조회
+    - `checkAndSuspend`: 신고 3회 이상 시 자동 계정 정지
+    - _요구사항: 11.1, 11.2, 11.3, 11.4_
+
+  - [ ]* 11.2 Property 25, 27 속성 테스트: 안전 관련
+    - **Property 25: 신고 시 매칭 즉시 중단**
+    - **Property 27: 신고 3회 이상 시 계정 정지**
+    - **검증 대상: 요구사항 11.2, 11.4**
+
+- [ ] 12. 알림 및 리마인더 서비스 구현
+  - [ ] 12.1 NotificationService 구현
+    - `sendNotification`: Spring AMQP(Amazon MQ/SQS) 기반 비동기 알림 전송 (매칭 성사, 단계 완료, 레벨업, 힌트 질문/답변 등)
+    - `getNotificationSettings` / `updateNotificationSettings`: 알림 종류별 수신 설정 관리
+    - `scheduleReminder`: 미션 기한 24시간 전 리마인더, 플래너 미작성 리마인더 스케줄링
+    - _요구사항: 12.1, 12.2, 12.3, 12.4_
+
+  - [ ]* 12.2 Property 28, 29 속성 테스트: 알림 관련
+    - **Property 28: 알림 설정 라운드트립**
+    - **Property 29: 미션 기한 임박 리마인더**
+    - **검증 대상: 요구사항 12.3, 12.4**
+
+- [ ] 13. 체크포인트 - 보조 서비스 검증
+  - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
+
+- [ ] 14. 캠퍼스 공간 데이터 서비스 구현
+  - [ ] 14.1 CampusDataService 구현
+    - `createBuilding`, `updateBuilding`, `getBuildings`, `getBuildingById`: 건물 CRUD (Spring Data JPA)
+    - `createPath`, `updatePath`, `getPathBetween`, `getAllPaths`: 경로 CRUD
+    - `createVenue`, `updateVenue`, `getVenues`, `getVenueById`: 거점(만남 장소) CRUD
+    - `getCampusContext`: AI 서비스에서 사용할 캠퍼스 전체 컨텍스트 조회
+    - 관리자 권한 검증 로직 (Spring Security @PreAuthorize)
+    - _요구사항: 14.1, 14.2, 14.3, 14.4, 14.5_
+
+  - [ ] 14.2 캠퍼스 시드 데이터 작성
+    - Flyway 시드 마이그레이션 또는 ApplicationRunner로 테스트용 캠퍼스 건물 데이터 (최소 10개 건물)
+    - 건물 간 경로 데이터 (주요 이동 경로)
+    - 주요 거점 데이터 (카페, 매점, 벤치, 광장 등)
+    - 운영 시간 데이터
+    - _요구사항: 14.1, 14.2, 14.3, 14.4_
+
+  - [ ]* 14.3 Property 39 속성 테스트: 캠퍼스 공간 데이터 CRUD 라운드트립
+    - **Property 39: 캠퍼스 공간 데이터 CRUD 라운드트립**
+    - jqwik로 임의의 건물/경로/거점 데이터에 대해 등록 후 조회 시 동일 데이터 반환 검증
+    - **검증 대상: 요구사항 14.1, 14.2, 14.3, 14.4, 14.5**
+
+- [ ] 15. AI/LLM 서비스 구현 (Amazon Bedrock)
+  - [ ] 15.1 AIService 기본 구조 구현
+    - AWS SDK for Java v2의 BedrockRuntimeClient 설정 및 Spring Bean 등록
+    - 프롬프트 템플릿 관리 모듈 (캠퍼스 데이터를 프롬프트 컨텍스트로 주입)
+    - 응답 파싱 및 검증 유틸리티 (Jackson ObjectMapper)
+    - 에러 핸들링 (API 타임아웃, ThrottlingException, 잘못된 응답 형식) - Spring Retry 활용
+    - _요구사항: 2.6, 4.8, 5.1, 8.1, 9.2, 9.3, 14.6_
+
+  - [ ] 15.2 AI 동선 추론 구현
+    - `inferRoute`: 시간표/플래너 + 캠퍼스 공간 데이터 기반 이동 경로 추론
+    - 건물 간 이동 시 경유 가능성이 높은 장소 추론 로직
+    - CampusDataService.getCampusContext로 캠퍼스 데이터 조회 후 프롬프트 컨텍스트로 전달
+    - BedrockRuntimeClient.invokeModel 호출
+    - _요구사항: 2.6_
+
+  - [ ] 15.3 AI 매칭 점수 계산 구현
+    - `calculateRouteMatchScore`: 두 사용자의 추론된 동선이 자연스럽게 겹치는 정도 판단
+    - 단순 장소 비교가 아닌 시간대/경유지/자연스러움 종합 평가
+    - BedrockRuntimeClient.invokeModel 호출
+    - _요구사항: 4.8_
+
+  - [ ] 15.4 AI 미션 생성 구현
+    - `generateMission`: 동선 교집합 장소 + 캠퍼스 공간 데이터(장소 특성, 운영시간) 기반 미션 생성
+    - 운영시간 내 장소만 제안, 만남 적합도 3 이상 장소 우선
+    - BedrockRuntimeClient.invokeModel 호출
+    - _요구사항: 8.1, 14.6_
+
+  - [ ] 15.5 AI 퀴즈 생성 구현
+    - `generateQuiz`: 프로필(취미, 관심사, 성격 유형) 기반 자연스러운 퀴즈 문항 생성
+    - 최소 5문항, 객관식 형태, 정답 포함 검증
+    - BedrockRuntimeClient.invokeModel 호출
+    - _요구사항: 5.1_
+
+  - [ ] 15.6 AI 회고 질문/글 생성 구현
+    - `generateReviewQuestions`: 만남 컨텍스트 기반 회고 질문 생성
+    - `generateReviewContent`: 답변 기반 회고 글 자동 생성
+    - BedrockRuntimeClient.invokeModel 호출
+    - _요구사항: 9.2, 9.3_
+
+  - [ ]* 15.7 Property 37, 38, 40 속성 테스트: AI 서비스 관련
+    - **Property 37: AI 동선 추론 - 캠퍼스 공간 데이터 활용**
+    - **Property 38: AI 미션 생성 - 운영시간 준수**
+    - **Property 40: AI 퀴즈 생성 - 프로필 기반 관련성**
+    - BedrockRuntimeClient를 Mockito로 모킹하여 테스트
+    - **검증 대상: 요구사항 2.6, 5.1, 8.1, 14.6**
+
+- [ ] 16. 체크포인트 - AI/캠퍼스 서비스 검증
+  - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
+
+- [ ] 17. 서비스 간 통합 및 배치 스케줄러 연결
+  - [ ] 17.1 배치 매칭 스케줄러 구현
+    - Spring @Scheduled(cron = "0 0 0 * * *") 자정 실행 크론 작업 설정
+    - MatchingService.executeBatchMatching 호출
+    - 배치 실행 결과 로깅 (SLF4J) 및 실패 슬롯 재시도 로직
+    - _요구사항: 4.1_
+
+  - [ ] 17.2 리마인더 스케줄러 구현
+    - 미션 기한 24시간 전 리마인더 자동 스케줄링
+    - 플래너 미작성 3일 이상 사용자 알림 스케줄링
+    - _요구사항: 2.4, 12.4_
+
+  - [ ] 17.3 서비스 간 이벤트 연동 통합
+    - Spring ApplicationEvent 또는 Spring AMQP를 활용한 이벤트 기반 연동
+    - 일기 작성 → 경험치 부여 → 레벨업 확인 → 슬롯 해금 흐름 연결
+    - 매칭 성사 → 상호작용 생성 → AI 퀴즈 생성 흐름 연결
+    - 신고 접수 → 매칭 종료 → 차단 처리 흐름 연결
+    - 빠른 매칭 성사 → 4단계 즉시 해금 → AI 미션 생성 흐름 연결
+    - 회고 완료 → 경험치 부여 → 매칭 완료 처리 흐름 연결
+    - AI 동선 추론 → 매칭 점수 계산 → 배치 매칭 흐름 연결
+    - _요구사항: 전체_
+
+  - [ ]* 17.4 통합 테스트 작성
+    - Spring Boot Test + Testcontainers (MySQL, Redis) 기반 통합 테스트
+    - 배치 매칭 전체 흐름 (빠른 매칭 풀 → 일반 풀 → 알림 전송, 매칭 범위 설정 필터링 포함)
+    - 매칭 주기 연장 흐름 (연장 요청 → 상대방 알림 → 동의/거부 → 주기 연장 또는 유지)
+    - 단계별 상호작용 전체 흐름 (1단계 → 5단계)
+    - 신고 → 매칭 중단 → 차단 → 재매칭 방지 흐름
+    - 경험치 부여 → 레벨업 → 슬롯 해금 흐름
+    - AI 동선 추론 → 매칭 점수 계산 → 미션 생성 흐름 (캠퍼스 공간 데이터 연동, BedrockRuntimeClient 모킹)
+    - 캠퍼스 공간 데이터 CRUD → AI 서비스 컨텍스트 반영 흐름
+    - _요구사항: 전체_
+
+- [ ] 18. 최종 체크포인트 - 전체 시스템 검증
+  - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
+
+## 참고 사항
+
+- `*` 표시된 태스크는 선택 사항이며, 빠른 MVP를 위해 건너뛸 수 있습니다
+- 각 태스크는 특정 요구사항을 참조하여 추적 가능합니다
+- 체크포인트에서 점진적 검증을 수행합니다
+- 속성 기반 테스트(jqwik)는 보편적 정확성 속성을 검증합니다 (`@Property(tries = 100)`)
+- 단위 테스트(JUnit 5 + Mockito)는 구체적 예시와 에지 케이스를 검증합니다
+- 통합 테스트(Spring Boot Test + Testcontainers)는 서비스 간 흐름을 검증합니다
+- AI 서비스는 AWS SDK for Java v2의 BedrockRuntimeClient를 사용하며, 캠퍼스 데이터는 MySQL에서 조회하여 프롬프트 컨텍스트로 전달합니다
