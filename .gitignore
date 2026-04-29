@@ -17,4 +17,4 @@ backend/.env
 Thumbs.db
 
 # AI ajent
-.kiro/specs/ilgi_yebo/.config.kiro
+.kiro/specs/ilgi-yebo/.config.kiro
