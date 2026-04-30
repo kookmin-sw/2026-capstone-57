@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +30,9 @@ public class UserEntity extends BaseSchema {
     @Column(nullable = false, length = 100)
     private String nickname;
 
+    @Column(length = 100)
+    private String name;
+
     @Column(nullable = false)
     private String university;
 
@@ -37,6 +41,13 @@ public class UserEntity extends BaseSchema {
 
     @Column(name = "student_id", length = 50)
     private String studentId;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private Gender gender;
 
     @Convert(converter = JsonStringListConverter.class)
     @Column(columnDefinition = "JSON")

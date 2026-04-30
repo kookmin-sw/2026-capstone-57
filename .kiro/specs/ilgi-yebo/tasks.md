@@ -69,7 +69,7 @@
     - jqwik `@Property(tries = 100)` + `@ForAll` 임의의 이메일 문자열에 대해 허용 도메인만 인증 허용 검증
     - **검증 대상: 요구사항 1.1**
 
-  - [ ] 2.3 UserService 구현
+  - [x] 2.3 UserService 구현
     - `setupProfile`: 프로필 설정 (이름, 전공, 취미, 관심사, 성격 유형, 이상형, 생년월일, 성별) + Bean Validation 필수 필드 검증
     - MVP 단계: 사용자가 이름(name)과 전공(major)을 직접 입력
     - EmailParsingService 인터페이스 정의 (대학별 이메일 파싱 규칙 관리, SES 도입 후 활성화 대비)

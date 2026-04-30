@@ -71,7 +71,7 @@ public class AuthServiceImpl implements AuthService {
 
         entry.setVerified(true);
 
-        return new VerificationConfirmResponse(verificationId, entry.getEmail(), true);
+        return VerificationConfirmResponse.from(entry);
     }
 
     @Override
@@ -109,7 +109,7 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
-        return new AuthTokenResponse(user.getId().toString(), accessToken, refreshToken);
+        return AuthTokenResponse.from(user.getId(), accessToken, refreshToken);
     }
 
     @Override
@@ -129,7 +129,7 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
-        return new AuthTokenResponse(user.getId().toString(), accessToken, refreshToken);
+        return AuthTokenResponse.from(user.getId(), accessToken, refreshToken);
     }
 
     public String resolveUniversity(String email) {
