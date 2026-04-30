@@ -1,14 +1,12 @@
 package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.config.JsonMapConverter;
 import com.ilgiyebo.config.JsonStringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -32,9 +30,9 @@ public class SlotEntity extends BaseSchema {
     @Column(columnDefinition = "JSON")
     private List<String> interests;
 
-    @Convert(converter = JsonMapConverter.class)
+    @Convert(converter = JsonStringListConverter.class)
     @Column(name = "ideal_type", columnDefinition = "JSON")
-    private Map<String, Object> idealType;
+    private List<String> idealTypes;
 
     @Column(name = "current_match_id", columnDefinition = "BINARY(16)")
     private UUID currentMatchId;

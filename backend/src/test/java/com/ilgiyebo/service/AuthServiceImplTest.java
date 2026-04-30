@@ -3,10 +3,14 @@ package com.ilgiyebo.service;
 import com.ilgiyebo.common.exception.BusinessException;
 import com.ilgiyebo.config.AuthProperties;
 import com.ilgiyebo.config.JwtTokenProvider;
+import com.ilgiyebo.domain.Gender;
+import com.ilgiyebo.domain.SlotEntity;
 import com.ilgiyebo.domain.UserEntity;
 import com.ilgiyebo.dto.AuthTokenResponse;
+import com.ilgiyebo.dto.SignupRequest;
 import com.ilgiyebo.dto.VerificationConfirmResponse;
 import com.ilgiyebo.dto.VerificationResponse;
+import com.ilgiyebo.repository.SlotRepository;
 import com.ilgiyebo.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +36,7 @@ import static org.mockito.Mockito.*;
 class AuthServiceImplTest {
 
     @Mock private UserRepository userRepository;
+    @Mock private SlotRepository slotRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private EmailService emailService;
@@ -48,7 +54,7 @@ class AuthServiceImplTest {
                 "snu.ac.kr", "서울대학교"
         ));
         authService = new AuthServiceImpl(
-                userRepository, passwordEncoder, jwtTokenProvider,
+                userRepository, slotRepository, passwordEncoder, jwtTokenProvider,
                 emailService, props);
     }
 
@@ -131,7 +137,7 @@ class AuthServiceImplTest {
     // --- signup ---
 
     @Test
-    void signup_afterVerification_createsUserWithUniversityFromDomain() {
+    void signup_afterVerification_createsUserWithProfileAndSlot() {
         when(userRepository.existsByEmail("kimari@kookmin.ac.kr")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed");
         when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> {
@@ -139,6 +145,7 @@ class AuthServiceImplTest {
             if (u.getId() == null) return u.toBuilder().id(UUID.randomUUID()).build();
             return u;
         });
+        when(slotRepository.save(any(SlotEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(jwtTokenProvider.generateAccessToken(any())).thenReturn("access-token");
         when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("refresh-token");
 
@@ -149,20 +156,35 @@ class AuthServiceImplTest {
         // Step 2: confirm
         authService.confirmVerification(vr.verificationId(), code);
 
-        // Step 3: signup
-        AuthTokenResponse response = authService.signup(
-                vr.verificationId(), "password123", "김아리", "소프트웨어전공", "20210001");
+        // Step 3: signup with profile
+        SignupRequest request = new SignupRequest(
+                vr.verificationId(), "password123", "김아리", "김아리",
+                "소프트웨어전공", "20210001",
+                LocalDate.of(2001, 3, 15), Gender.FEMALE,
+                List.of("READING", "MOVIE"), List.of("TECHNOLOGY", "MUSIC_GENRE"),
+                List.of("INTROVERTED", "CREATIVE"), List.of("KIND", "FUNNY")
+        );
+        AuthTokenResponse response = authService.signup(request);
 
         assertNotNull(response.userId());
         assertEquals("access-token", response.token());
 
-        ArgumentCaptor<UserEntity> captor = ArgumentCaptor.forClass(UserEntity.class);
-        verify(userRepository).save(captor.capture());
-        UserEntity saved = captor.getValue();
+        // 유저 생성 검증
+        ArgumentCaptor<UserEntity> userCaptor = ArgumentCaptor.forClass(UserEntity.class);
+        verify(userRepository).save(userCaptor.capture());
+        UserEntity saved = userCaptor.getValue();
         assertEquals("kimari@kookmin.ac.kr", saved.getEmail());
         assertEquals("국민대학교", saved.getUniversity());
+        assertEquals("김아리", saved.getName());
         assertEquals("소프트웨어전공", saved.getMajor());
-        assertEquals("20210001", saved.getStudentId());
+        assertEquals(LocalDate.of(2001, 3, 15), saved.getBirthDate());
+        assertEquals(Gender.FEMALE, saved.getGender());
+        assertEquals(List.of("READING", "MOVIE"), saved.getHobbies());
+        assertEquals(List.of("INTROVERTED", "CREATIVE"), saved.getPersonalityTypes());
+        assertEquals(List.of("KIND", "FUNNY"), saved.getIdealTypes());
+
+        // 초기 슬롯 부여 검증
+        verify(slotRepository).save(any(SlotEntity.class));
     }
 
     @Test
@@ -171,8 +193,14 @@ class AuthServiceImplTest {
         VerificationResponse vr = authService.sendVerification("test@kookmin.ac.kr");
 
         // Skip confirm, go straight to signup
+        SignupRequest request = new SignupRequest(
+                vr.verificationId(), "pw", "nick", "이름",
+                "전공", "12345",
+                LocalDate.of(2000, 1, 1), Gender.MALE,
+                null, null, null, null
+        );
         BusinessException ex = assertThrows(BusinessException.class,
-                () -> authService.signup(vr.verificationId(), "pw", "nick", "전공", "12345"));
+                () -> authService.signup(request));
         assertEquals(403, ex.getStatus().value());
     }
 
@@ -185,13 +213,21 @@ class AuthServiceImplTest {
             if (u.getId() == null) return u.toBuilder().id(UUID.randomUUID()).build();
             return u;
         });
+        when(slotRepository.save(any(SlotEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(jwtTokenProvider.generateAccessToken(any())).thenReturn("t");
         when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("r");
 
         VerificationResponse vr = authService.sendVerification("test@unknown.ac.kr");
         String code = authService.getVerificationStore().get(vr.verificationId()).getCode();
         authService.confirmVerification(vr.verificationId(), code);
-        authService.signup(vr.verificationId(), "pw", "닉네임", "전공", "12345");
+
+        SignupRequest request = new SignupRequest(
+                vr.verificationId(), "pw", "닉네임", "이름",
+                "전공", "12345",
+                LocalDate.of(2000, 1, 1), Gender.MALE,
+                null, null, null, null
+        );
+        authService.signup(request);
 
         ArgumentCaptor<UserEntity> captor = ArgumentCaptor.forClass(UserEntity.class);
         verify(userRepository).save(captor.capture());

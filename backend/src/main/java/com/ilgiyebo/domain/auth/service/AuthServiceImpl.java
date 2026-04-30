@@ -2,12 +2,12 @@ package com.ilgiyebo.service;
 
 import com.ilgiyebo.config.AuthProperties;
 import com.ilgiyebo.config.JwtTokenProvider;
+import com.ilgiyebo.domain.SlotEntity;
+import com.ilgiyebo.domain.SlotStatus;
 import com.ilgiyebo.domain.UserEntity;
 import com.ilgiyebo.domain.auth.exception.AuthException;
-import com.ilgiyebo.dto.AuthTokenResponse;
-import com.ilgiyebo.dto.VerificationConfirmResponse;
-import com.ilgiyebo.dto.VerificationEntry;
-import com.ilgiyebo.dto.VerificationResponse;
+import com.ilgiyebo.dto.*;
+import com.ilgiyebo.repository.SlotRepository;
 import com.ilgiyebo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,8 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -31,6 +30,7 @@ public class AuthServiceImpl implements AuthService {
     private static final int MAX_VERIFICATION_ATTEMPTS = 5;
 
     private final UserRepository userRepository;
+    private final SlotRepository slotRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
@@ -76,9 +76,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthTokenResponse signup(String verificationId, String password,
-                                     String nickname, String major, String studentId) {
-        VerificationEntry entry = verificationStore.get(verificationId);
+    public AuthTokenResponse signup(SignupRequest request) {
+        VerificationEntry entry = verificationStore.get(request.verificationId());
         if (entry == null) {
             throw AuthException.VERIFICATION_NOT_FOUND.toException();
         }
@@ -88,23 +87,38 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (entry.isExpired()) {
-            verificationStore.remove(verificationId);
+            verificationStore.remove(request.verificationId());
             throw AuthException.VERIFICATION_EXPIRED.toException();
         }
 
-        verificationStore.remove(verificationId);
+        verificationStore.remove(request.verificationId());
 
         String university = resolveUniversity(entry.getEmail());
 
         UserEntity user = UserEntity.builder()
                 .email(entry.getEmail())
-                .passwordHash(passwordEncoder.encode(password))
-                .nickname(nickname)
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .nickname(request.nickname())
+                .name(request.name())
                 .university(university)
-                .major(major)
-                .studentId(studentId)
+                .major(request.major())
+                .studentId(request.studentId())
+                .birthDate(request.birthDate())
+                .gender(request.gender())
+                .hobbies(request.hobbies())
+                .interests(request.interests())
+                .personalityTypes(request.personalityTypes())
+                .idealTypes(request.idealTypes())
                 .build();
         user = userRepository.save(user);
+
+        // 초기 슬롯 1개 자동 부여
+        SlotEntity slot = SlotEntity.builder()
+                .userId(user.getId())
+                .status(SlotStatus.EMPTY)
+                .build();
+        slotRepository.save(slot);
+        log.info("회원가입 완료 및 초기 슬롯 부여: userId={}", user.getId());
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());

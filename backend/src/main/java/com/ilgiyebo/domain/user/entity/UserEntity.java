@@ -1,7 +1,6 @@
 package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.config.JsonMapConverter;
 import com.ilgiyebo.config.JsonStringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,7 +8,6 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @Entity
 @Table(name = "`USER`")
@@ -57,12 +55,13 @@ public class UserEntity extends BaseSchema {
     @Column(columnDefinition = "JSON")
     private List<String> interests;
 
-    @Column(name = "personality_type", length = 50)
-    private String personalityType;
+    @Convert(converter = JsonStringListConverter.class)
+    @Column(name = "personality_type", columnDefinition = "JSON")
+    private List<String> personalityTypes;
 
-    @Convert(converter = JsonMapConverter.class)
+    @Convert(converter = JsonStringListConverter.class)
     @Column(name = "ideal_type_preferences", columnDefinition = "JSON")
-    private Map<String, Object> idealTypePreferences;
+    private List<String> idealTypes;
 
     @Builder.Default
     @Column(name = "total_exp", nullable = false)

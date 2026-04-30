@@ -5,5 +5,5 @@ import java.util.List;
 public record SlotAttributesDto(
     List<String> hobbies,
     List<String> interests,
-    IdealTypePreferences idealType
+    List<String> idealTypes
 ) {}

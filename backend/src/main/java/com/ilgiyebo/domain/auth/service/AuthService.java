@@ -1,6 +1,7 @@
 package com.ilgiyebo.service;
 
 import com.ilgiyebo.dto.AuthTokenResponse;
+import com.ilgiyebo.dto.SignupRequest;
 import com.ilgiyebo.dto.VerificationConfirmResponse;
 import com.ilgiyebo.dto.VerificationResponse;
 
@@ -12,9 +13,8 @@ public interface AuthService {
     /** 인증 코드 확인 (코드 일치 여부만 검증) */
     VerificationConfirmResponse confirmVerification(String verificationId, String code);
 
-    /** 회원가입 (인증 완료 후 사용자 정보 입력) */
-    AuthTokenResponse signup(String verificationId, String password,
-                             String nickname, String major, String studentId);
+    /** 회원가입 (인증 완료 후 프로필 포함 사용자 생성) */
+    AuthTokenResponse signup(SignupRequest request);
 
     /** 로그인 */
     AuthTokenResponse login(String email, String password);

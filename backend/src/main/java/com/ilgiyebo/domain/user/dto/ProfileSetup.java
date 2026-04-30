@@ -27,6 +27,6 @@ public record ProfileSetup(
 
     List<String> hobbies,
     List<String> interests,
-    String personalityType,
-    IdealTypePreferences idealTypePreferences
+    List<String> personalityTypes,
+    List<String> idealTypes
 ) {}
