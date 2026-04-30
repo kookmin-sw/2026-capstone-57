@@ -7,7 +7,7 @@
 핵심 도메인:
 - **사용자 관리**: 대학 이메일 인증 기반 가입, 프로필/관심사 설정
 - **일상 기록**: 플래너(일정)와 일기(자유 형식) 작성, 경험치 연동
-- **슬롯 기반 매칭**: 매일 자정 배치 처리, 슬롯 속성 기반 추천, 동선 교집합 우선
+- **슬롯 기반 매칭**: 평일(월~금) 자정 배치 처리, 슬롯 속성 기반 추천, 동선 교집합 우선
 - **단계별 상호작용**: 퀴즈(비동기 힌트 질문 포함) → 채팅 → 협동 게임 → 미션 기반 만남 → 회고(AI 기반/직접 작성) (5단계)
 - **빠른 매칭**: 1~3단계 건너뛰기, 빠른 매칭 풀 우선 매칭
 - **경험치/성장**: 활동 기반 경험치, 레벨업, 슬롯 해금
@@ -58,7 +58,7 @@ graph TB
         end
 
         subgraph Scheduler["스케줄러"]
-            BATCH[배치 매칭 스케줄러 - Spring Scheduler 자정 실행]
+            BATCH[배치 매칭 스케줄러 - Spring Scheduler 평일 자정 실행]
             REMINDER[리마인더 스케줄러 - Spring Scheduler]
         end
     end
@@ -108,7 +108,7 @@ graph TB
 
 1. **Spring Boot (Java) 기반 백엔드**: 엔터프라이즈급 안정성, 풍부한 생태계(Spring Data JPA, Spring Security, Spring Batch, Spring WebSocket 등), 대규모 서비스 운영에 검증된 프레임워크. Java record를 활용한 불변 DTO, sealed interface를 활용한 타입 안전 모델링
 2. **마이크로서비스 아키텍처**: 매칭, 채팅, 게임 등 독립적 확장이 필요한 도메인이 많아 서비스 분리 채택
-3. **배치 매칭 (자정 실행)**: Spring Batch/Scheduler를 활용한 배치 처리. 실시간 매칭 대비 공정성 보장 및 서버 부하 분산. 모든 사용자의 슬롯을 한 번에 처리
+3. **배치 매칭 (평일 자정 실행)**: Spring Batch/Scheduler를 활용한 배치 처리. 실시간 매칭 대비 공정성 보장 및 서버 부하 분산. 모든 사용자의 슬롯을 한 번에 처리. 주말(토, 일)에는 실행하지 않음
 4. **Redis 캐시 (Amazon ElastiCache)**: Spring Data Redis를 통한 채팅 세션, 매칭 풀 임시 데이터, 게임 상태 등 실시간성이 필요한 데이터에 활용
 5. **메시지 큐 (Amazon SQS / Amazon MQ)**: Spring AMQP를 통한 알림 전송의 비동기 처리로 서비스 간 결합도 감소
 6. **Amazon Bedrock 기반 AI 서비스**: AWS SDK for Java v2의 BedrockRuntimeClient를 활용하여 동선 추론, 매칭 점수 계산, 미션 생성, 퀴즈 생성, 회고 질문/글 생성을 수행. 캠퍼스 데이터는 MySQL에 저장하고 Bedrock API 호출 시 프롬프트 컨텍스트로 전달 (Knowledge Bases 미사용). AWS 생태계와의 자연스러운 통합, IAM 기반 인증으로 별도 API 키 관리 불필요, 다양한 파운데이션 모델(Claude, Titan 등) 선택 가능
@@ -358,7 +358,7 @@ public record EmotionTrend(LocalDate date, EmotionTag emotion) {}
 
 ```mermaid
 flowchart TD
-    START[자정 배치 시작] --> FETCH[모든 사용자의 슬롯 조회]
+    START[평일 자정 배치 시작] --> FETCH[모든 사용자의 슬롯 조회]
     FETCH --> SPLIT{빠른 매칭 요청 여부}
     
     SPLIT -->|빠른 매칭 풀| FAST[빠른 매칭 풀 구성]
@@ -372,8 +372,8 @@ flowchart TD
     
     NORMAL --> FILTER[빈 슬롯만 필터링]
     FILTER --> SKIP{활성 매칭 존재?}
-    SKIP -->|예 - 3일 미만| PASS[건너뛰기]
-    SKIP -->|아니오 또는 3일 경과| SCORE[매칭 점수 계산]
+    SKIP -->|예 - 5일 미만| PASS[건너뛰기]
+    SKIP -->|아니오 또는 5일 경과| SCORE[매칭 점수 계산]
     
     SCORE --> ATTR[슬롯 속성 매칭 점수]
     SCORE --> ROUTE[동선 교집합 점수]
@@ -1440,33 +1440,33 @@ erDiagram
 
 ### Property 11: 배치 매칭 - 빈 슬롯 매칭 규칙
 
-*For any* 빈 슬롯 집합에 대해, 배치 매칭 실행 후 각 빈 슬롯에는 최대 1명의 상대가 배정되어야 하며, 활성 매칭이 있고 매칭 주기(3일)가 종료되지 않은 슬롯은 건너뛰어야 한다.
+*For any* 빈 슬롯 집합에 대해, 배치 매칭 실행 후 각 빈 슬롯에는 최대 1명의 상대가 배정되어야 하며, 활성 매칭이 있고 매칭 주기(5일)가 종료되지 않은 슬롯은 건너뛰어야 한다. 배치 매칭은 평일(월~금)에만 실행되어야 한다.
 
-**Validates: Requirements 4.2, 4.3, 4.4**
+**Validates: Requirements 4.2, 4.3, 4.4, 4.5, 4.7**
 
 ### Property 12: 매칭 주기 불변식
 
-*For any* 생성된 매칭에 대해, cycle_end_date는 cycle_start_date로부터 정확히 3일 후여야 한다.
+*For any* 생성된 매칭에 대해, cycle_end_date는 cycle_start_date와 같은 주 금요일이어야 한다 (월요일 매칭 시 같은 주 금요일, 즉 5일간의 매칭_주기).
 
-**Validates: Requirements 4.5**
+**Validates: Requirements 4.6**
 
 ### Property 13: 경험치 기반 슬롯 해금
 
 *For any* 사용자의 누적 경험치에 대해, 레벨업 조건을 충족하면 새로운 슬롯이 해금되어야 하고, 조건 미충족 시 슬롯 수가 변하지 않아야 한다.
 
-**Validates: Requirements 4.6, 10.3**
+**Validates: Requirements 4.8, 10.3**
 
 ### Property 14: 매칭 점수 - 속성 및 동선 우선순위
 
 *For any* 슬롯 속성과 두 후보 사용자에 대해, 슬롯 속성과의 일치도가 높거나 동선 교집합이 존재하는 후보가 그렇지 않은 후보보다 높은 매칭 점수를 받아야 한다.
 
-**Validates: Requirements 4.7, 4.8**
+**Validates: Requirements 4.9, 4.10**
 
 ### Property 15: 매칭 성사 시 양쪽 알림 전송
 
 *For any* 성사된 매칭에 대해, 매칭된 양쪽 사용자 모두에게 매칭 알림이 전송되어야 한다.
 
-**Validates: Requirements 4.9, 12.1**
+**Validates: Requirements 4.11, 12.1**
 
 ### Property 16: 퀴즈 불변식
 
@@ -1620,21 +1620,21 @@ erDiagram
 
 ### Property 41: 매칭 주기 연장 - 양쪽 동의 필수
 
-*For any* 매칭 주기 연장 요청에 대해, 양쪽 사용자가 모두 동의한 경우에만 cycle_end_date가 3일 연장되어야 하며, 한쪽이라도 거부하면 기존 매칭 주기가 유지되어야 한다.
+*For any* 매칭 주기 연장 요청에 대해, 양쪽 사용자가 모두 동의한 경우에만 cycle_end_date가 5일 연장되어야 하며 (다음 주 금요일까지), 한쪽이라도 거부하면 기존 매칭 주기가 유지되어야 한다.
 
-**Validates: Requirements 4.11, 4.12, 4.13**
+**Validates: Requirements 4.13, 4.14, 4.15**
 
 ### Property 42: 매칭 범위 설정 - 나이/성별 필터링
 
 *For any* 매칭_범위_설정이 구성된 사용자에 대해, 배치 매칭 결과에서 매칭된 상대의 나이와 성별이 해당 사용자의 매칭_범위_설정 조건에 부합해야 한다.
 
-**Validates: Requirements 4.14, 4.15**
+**Validates: Requirements 4.16, 4.17**
 
 ### Property 43: 매칭 범위 미설정 시 제한 없음
 
 *For any* 매칭_범위_설정이 구성되지 않은 사용자에 대해, 배치 매칭 시 나이와 성별에 의한 필터링이 적용되지 않아야 한다.
 
-**Validates: Requirements 4.16**
+**Validates: Requirements 4.18**
 
 ### Property 44: 이메일 파싱 라운드트립
 
