@@ -1,17 +1,18 @@
 package com.ilgiyebo.controller;
 
-import com.ilgiyebo.common.annotation.CurrentMember;
-import com.ilgiyebo.common.annotation.MemberGuard;
 import com.ilgiyebo.dto.ProfileSetup;
 import com.ilgiyebo.dto.ProfileOptionsResponse;
 import com.ilgiyebo.dto.UserProfileDto;
 import com.ilgiyebo.service.ProfileOptionService;
 import com.ilgiyebo.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -32,17 +33,17 @@ public class UserController {
     }
 
     @Operation(summary = "내 프로필 조회", description = "현재 로그인한 사용자의 프로필을 조회한다")
-    @MemberGuard
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
-    public ResponseEntity<UserProfileDto> getMyProfile(@CurrentMember UUID userId) {
+    public ResponseEntity<UserProfileDto> getMyProfile(@AuthenticationPrincipal UUID userId) {
         return ResponseEntity.ok(userService.getProfile(userId));
     }
 
     @Operation(summary = "프로필 수정", description = "프로필 정보를 수정한다")
-    @MemberGuard
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/profile")
     public ResponseEntity<UserProfileDto> updateProfile(
-            @CurrentMember UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody ProfileSetup updates) {
         return ResponseEntity.ok(userService.updateProfile(userId, updates));
     }
