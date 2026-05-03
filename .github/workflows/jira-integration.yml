@@ -1,0 +1,63 @@
+name: Jira Branch Integration
+
+on:
+  create:
+    branches:
+      - '**' # 모든 브랜치 생성 이벤트 감지
+
+jobs:
+  update-jira:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract Branch Name and Issue Key
+        id: branch_info
+        run: |
+          BRANCH_NAME="${{ github.event.ref }}"
+          echo "Branch Name: $BRANCH_NAME"
+          
+          # 정규식을 이용해 Jira 이슈 키 추출
+          ISSUE_KEY=$(echo "$BRANCH_NAME" | grep -oE '[A-Z]+-[0-9]+' | head -n 1)
+          echo "ISSUE_KEY=$ISSUE_KEY" >> $GITHUB_ENV
+          
+          # 브랜치 URL 생성 (GitHub 레포지토리 주소와 브랜치명 조합)
+          BRANCH_URL="${{ github.server_url }}/${{ github.repository }}/tree/$BRANCH_NAME"
+          echo "BRANCH_URL=$BRANCH_URL" >> $GITHUB_ENV
+
+      - name: Send Branch Info to Jira
+        if: env.ISSUE_KEY != ''
+        run: |
+          echo "Found Jira Issue Key: ${{ env.ISSUE_KEY }}"
+          
+          # 1. Jira 이슈에 브랜치 링크가 포함된 코멘트 추가
+          JIRA_COMMENT_URL="${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ env.ISSUE_KEY }}/comment"
+          
+          COMMENT_PAYLOAD=$(jq -n \
+            --arg branch "${{ github.event.ref }}" \
+            --arg url "${{ env.BRANCH_URL }}" \
+            '{body: ("GitHub Repository에 브랜치 [" + $branch + "](" + $url + ") 가 생성되었습니다.")}')
+          
+          curl -X POST \
+            -u "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$COMMENT_PAYLOAD" \
+            "$JIRA_COMMENT_URL"
+
+      - name: Transition Jira Issue to In Progress
+        if: env.ISSUE_KEY != ''
+        run: |
+          # 2. Jira 이슈 상태를 'In Progress'로 전환
+          JIRA_TRANSITION_URL="${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ env.ISSUE_KEY }}/transitions"
+          
+          # 주의: Jira 프로젝트의 워크플로우 상태값에 따라 'In Progress'에 해당하는 ID(예: 31, 21 등)를 확인하여 변경해야 합니다.
+          # 일반적인 Jira Cloud 기본 설정에서는 'In Progress'의 id는 보통 '21' 또는 '31' 등입니다.
+          TRANSITION_PAYLOAD=$(jq -n \
+            '{transition: {id: "21"}}')
+            
+          curl -X POST \
+            -u "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$TRANSITION_PAYLOAD" \
+            "$JIRA_TRANSITION_URL"
