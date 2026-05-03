@@ -1,0 +1,27 @@
+package com.ilgiyebo.dto;
+
+import com.ilgiyebo.domain.SlotEntity;
+import com.ilgiyebo.domain.SlotPriority;
+import com.ilgiyebo.domain.SlotStatus;
+
+import java.util.UUID;
+
+public record SlotResponseDto(
+    UUID id,
+    UUID userId,
+    SlotPriority priority,
+    UUID currentMatchId,
+    boolean isQuickMatch,
+    SlotStatus status
+) {
+    public static SlotResponseDto from(SlotEntity entity) {
+        return new SlotResponseDto(
+            entity.getId(),
+            entity.getUserId(),
+            entity.getPriority(),
+            entity.getCurrentMatchId(),
+            entity.isQuickMatch(),
+            entity.getStatus()
+        );
+    }
+}

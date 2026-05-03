@@ -1,12 +1,10 @@
 package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.config.JsonStringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -22,17 +20,14 @@ public class SlotEntity extends BaseSchema {
     @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
     private UUID userId;
 
-    @Convert(converter = JsonStringListConverter.class)
-    @Column(columnDefinition = "JSON")
-    private List<String> hobbies;
-
-    @Convert(converter = JsonStringListConverter.class)
-    @Column(columnDefinition = "JSON")
-    private List<String> interests;
-
-    @Convert(converter = JsonStringListConverter.class)
-    @Column(name = "ideal_type", columnDefinition = "JSON")
-    private List<String> idealTypes;
+    /**
+     * 매칭 우선순위: 이 슬롯에서 매칭할 때 어떤 기준을 우선시할지.
+     * HOBBY(취미), INTEREST(관심사), IDEAL_TYPE(이상형)
+     */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", nullable = false)
+    private SlotPriority priority = SlotPriority.HOBBY;
 
     @Column(name = "current_match_id", columnDefinition = "BINARY(16)")
     private UUID currentMatchId;
