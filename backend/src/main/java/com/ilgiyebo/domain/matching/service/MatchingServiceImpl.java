@@ -40,6 +40,8 @@ public class MatchingServiceImpl implements MatchingService {
             throw MatchingException.USER_NOT_FOUND.toException();
         }
 
+        // TODO: 슬롯 해금 시 경험치 조건 필요
+
         SlotEntity slot = SlotEntity.builder()
                 .userId(userId)
                 .priority(SlotPriority.HOBBY)
