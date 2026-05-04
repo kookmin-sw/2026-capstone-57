@@ -108,7 +108,7 @@ graph TB
 
 1. **Spring Boot (Java) 기반 백엔드**: 엔터프라이즈급 안정성, 풍부한 생태계(Spring Data JPA, Spring Security, Spring Batch, Spring WebSocket 등), 대규모 서비스 운영에 검증된 프레임워크. Java record를 활용한 불변 DTO, sealed interface를 활용한 타입 안전 모델링
 2. **마이크로서비스 아키텍처**: 매칭, 채팅, 게임 등 독립적 확장이 필요한 도메인이 많아 서비스 분리 채택
-3. **배치 매칭 (평일 자정 실행)**: Spring Batch/Scheduler를 활용한 배치 처리. 실시간 매칭 대비 공정성 보장 및 서버 부하 분산. 모든 사용자의 슬롯을 한 번에 처리. 주말(토, 일)에는 실행하지 않음
+3. **배치 매칭 (월요일 자정 실행)**: Spring Scheduler를 활용한 배치 처리. 매주 월요일 자정에만 실행하여 한 주간의 매칭을 일괄 생성. 중간에 매칭이 일찍 끝나도 다음 월요일까지 재매칭하지 않음
 4. **Redis 캐시 (Amazon ElastiCache)**: Spring Data Redis를 통한 채팅 세션, 매칭 풀 임시 데이터, 게임 상태 등 실시간성이 필요한 데이터에 활용
 5. **메시지 큐 (Amazon SQS / Amazon MQ)**: Spring AMQP를 통한 알림 전송의 비동기 처리로 서비스 간 결합도 감소
 6. **Amazon Bedrock 기반 AI 서비스**: AWS SDK for Java v2의 BedrockRuntimeClient를 활용하여 퀴즈 생성, 회고 질문/글 생성을 수행. MVP에서는 매칭 점수 계산과 동선 추론에 AI를 사용하지 않으며, 시간표 기반 단순 동선 겹침으로 대체한다. 프로필 속성(취미, 관심사, 이상형)과 매칭 범위(나이, 성별)는 데이터 수집만 하고 매칭 알고리즘에 반영하지 않는다. 출시 후 데이터가 충분히 쌓이면 AI 기반 매칭 점수 계산, 동선 추론, 미션 장소 추천으로 확장 예정. 캠퍼스 데이터는 MySQL에 저장하고 Bedrock API 호출 시 프롬프트 컨텍스트로 전달 (Knowledge Bases 미사용). AWS 생태계와의 자연스러운 통합, IAM 기반 인증으로 별도 API 키 관리 불필요, 다양한 파운데이션 모델(Claude, Titan 등) 선택 가능
@@ -360,20 +360,17 @@ public record EmotionTrend(LocalDate date, EmotionTag emotion) {}
 
 ```mermaid
 flowchart TD
-    START[평일 자정 배치 시작] --> FETCH[모든 사용자의 슬롯 조회]
-    FETCH --> NORMAL[매칭 풀 구성]
+    START[월요일 자정 배치 시작] --> FETCH[모든 사용자의 슬롯 조회]
+    FETCH --> FILTER[빈 슬롯만 필터링]
+    FILTER --> BLOCK[차단 목록 필터]
     
-    NORMAL --> FILTER[빈 슬롯만 필터링]
-    FILTER --> SKIP{활성 매칭 존재?}
-    SKIP -->|예 - 5일 미만| PASS[건너뛰기]
-    SKIP -->|아니오 또는 5일 경과| BLOCK[차단 목록 필터]
+    BLOCK --> ROUTE[시간표에서 출발/도착 건물 동일 동선 비교]
     
-    BLOCK --> ROUTE[시간표 기반 동선 시간대 겹침 계산]
-    
-    ROUTE --> RANK[겹침 점수 랭킹]
-    
-    RANK --> ASSIGN[최적 상대 배정]
-    ASSIGN --> NOTIFY[매칭 알림 전송]
+    ROUTE --> MATCH{겹치는 동선 존재?}
+    MATCH -->|아니오| NEXT[다음 후보로]
+    MATCH -->|예| SELECT[겹치는 동선 중 하나 선택]
+    SELECT --> ASSIGN[매칭 성사]
+    ASSIGN --> MISSION[선택된 동선 기반 미션 사전 생성]
 ```
 
 ```java
@@ -387,16 +384,10 @@ public interface MatchingService {
     Slot updateSlotAttributes(String userId, String slotId, SlotAttributes attrs);
 
     /**
-     * 동선 시간대 겹침 계산 (MVP: AI 미사용, 시간표 기반)
-     * 두 사용자의 시간표에서 같은 시간대에 같은 건물/인접 건물에 있는 횟수를 계산
+     * 동선 겹침 비교 (MVP: 시간표의 출발/도착 건물 동일 여부만 비교)
+     * 겹치는 동선이 있으면 그 중 하나를 선택하여 미션 데이터 사전 생성
      */
     RouteOverlap calculateRouteOverlap(String userA, String userB);
-
-    /** 매칭 주기 연장 요청 */
-    ExtensionRequestResult requestMatchCycleExtension(String matchId, String userId);
-
-    /** 매칭 주기 연장 동의/거부 */
-    ExtensionResponseResult respondToMatchCycleExtension(String matchId, String userId, boolean accept);
 }
 
 public record Slot(
@@ -426,9 +417,7 @@ public record MatchPreferences(
 
 public record BatchMatchingResult(
     int totalProcessed,
-    int matchesCreated,
-    int normalMatches,
-    List<String> failedSlots
+    int matchesCreated
 ) {}
 
 public record RouteOverlap(
@@ -436,21 +425,7 @@ public record RouteOverlap(
     List<OverlapLocation> overlappingLocations
 ) {}
 
-public record OverlapLocation(String place, String timeRange) {}
-
-public record ExtensionRequestResult(
-    String matchId,
-    String requesterId,
-    ExtensionStatus status
-) {}
-
-public record ExtensionResponseResult(
-    String matchId,
-    boolean accepted,
-    @Nullable LocalDate newCycleEndDate
-) {}
-
-public enum ExtensionStatus { PENDING, ACCEPTED, REJECTED }
+public record OverlapLocation(String fromBuilding, String toBuilding, String timeRange) {}
 ```
 
 #### 6. 상호작용 서비스 (InteractionService)
