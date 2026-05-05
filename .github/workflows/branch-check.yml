@@ -2,7 +2,7 @@ name: Branch Name Check
 
 on:
   create:
-
+  pull_request: 
 jobs:
   check-name:
     runs-on: ubuntu-latest
