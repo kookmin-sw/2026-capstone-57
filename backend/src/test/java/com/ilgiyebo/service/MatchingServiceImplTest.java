@@ -2,7 +2,13 @@ package com.ilgiyebo.service;
 
 import com.ilgiyebo.domain.CampusBuildingEntity;
 import com.ilgiyebo.domain.CampusPathEntity;
+import com.ilgiyebo.domain.InteractionEntity;
+import com.ilgiyebo.domain.MatchEntity;
+import com.ilgiyebo.domain.MissionEntity;
 import com.ilgiyebo.domain.ScheduleEntity;
+import com.ilgiyebo.domain.SlotEntity;
+import com.ilgiyebo.domain.SlotStatus;
+import com.ilgiyebo.dto.BatchMatchingResultDto;
 import com.ilgiyebo.dto.OverlapLocationDto;
 import com.ilgiyebo.dto.RouteOverlapDto;
 import com.ilgiyebo.repository.*;
@@ -30,6 +36,10 @@ class MatchingServiceImplTest {
     @Mock private BlockRepository blockRepository;
     @Mock private CampusBuildingRepository campusBuildingRepository;
     @Mock private CampusPathRepository campusPathRepository;
+    @Mock private CampusVenueRepository campusVenueRepository;
+    @Mock private MatchRepository matchRepository;
+    @Mock private MissionRepository missionRepository;
+    @Mock private InteractionRepository interactionRepository;
 
     private MatchingServiceImpl matchingService;
 
@@ -40,7 +50,9 @@ class MatchingServiceImplTest {
     void setUp() {
         matchingService = new MatchingServiceImpl(
                 slotRepository, userRepository, scheduleRepository,
-                blockRepository, campusBuildingRepository, campusPathRepository);
+                blockRepository, campusBuildingRepository, campusPathRepository,
+                campusVenueRepository, matchRepository, missionRepository,
+                interactionRepository);
     }
 
     // --- calculateRouteOverlap ---
@@ -186,6 +198,123 @@ class MatchingServiceImplTest {
         when(blockRepository.existsByUserIdAndBlockedUserId(userB, userA)).thenReturn(false);
 
         assertFalse(matchingService.isBlocked(userA, userB));
+    }
+
+    // --- executeBatchMatching ---
+
+    @Test
+    void executeBatchMatching_noEmptySlots_returnsZeroMatches() {
+        when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of());
+
+        BatchMatchingResultDto result = matchingService.executeBatchMatching();
+
+        assertEquals(0, result.totalProcessed());
+        assertEquals(0, result.matchesCreated());
+    }
+
+    @Test
+    void executeBatchMatching_twoUsersWithOverlap_createsMatch() {
+        SlotEntity slotA = SlotEntity.builder()
+                .id(UUID.randomUUID()).userId(userA).status(SlotStatus.EMPTY).build();
+        SlotEntity slotB = SlotEntity.builder()
+                .id(UUID.randomUUID()).userId(userB).status(SlotStatus.EMPTY).build();
+
+        when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of(slotA, slotB));
+
+        ScheduleEntity sa = schedule(userA, DayOfWeek.MONDAY, "09:00", "10:30", "공학관");
+        ScheduleEntity sb = schedule(userB, DayOfWeek.MONDAY, "09:30", "11:00", "공학관");
+        when(scheduleRepository.findAllByUserId(userA)).thenReturn(List.of(sa));
+        when(scheduleRepository.findAllByUserId(userB)).thenReturn(List.of(sb));
+
+        when(blockRepository.existsByUserIdAndBlockedUserId(userA, userB)).thenReturn(false);
+        when(blockRepository.existsByUserIdAndBlockedUserId(userB, userA)).thenReturn(false);
+
+        when(campusBuildingRepository.findByName("공학관")).thenReturn(Optional.empty());
+
+        when(matchRepository.save(org.mockito.ArgumentMatchers.any(MatchEntity.class)))
+                .thenAnswer(inv -> {
+                    MatchEntity m = inv.getArgument(0);
+                    return m.toBuilder().id(UUID.randomUUID()).build();
+                });
+        when(interactionRepository.save(org.mockito.ArgumentMatchers.any(InteractionEntity.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(missionRepository.save(org.mockito.ArgumentMatchers.any(MissionEntity.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(slotRepository.save(org.mockito.ArgumentMatchers.any(SlotEntity.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        BatchMatchingResultDto result = matchingService.executeBatchMatching();
+
+        assertEquals(2, result.totalProcessed());
+        assertEquals(1, result.matchesCreated());
+    }
+
+    @Test
+    void executeBatchMatching_blockedUsers_doesNotMatch() {
+        SlotEntity slotA = SlotEntity.builder()
+                .id(UUID.randomUUID()).userId(userA).status(SlotStatus.EMPTY).build();
+        SlotEntity slotB = SlotEntity.builder()
+                .id(UUID.randomUUID()).userId(userB).status(SlotStatus.EMPTY).build();
+
+        when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of(slotA, slotB));
+
+        ScheduleEntity sa = schedule(userA, DayOfWeek.MONDAY, "09:00", "10:30", "공학관");
+        ScheduleEntity sb = schedule(userB, DayOfWeek.MONDAY, "09:30", "11:00", "공학관");
+        when(scheduleRepository.findAllByUserId(userA)).thenReturn(List.of(sa));
+        when(scheduleRepository.findAllByUserId(userB)).thenReturn(List.of(sb));
+
+        // A가 B를 차단
+        when(blockRepository.existsByUserIdAndBlockedUserId(userA, userB)).thenReturn(true);
+
+        BatchMatchingResultDto result = matchingService.executeBatchMatching();
+
+        assertEquals(2, result.totalProcessed());
+        assertEquals(0, result.matchesCreated());
+    }
+
+    @Test
+    void executeBatchMatching_noOverlap_doesNotMatch() {
+        SlotEntity slotA = SlotEntity.builder()
+                .id(UUID.randomUUID()).userId(userA).status(SlotStatus.EMPTY).build();
+        SlotEntity slotB = SlotEntity.builder()
+                .id(UUID.randomUUID()).userId(userB).status(SlotStatus.EMPTY).build();
+
+        when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of(slotA, slotB));
+
+        // 다른 요일 → 겹침 없음
+        ScheduleEntity sa = schedule(userA, DayOfWeek.MONDAY, "09:00", "10:30", "공학관");
+        ScheduleEntity sb = schedule(userB, DayOfWeek.TUESDAY, "09:00", "10:30", "공학관");
+        when(scheduleRepository.findAllByUserId(userA)).thenReturn(List.of(sa));
+        when(scheduleRepository.findAllByUserId(userB)).thenReturn(List.of(sb));
+
+        when(blockRepository.existsByUserIdAndBlockedUserId(userA, userB)).thenReturn(false);
+        when(blockRepository.existsByUserIdAndBlockedUserId(userB, userA)).thenReturn(false);
+
+        BatchMatchingResultDto result = matchingService.executeBatchMatching();
+
+        assertEquals(2, result.totalProcessed());
+        assertEquals(0, result.matchesCreated());
+    }
+
+    @Test
+    void executeBatchMatching_userWithNoSchedule_excluded() {
+        SlotEntity slotA = SlotEntity.builder()
+                .id(UUID.randomUUID()).userId(userA).status(SlotStatus.EMPTY).build();
+        SlotEntity slotB = SlotEntity.builder()
+                .id(UUID.randomUUID()).userId(userB).status(SlotStatus.EMPTY).build();
+
+        when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of(slotA, slotB));
+
+        // userA에 시간표 없음
+        when(scheduleRepository.findAllByUserId(userA)).thenReturn(List.of());
+        when(scheduleRepository.findAllByUserId(userB)).thenReturn(List.of(
+                schedule(userB, DayOfWeek.MONDAY, "09:00", "10:30", "공학관")));
+
+        BatchMatchingResultDto result = matchingService.executeBatchMatching();
+
+        // 시간표가 있는 사용자가 2명 미만이므로 매칭 불가
+        assertEquals(2, result.totalProcessed());
+        assertEquals(0, result.matchesCreated());
     }
 
     // --- helper ---

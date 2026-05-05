@@ -1,6 +1,7 @@
 package com.ilgiyebo.service;
 
 import com.ilgiyebo.domain.SlotPriority;
+import com.ilgiyebo.dto.BatchMatchingResultDto;
 import com.ilgiyebo.dto.RouteOverlapDto;
 import com.ilgiyebo.dto.SlotResponseDto;
 
@@ -29,4 +30,11 @@ public interface MatchingService {
      * A가 B를 차단했거나 B가 A를 차단한 경우 true를 반환한다.
      */
     boolean isBlocked(UUID userA, UUID userB);
+
+    /**
+     * 배치 매칭을 실행한다.
+     * 빈 슬롯을 조회하여 시간표 기반 동선 겹침이 있는 사용자끼리 매칭한다.
+     * 매칭 성사 시 매칭 주기(월~금 5일)를 설정하고, 선택된 동선 기반으로 미션을 사전 생성한다.
+     */
+    BatchMatchingResultDto executeBatchMatching();
 }
