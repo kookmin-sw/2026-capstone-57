@@ -2,21 +2,26 @@ name: Branch Name Check
 
 on:
   create:
-  pull_request: 
+  pull_request:
+
 jobs:
   check-name:
     runs-on: ubuntu-latest
     steps:
       - name: Check Branch Name Pattern
+        shell: bash
         run: |
-          # 생성된 브랜치 이름 가져오기
-          BRANCH_NAME="${{ github.event.ref }}"
-          
-          # 'feature/IG-00...' 형태인지 검사하는 정규식
-          # 예시: IG-123 형태가 포함되어 있는지 확인
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BRANCH_NAME="${{ github.head_ref }}"
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+          fi
+
+          echo "검사 대상 브랜치명: $BRANCH_NAME"
+
           if [[ ! "$BRANCH_NAME" =~ IG-[0-9]+ ]]; then
             echo "::error::브랜치 이름 형식이 올바르지 않습니다. 'IG-[숫자]' 패턴을 포함해야 합니다. (예: feature/IG-123-login)"
             exit 1
           fi
-          
+
           echo "올바른 브랜치명입니다: $BRANCH_NAME"
