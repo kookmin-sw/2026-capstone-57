@@ -11,21 +11,26 @@ jobs:
       - name: Check Branch Name Pattern
         shell: bash
         env:
-          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-          REF_TYPE: ${{ github.event.ref_type }}
+          EVENT_NAME: ${{ github.event_name }}
+          CREATE_REF: ${{ github.event.ref }}
+          CREATE_REF_TYPE: ${{ github.event.ref_type }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          echo "event_name=${{ github.event_name }}"
-          echo "ref_type=$REF_TYPE"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BRANCH_NAME="$PR_BRANCH"
+          else
+            BRANCH_NAME="$CREATE_REF"
+          fi
+
           echo "BRANCH_NAME=[$BRANCH_NAME]"
 
-          # create 이벤트에서 tag 생성은 검사 제외
-          if [[ "${{ github.event_name }}" == "create" && "$REF_TYPE" != "branch" ]]; then
-            echo "브랜치 생성이 아니므로 스킵합니다."
+          if [[ "$EVENT_NAME" == "create" && "$CREATE_REF_TYPE" != "branch" ]]; then
+            echo "브랜치 생성이 아니므로 스킵"
             exit 0
           fi
 
           if [[ ! "$BRANCH_NAME" =~ IG-[0-9]+ ]]; then
-            echo "::error::브랜치 이름 형식이 올바르지 않습니다. IG-[숫자] 패턴 필요. 예: feature/IG-02-login , $BRANCH_NAME"
+            echo "::error::브랜치 이름 형식이 올바르지 않습니다. 예: feature/IG-02-login"
             exit 1
           fi
 
