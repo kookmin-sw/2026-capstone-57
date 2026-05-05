@@ -6,10 +6,10 @@
 
 핵심 도메인:
 - **사용자 관리**: 대학 이메일 인증 기반 가입, 프로필/관심사 설정
-- **일상 기록**: 플래너(일정)와 일기(자유 형식) 작성, 경험치 연동
-- **슬롯 기반 매칭**: 평일(월~금) 자정 배치 처리, 슬롯 속성 기반 추천, 동선 교집합 우선
+- **일상 기록**: 플래너(일정)와 일기(자유 형식) 작성, 경험치 연동 [MVP 후순위]
+- **슬롯 기반 매칭**: 평일(월~금) 자정 배치 처리. MVP에서는 동선 시간대 겹침 기반 단순 매칭 (AI 미사용, 프로필 속성 분석 미적용). 프로필 데이터는 추후 분석을 위해 수집만 수행
 - **단계별 상호작용**: 퀴즈(비동기 힌트 질문 포함) → 채팅 → 협동 게임 → 미션 기반 만남 → 회고(AI 기반/직접 작성) (5단계)
-- **빠른 매칭**: 1~3단계 건너뛰기, 빠른 매칭 풀 우선 매칭
+- **빠른 매칭**: 1~3단계 건너뛰기, 빠른 매칭 풀 우선 매칭 [MVP 후순위]
 - **경험치/성장**: 활동 기반 경험치, 레벨업, 슬롯 해금
 - **안전**: 신고/차단, 자동 계정 정지
 
@@ -108,10 +108,10 @@ graph TB
 
 1. **Spring Boot (Java) 기반 백엔드**: 엔터프라이즈급 안정성, 풍부한 생태계(Spring Data JPA, Spring Security, Spring Batch, Spring WebSocket 등), 대규모 서비스 운영에 검증된 프레임워크. Java record를 활용한 불변 DTO, sealed interface를 활용한 타입 안전 모델링
 2. **마이크로서비스 아키텍처**: 매칭, 채팅, 게임 등 독립적 확장이 필요한 도메인이 많아 서비스 분리 채택
-3. **배치 매칭 (평일 자정 실행)**: Spring Batch/Scheduler를 활용한 배치 처리. 실시간 매칭 대비 공정성 보장 및 서버 부하 분산. 모든 사용자의 슬롯을 한 번에 처리. 주말(토, 일)에는 실행하지 않음
+3. **배치 매칭 (월요일 자정 실행)**: Spring Scheduler를 활용한 배치 처리. 매주 월요일 자정에만 실행하여 한 주간의 매칭을 일괄 생성. 중간에 매칭이 일찍 끝나도 다음 월요일까지 재매칭하지 않음
 4. **Redis 캐시 (Amazon ElastiCache)**: Spring Data Redis를 통한 채팅 세션, 매칭 풀 임시 데이터, 게임 상태 등 실시간성이 필요한 데이터에 활용
 5. **메시지 큐 (Amazon SQS / Amazon MQ)**: Spring AMQP를 통한 알림 전송의 비동기 처리로 서비스 간 결합도 감소
-6. **Amazon Bedrock 기반 AI 서비스**: AWS SDK for Java v2의 BedrockRuntimeClient를 활용하여 동선 추론, 매칭 점수 계산, 미션 생성, 퀴즈 생성, 회고 질문/글 생성을 수행. 캠퍼스 데이터는 MySQL에 저장하고 Bedrock API 호출 시 프롬프트 컨텍스트로 전달 (Knowledge Bases 미사용). AWS 생태계와의 자연스러운 통합, IAM 기반 인증으로 별도 API 키 관리 불필요, 다양한 파운데이션 모델(Claude, Titan 등) 선택 가능
+6. **Amazon Bedrock 기반 AI 서비스**: AWS SDK for Java v2의 BedrockRuntimeClient를 활용하여 퀴즈 생성, 회고 질문/글 생성을 수행. MVP에서는 매칭 점수 계산과 동선 추론에 AI를 사용하지 않으며, 시간표 기반 단순 동선 겹침으로 대체한다. 프로필 속성(취미, 관심사, 이상형)과 매칭 범위(나이, 성별)는 데이터 수집만 하고 매칭 알고리즘에 반영하지 않는다. 출시 후 데이터가 충분히 쌓이면 AI 기반 매칭 점수 계산, 동선 추론, 미션 장소 추천으로 확장 예정. 캠퍼스 데이터는 MySQL에 저장하고 Bedrock API 호출 시 프롬프트 컨텍스트로 전달 (Knowledge Bases 미사용). AWS 생태계와의 자연스러운 통합, IAM 기반 인증으로 별도 API 키 관리 불필요, 다양한 파운데이션 모델(Claude, Titan 등) 선택 가능
 7. **캠퍼스 공간 데이터**: 건물/경로/거점 정보를 별도 테이블로 관리하여 AI 추론의 프롬프트 컨텍스트로 활용
 8. **Spring Security + JWT**: 대학 이메일 인증 기반 가입 및 JWT 토큰 기반 인증/인가 처리. `JwtAuthenticationFilter`가 모든 요청에서 Bearer 토큰을 파싱하여 SecurityContext에 userId를 설정한다. 실제 인증 강제는 `@MemberGuard` 커스텀 어노테이션(AOP 기반)이 메서드 단위로 처리하며, `@CurrentMember` 파라미터 어노테이션으로 컨트롤러에서 현재 로그인한 사용자의 UUID를 주입받는다. Spring Security의 `authorizeHttpRequests`는 `permitAll()`로 열어두고, 인증이 필요한 API에만 `@MemberGuard`를 선택적으로 적용하는 구조이다
 9. **Spring Data JPA + MySQL (Amazon RDS Aurora MySQL 호환)**: JPA를 통한 ORM 매핑으로 도메인 모델과 데이터베이스 간 매핑 간소화. 팀 내 MySQL 운영 경험이 풍부하여 생산성 극대화. Aurora MySQL 호환 모드로 고가용성 및 자동 장애 복구 지원. RDS 관리형 서비스로 운영 부담 감소
@@ -356,39 +356,21 @@ public record EmotionTrend(LocalDate date, EmotionTag emotion) {}
 
 #### 5. 매칭 서비스 (MatchingService)
 
+> **MVP 매칭 전략**: AI를 사용하지 않고, 시간표 기반 동선 시간대 겹침만으로 매칭한다. 프로필 속성(취미, 관심사, 이상형)과 매칭 범위(나이, 성별)는 데이터 수집만 하고 매칭 알고리즘에 반영하지 않는다. 출시 후 데이터가 충분히 쌓이면 AI 기반 매칭으로 확장한다.
+
 ```mermaid
 flowchart TD
-    START[평일 자정 배치 시작] --> FETCH[모든 사용자의 슬롯 조회]
-    FETCH --> SPLIT{빠른 매칭 요청 여부}
+    START[월요일 자정 배치 시작] --> FETCH[모든 사용자의 슬롯 조회]
+    FETCH --> FILTER[빈 슬롯만 필터링]
+    FILTER --> BLOCK[차단 목록 필터]
     
-    SPLIT -->|빠른 매칭 풀| FAST[빠른 매칭 풀 구성]
-    SPLIT -->|일반 매칭 풀| NORMAL[일반 매칭 풀 구성]
+    BLOCK --> ROUTE[시간표에서 출발/도착 건물 동일 동선 비교]
     
-    FAST --> FAST_MATCH[빠른 매칭 풀 내 매칭 시도]
-    FAST_MATCH --> FAST_OK{매칭 성공?}
-    FAST_OK -->|예| STAGE4[4단계 즉시 해금]
-    FAST_OK -->|아니오| FALLBACK[일반 매칭 풀로 이동]
-    FALLBACK --> NORMAL
-    
-    NORMAL --> FILTER[빈 슬롯만 필터링]
-    FILTER --> SKIP{활성 매칭 존재?}
-    SKIP -->|예 - 5일 미만| PASS[건너뛰기]
-    SKIP -->|아니오 또는 5일 경과| SCORE[매칭 점수 계산]
-    
-    SCORE --> ATTR[슬롯 속성 매칭 점수]
-    SCORE --> ROUTE[동선 교집합 점수]
-    SCORE --> BLOCK[차단 목록 필터]
-    SCORE --> PREF[매칭 범위 설정 필터 - 나이/성별]
-    
-    ATTR --> RANK[종합 점수 랭킹]
-    ROUTE --> RANK
-    BLOCK --> RANK
-    PREF --> RANK
-    
-    RANK --> ASSIGN[최적 상대 배정]
-    ASSIGN --> NOTIFY[매칭 알림 전송]
-    
-    STAGE4 --> NOTIFY
+    ROUTE --> MATCH{겹치는 동선 존재?}
+    MATCH -->|아니오| NEXT[다음 후보로]
+    MATCH -->|예| SELECT[겹치는 동선 중 하나 선택]
+    SELECT --> ASSIGN[매칭 성사]
+    ASSIGN --> MISSION[선택된 동선 기반 미션 사전 생성]
 ```
 
 ```java
@@ -396,25 +378,16 @@ public interface MatchingService {
     /** 배치 매칭 실행 (스케줄러에서 호출) */
     BatchMatchingResult executeBatchMatching();
 
-    /** 빠른 매칭 요청 */
-    void requestQuickMatch(String userId, String slotId);
-
     /** 슬롯 관리 */
     List<Slot> getSlots(String userId);
     Slot unlockSlot(String userId);
     Slot updateSlotAttributes(String userId, String slotId, SlotAttributes attrs);
 
-    /** 매칭 점수 계산 (내부 - AIService 연동) */
-    double calculateMatchScore(String userA, String userB, SlotAttributes slotAttrs);
-
-    /** 동선 교집합 계산 (내부 - AIService 연동) */
+    /**
+     * 동선 겹침 비교 (MVP: 시간표의 출발/도착 건물 동일 여부만 비교)
+     * 겹치는 동선이 있으면 그 중 하나를 선택하여 미션 데이터 사전 생성
+     */
     RouteOverlap calculateRouteOverlap(String userA, String userB);
-
-    /** 매칭 주기 연장 요청 */
-    ExtensionRequestResult requestMatchCycleExtension(String matchId, String userId);
-
-    /** 매칭 주기 연장 동의/거부 */
-    ExtensionResponseResult respondToMatchCycleExtension(String matchId, String userId, boolean accept);
 }
 
 public record Slot(
@@ -444,10 +417,7 @@ public record MatchPreferences(
 
 public record BatchMatchingResult(
     int totalProcessed,
-    int matchesCreated,
-    int quickMatches,
-    int normalMatches,
-    List<String> failedSlots
+    int matchesCreated
 ) {}
 
 public record RouteOverlap(
@@ -455,21 +425,7 @@ public record RouteOverlap(
     List<OverlapLocation> overlappingLocations
 ) {}
 
-public record OverlapLocation(String place, String timeRange) {}
-
-public record ExtensionRequestResult(
-    String matchId,
-    String requesterId,
-    ExtensionStatus status
-) {}
-
-public record ExtensionResponseResult(
-    String matchId,
-    boolean accepted,
-    @Nullable LocalDate newCycleEndDate
-) {}
-
-public enum ExtensionStatus { PENDING, ACCEPTED, REJECTED }
+public record OverlapLocation(String fromBuilding, String toBuilding, String timeRange) {}
 ```
 
 #### 6. 상호작용 서비스 (InteractionService)
@@ -874,15 +830,17 @@ public enum ReminderType { MISSION_DEADLINE, PLANNER_INACTIVE }
 
 #### 14. AI/LLM 서비스 (AIService)
 
+> **MVP 범위**: 퀴즈 생성, 회고 질문/글 생성만 AI를 사용한다. 동선 추론(`inferRoute`), 매칭 점수 계산(`calculateRouteMatchScore`), 미션 생성(`generateMission`)은 MVP에서 AI를 사용하지 않으며, 시간표 기반 단순 로직으로 대체한다. 출시 후 데이터가 충분히 쌓이면 AI 기반으로 확장한다.
+
 ```java
 public interface AIService {
-    /** 동선 추론: 시간표/플래너 + 캠퍼스 공간 데이터 기반으로 이동 경로 추론 */
+    /** [MVP 후순위] 동선 추론: MVP에서는 시간표 기반 단순 동선 계산으로 대체 */
     InferredRoute inferRoute(String userId, LocalDate date, List<Object> schedule, CampusContext campusData);
 
-    /** 매칭 점수 계산: 두 사용자의 동선이 얼마나 자연스럽게 겹치는지 판단 */
+    /** [MVP 후순위] 매칭 점수 계산: MVP에서는 시간대 겹침 기반 단순 점수로 대체 */
     RouteMatchScore calculateRouteMatchScore(InferredRoute routeA, InferredRoute routeB, CampusContext campusData);
 
-    /** 미션 생성: 동선 교집합 장소 + 캠퍼스 공간 데이터 기반 자연스러운 만남 미션 생성 */
+    /** [MVP 후순위] 미션 생성: MVP에서는 동선 겹침 장소 기반 단순 미션 생성으로 대체 */
     GeneratedMission generateMission(RouteOverlap routeOverlap, CampusContext campusData, UserProfilePair userProfiles);
 
     /** 퀴즈 생성: 프로필 기반 자연스러운 퀴즈 문항 생성 */
@@ -1662,10 +1620,9 @@ erDiagram
 ### 매칭 관련
 | 에러 상황 | 처리 방식 | HTTP 코드 |
 |-----------|-----------|-----------|
-| 매칭 가능한 상대 없음 | 슬롯 속성 조건 완화 제안 | 200 (빈 결과) |
+| 매칭 가능한 상대 없음 | 다음 배치에서 재시도 | 200 (빈 결과) |
 | 이미 차단된 사용자와 매칭 시도 | 자동 필터링 (사용자에게 노출 안 함) | - |
 | 배치 매칭 중 시스템 오류 | 실패 슬롯 기록, 다음 배치에서 재시도 | 500 (내부) |
-| 빠른 매칭 풀 매칭 실패 | 일반 풀로 자동 이동 | - |
 
 ### 상호작용 관련
 | 에러 상황 | 처리 방식 | HTTP 코드 |
