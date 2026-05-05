@@ -30,7 +30,7 @@ jobs:
           fi
 
           if [[ ! "$BRANCH_NAME" =~ IG-[0-9]+ ]]; then
-            echo "::error::브랜치 이름 형식이 올바르지 않습니다. 예: feature/IG-02-login, $BRANCH_NAME"
+            echo "::error::브랜치 이름 형식이 올바르지 않습니다. 예: feature/IG-02-login"
             exit 1
           fi
 
