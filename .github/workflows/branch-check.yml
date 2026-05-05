@@ -10,7 +10,7 @@ jobs:
       - name: Check Branch Name Pattern
         run: |
           # 생성된 브랜치 이름 가져오기
-          BRANCH_NAME="${{ github.event.ref }}"
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           
           # 'feature/IG-00...' 형태인지 검사하는 정규식
           # 예시: IG-123 형태가 포함되어 있는지 확인
