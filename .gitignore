@@ -18,3 +18,4 @@ Thumbs.db
 
 # AI ajent
 .kiro/specs/ilgi-yebo/.config.kiro
+backend/src/main/java/com/ilgiyebo/domain/chat/.kiro/*
