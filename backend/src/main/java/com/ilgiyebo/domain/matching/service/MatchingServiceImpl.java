@@ -11,7 +11,9 @@ import com.ilgiyebo.domain.SlotEntity;
 import com.ilgiyebo.domain.SlotPriority;
 import com.ilgiyebo.domain.SlotStatus;
 import com.ilgiyebo.domain.StageStatus;
+import com.ilgiyebo.domain.UserEntity;
 import com.ilgiyebo.domain.campus.entity.CampusBuildingPlaceEntity;
+import com.ilgiyebo.domain.campus.entity.CampusPathEntity;
 import com.ilgiyebo.domain.matching.exception.MatchingException;
 import com.ilgiyebo.dto.BatchMatchingResultDto;
 import com.ilgiyebo.dto.MatchedUserDto;
@@ -68,10 +70,10 @@ public class MatchingServiceImpl implements MatchingService {
 
         return slots.stream()
                 .map(slot -> {
-                    if (slot.getCurrentMatchId() == null) {
+                    if (slot.getCurrentMatch() == null) {
                         return SlotResponseDto.from(slot);
                     }
-                    MatchedUserDto matchedUser = resolveMatchedUser(slot.getCurrentMatchId(), userId);
+                    MatchedUserDto matchedUser = resolveMatchedUser(slot.getCurrentMatch().getId(), userId);
                     return SlotResponseDto.from(slot, matchedUser);
                 })
                 .toList();
@@ -85,9 +87,12 @@ public class MatchingServiceImpl implements MatchingService {
         }
 
         // TODO: 슬롯 해금 시 경험치 조건 필요
+        
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(MatchingException.USER_NOT_FOUND::toException);
 
         SlotEntity slot = SlotEntity.builder()
-                .userId(userId)
+                .user(user)
                 .priority(SlotPriority.HOBBY)
                 .status(SlotStatus.EMPTY)
                 .build();
@@ -168,7 +173,7 @@ public class MatchingServiceImpl implements MatchingService {
 
         // 2. 사용자별 빈 슬롯 그룹핑
         Map<UUID, List<SlotEntity>> slotsByUser = emptySlots.stream()
-                .collect(Collectors.groupingBy(SlotEntity::getUserId));
+                .collect(Collectors.groupingBy(slot -> slot.getUser().getId()));
 
         // 3. 매칭 대상 사용자 목록 (시간표가 있는 사용자만)
         Set<UUID> candidateUsers = new HashSet<>();
@@ -229,11 +234,11 @@ public class MatchingServiceImpl implements MatchingService {
 
                         // 슬롯 상태 업데이트
                         slotA.setStatus(SlotStatus.ACTIVE);
-                        slotA.setCurrentMatchId(match.getId());
+                        slotA.setCurrentMatch(match);
                         slotRepository.save(slotA);
 
                         slotB.setStatus(SlotStatus.ACTIVE);
-                        slotB.setCurrentMatchId(match.getId());
+                        slotB.setCurrentMatch(match);
                         slotRepository.save(slotB);
 
                         matchedSlots.add(slotA.getId());
@@ -261,13 +266,18 @@ public class MatchingServiceImpl implements MatchingService {
     /**
      * 매칭 엔티티를 생성하고 저장한다.
      */
-    private MatchEntity createMatch(UUID userA, UUID userB, SlotEntity slotA, SlotEntity slotB,
+    private MatchEntity createMatch(UUID userAId, UUID userBId, SlotEntity slotA, SlotEntity slotB,
                                     LocalDate cycleStart, LocalDate cycleEnd) {
+        UserEntity userA = userRepository.findById(userAId)
+                .orElseThrow(MatchingException.USER_NOT_FOUND::toException);
+        UserEntity userB = userRepository.findById(userBId)
+                .orElseThrow(MatchingException.USER_NOT_FOUND::toException);
+
         MatchEntity match = MatchEntity.builder()
-                .userAId(userA)
-                .userBId(userB)
-                .slotAId(slotA.getId())
-                .slotBId(slotB.getId())
+                .userA(userA)
+                .userB(userB)
+                .slotA(slotA)
+                .slotB(slotB)
                 .cycleStartDate(cycleStart)
                 .cycleEndDate(cycleEnd)
                 .status(MatchStatus.ACTIVE)
@@ -292,22 +302,53 @@ public class MatchingServiceImpl implements MatchingService {
     }
 
     /**
-     * 선택된 동선 겹침 정보를 기반으로 4단계 미션 데이터를 사전 생성한다.
-     * 겹침 장소 인근의 장소(카페, 매점 등)를 조회하여 미션 장소로 설정한다.
+     * 선택된 동선 겹침 정보를 기반으로 미션 데이터를 생성한다.
+     *
+     * 1. 이동 중 만나는 경우 (from != to): campus_path의 venue를 사용
+     * 2. 같은 건물에 머무르는 경우 (from == to): place를 사용
      */
     private void createMissionFromOverlap(UUID matchId, OverlapLocationDto overlap, LocalDate cycleEnd) {
-        String location = overlap.fromBuilding();
-        String activity = "만남";
+        String location;
+        String activity;
+        String description;
 
-        // 겹침 장소 인근 장소 조회 시도
-        Optional<CampusBuildingEntity> building = campusBuildingRepository.findByName(overlap.fromBuilding());
-        if (building.isPresent()) {
-            List<CampusBuildingPlaceEntity> places = placeRepository.findByBuildingId(building.get().getId());
-            if (!places.isEmpty()) {
-                // 첫 번째 장소를 미션 장소로 선택
-                CampusBuildingPlaceEntity selectedPlace = places.get(0);
-                location = selectedPlace.getName();
-                activity = selectedPlace.getType() + "에서 만남";
+        boolean sameBuilding = overlap.fromBuilding().equals(overlap.toBuilding());
+
+        if (sameBuilding) {
+            // 같은 건물에 머무르는 경우 → place 사용
+            location = overlap.fromBuilding();
+            activity = "만남";
+            description = overlap.fromBuilding() + "에서 " + overlap.timeRange() + " 시간대에 만남";
+
+            Optional<CampusBuildingEntity> building = campusBuildingRepository.findByName(overlap.fromBuilding());
+            if (building.isPresent()) {
+                List<CampusBuildingPlaceEntity> places = placeRepository.findByBuildingId(building.get().getId());
+                if (!places.isEmpty()) {
+                    CampusBuildingPlaceEntity selectedPlace = places.get(0);
+                    location = overlap.fromBuilding() + " " + selectedPlace.getFloor() + "층 " + selectedPlace.getName();
+                    activity = location + "에서 만나기";
+                    description = location + "에서 " + overlap.timeRange() + " 시간대에 만남";
+                }
+            }
+        } else {
+            // 이동 중 만나는 경우 → campus_path의 venue 사용
+            location = overlap.fromBuilding() + " → " + overlap.toBuilding();
+            activity = "이동 중 만남";
+            description = overlap.fromBuilding() + "에서 " + overlap.toBuilding() + "으로 이동 중 " + overlap.timeRange() + " 시간대에 만남";
+
+            Optional<CampusBuildingEntity> fromBuilding = campusBuildingRepository.findByName(overlap.fromBuilding());
+            Optional<CampusBuildingEntity> toBuilding = campusBuildingRepository.findByName(overlap.toBuilding());
+
+            if (fromBuilding.isPresent() && toBuilding.isPresent()) {
+                List<CampusPathEntity> paths = campusPathRepository.findByFromBuildingIdAndToBuildingId(
+                        fromBuilding.get().getId(), toBuilding.get().getId());
+                if (!paths.isEmpty()) {
+                    CampusPathEntity selectedPath = paths.get(0);
+                    String venueName = selectedPath.getVenue().getName();
+                    location = venueName;
+                    activity = venueName + "에서 만나기";
+                    description = overlap.fromBuilding() + " → " + overlap.toBuilding() + " 이동 중 " + venueName + "에서 " + overlap.timeRange() + " 시간대에 만남";
+                }
             }
         }
 
@@ -321,7 +362,7 @@ public class MatchingServiceImpl implements MatchingService {
                 .matchId(matchId)
                 .location(location)
                 .activity(activity)
-                .description(overlap.fromBuilding() + " 근처에서 " + overlap.timeRange() + " 시간대에 만남")
+                .description(description)
                 .deadline(deadline)
                 .confirmedBy(List.of())
                 .extended(false)
@@ -338,19 +379,18 @@ public class MatchingServiceImpl implements MatchingService {
     private MatchedUserDto resolveMatchedUser(UUID matchId, UUID currentUserId) {
         return matchRepository.findById(matchId)
                 .map(match -> {
-                    UUID partnerId = match.getUserAId().equals(currentUserId)
-                            ? match.getUserBId()
-                            : match.getUserAId();
-                    return userRepository.findById(partnerId)
-                            .map(user -> new MatchedUserDto(user.getId(), user.getNickname()))
-                            .orElse(null);
+                    UserEntity partner = match.getUserA().getId().equals(currentUserId)
+                            ? match.getUserB()
+                            : match.getUserA();
+                    return new MatchedUserDto(partner.getId(), partner.getNickname());
                 })
                 .orElse(null);
     }
 
     /**
-     * 두 스케줄 항목의 시간 겹침과 장소 일치/인접 여부를 확인한다.
+     * 두 스케줄 항목의 시간 겹침과 건물 일치/인접 여부를 확인한다.
      * 같은 건물이거나 CampusPath로 연결된 인접 건물이면 겹침으로 판정한다.
+     * campusBuilding이 파싱되지 않은 스케줄은 비교 대상에서 제외한다.
      */
     private Optional<OverlapLocationDto> findOverlap(ScheduleEntity sa, ScheduleEntity sb, DayOfWeek day) {
         LocalTime overlapStart = sa.getStartedAt().isAfter(sb.getStartedAt()) ? sa.getStartedAt() : sb.getStartedAt();
@@ -360,17 +400,24 @@ public class MatchingServiceImpl implements MatchingService {
             return Optional.empty();
         }
 
-        String placeA = sa.getPlace();
-        String placeB = sb.getPlace();
+        CampusBuildingEntity buildingA = sa.getCampusBuilding();
+        CampusBuildingEntity buildingB = sb.getCampusBuilding();
 
-        if (placeA.equals(placeB)) {
-            String timeRange = day.name() + " " + overlapStart.format(TIME_FMT) + "~" + overlapEnd.format(TIME_FMT);
-            return Optional.of(new OverlapLocationDto(placeA, placeB, timeRange));
+        // 건물 정보가 파싱되지 않은 경우 비교 불가
+        if (buildingA == null || buildingB == null) {
+            return Optional.empty();
         }
 
-        if (areAdjacentBuildings(placeA, placeB)) {
-            String timeRange = day.name() + " " + overlapStart.format(TIME_FMT) + "~" + overlapEnd.format(TIME_FMT);
-            return Optional.of(new OverlapLocationDto(placeA, placeB, timeRange));
+        String timeRange = day.name() + " " + overlapStart.format(TIME_FMT) + "~" + overlapEnd.format(TIME_FMT);
+
+        if (buildingA.getId().equals(buildingB.getId())) {
+            // 같은 건물
+            return Optional.of(new OverlapLocationDto(buildingA.getName(), buildingB.getName(), timeRange));
+        }
+
+        if (areAdjacentBuildings(buildingA.getId(), buildingB.getId())) {
+            // 인접 건물 (campus_path로 연결)
+            return Optional.of(new OverlapLocationDto(buildingA.getName(), buildingB.getName(), timeRange));
         }
 
         return Optional.empty();
@@ -378,21 +425,10 @@ public class MatchingServiceImpl implements MatchingService {
 
     /**
      * 두 건물이 CampusPath로 연결된 인접 건물인지 확인한다.
-     * 건물 이름으로 CampusBuilding을 조회한 뒤, 양방향 경로 존재 여부를 확인한다.
      */
-    private boolean areAdjacentBuildings(String placeA, String placeB) {
-        Optional<CampusBuildingEntity> buildingA = campusBuildingRepository.findByName(placeA);
-        Optional<CampusBuildingEntity> buildingB = campusBuildingRepository.findByName(placeB);
-
-        if (buildingA.isEmpty() || buildingB.isEmpty()) {
-            return false;
-        }
-
-        UUID idA = buildingA.get().getId();
-        UUID idB = buildingB.get().getId();
-
-        return !campusPathRepository.findByFromBuildingIdAndToBuildingId(idA, idB).isEmpty()
-                || !campusPathRepository.findByFromBuildingIdAndToBuildingId(idB, idA).isEmpty();
+    private boolean areAdjacentBuildings(UUID buildingIdA, UUID buildingIdB) {
+        return !campusPathRepository.findByFromBuildingIdAndToBuildingId(buildingIdA, buildingIdB).isEmpty()
+                || !campusPathRepository.findByFromBuildingIdAndToBuildingId(buildingIdB, buildingIdA).isEmpty();
     }
 
     private SlotEntity findSlotOrThrow(UUID slotId) {
@@ -401,7 +437,7 @@ public class MatchingServiceImpl implements MatchingService {
     }
 
     private void verifyOwnership(SlotEntity slot, UUID userId) {
-        if (!slot.getUserId().equals(userId)) {
+        if (!slot.getUser().getId().equals(userId)) {
             throw MatchingException.SLOT_NOT_OWNED.toException();
         }
     }
