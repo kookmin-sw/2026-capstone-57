@@ -388,8 +388,9 @@ public class MatchingServiceImpl implements MatchingService {
     }
 
     /**
-     * 두 스케줄 항목의 시간 겹침과 장소 일치/인접 여부를 확인한다.
+     * 두 스케줄 항목의 시간 겹침과 건물 일치/인접 여부를 확인한다.
      * 같은 건물이거나 CampusPath로 연결된 인접 건물이면 겹침으로 판정한다.
+     * campusBuilding이 파싱되지 않은 스케줄은 비교 대상에서 제외한다.
      */
     private Optional<OverlapLocationDto> findOverlap(ScheduleEntity sa, ScheduleEntity sb, DayOfWeek day) {
         LocalTime overlapStart = sa.getStartedAt().isAfter(sb.getStartedAt()) ? sa.getStartedAt() : sb.getStartedAt();
@@ -399,17 +400,24 @@ public class MatchingServiceImpl implements MatchingService {
             return Optional.empty();
         }
 
-        String placeA = sa.getPlace();
-        String placeB = sb.getPlace();
+        CampusBuildingEntity buildingA = sa.getCampusBuilding();
+        CampusBuildingEntity buildingB = sb.getCampusBuilding();
 
-        if (placeA.equals(placeB)) {
-            String timeRange = day.name() + " " + overlapStart.format(TIME_FMT) + "~" + overlapEnd.format(TIME_FMT);
-            return Optional.of(new OverlapLocationDto(placeA, placeB, timeRange));
+        // 건물 정보가 파싱되지 않은 경우 비교 불가
+        if (buildingA == null || buildingB == null) {
+            return Optional.empty();
         }
 
-        if (areAdjacentBuildings(placeA, placeB)) {
-            String timeRange = day.name() + " " + overlapStart.format(TIME_FMT) + "~" + overlapEnd.format(TIME_FMT);
-            return Optional.of(new OverlapLocationDto(placeA, placeB, timeRange));
+        String timeRange = day.name() + " " + overlapStart.format(TIME_FMT) + "~" + overlapEnd.format(TIME_FMT);
+
+        if (buildingA.getId().equals(buildingB.getId())) {
+            // 같은 건물
+            return Optional.of(new OverlapLocationDto(buildingA.getName(), buildingB.getName(), timeRange));
+        }
+
+        if (areAdjacentBuildings(buildingA.getId(), buildingB.getId())) {
+            // 인접 건물 (campus_path로 연결)
+            return Optional.of(new OverlapLocationDto(buildingA.getName(), buildingB.getName(), timeRange));
         }
 
         return Optional.empty();
@@ -417,21 +425,10 @@ public class MatchingServiceImpl implements MatchingService {
 
     /**
      * 두 건물이 CampusPath로 연결된 인접 건물인지 확인한다.
-     * 건물 이름으로 CampusBuilding을 조회한 뒤, 양방향 경로 존재 여부를 확인한다.
      */
-    private boolean areAdjacentBuildings(String placeA, String placeB) {
-        Optional<CampusBuildingEntity> buildingA = campusBuildingRepository.findByName(placeA);
-        Optional<CampusBuildingEntity> buildingB = campusBuildingRepository.findByName(placeB);
-
-        if (buildingA.isEmpty() || buildingB.isEmpty()) {
-            return false;
-        }
-
-        UUID idA = buildingA.get().getId();
-        UUID idB = buildingB.get().getId();
-
-        return !campusPathRepository.findByFromBuildingIdAndToBuildingId(idA, idB).isEmpty()
-                || !campusPathRepository.findByFromBuildingIdAndToBuildingId(idB, idA).isEmpty();
+    private boolean areAdjacentBuildings(UUID buildingIdA, UUID buildingIdB) {
+        return !campusPathRepository.findByFromBuildingIdAndToBuildingId(buildingIdA, buildingIdB).isEmpty()
+                || !campusPathRepository.findByFromBuildingIdAndToBuildingId(buildingIdB, buildingIdA).isEmpty();
     }
 
     private SlotEntity findSlotOrThrow(UUID slotId) {
