@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "Interaction", description = "Matching interaction stage management API")
+@Tag(name = "Interaction", description = "매칭 상호작용 단계 관리 API")
 @RestController
 @RequestMapping("/api/interactions")
 @RequiredArgsConstructor
@@ -26,7 +26,7 @@ public class InteractionController {
     private final QuizService quizService;
     private final HintQuestionService hintQuestionService;
 
-    @Operation(summary = "Get interaction state")
+    @Operation(summary = "현재 상호작용 상태 조회")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{matchId}")
     public ResponseEntity<InteractionStateDto> getInteractionState(
@@ -35,7 +35,7 @@ public class InteractionController {
         return ResponseEntity.ok(interactionService.getInteractionState(matchId, userId));
     }
 
-    @Operation(summary = "Accept or reject stage advance")
+    @Operation(summary = "다음 단계 진행 수락 및 거절")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{matchId}/advance")
     public ResponseEntity<InteractionStateDto> respondToStageAdvance(
@@ -43,10 +43,10 @@ public class InteractionController {
             @PathVariable UUID matchId,
             @Valid @RequestBody StageAdvanceRequest request) {
         return ResponseEntity.ok(
-            interactionService.respondToStageAdvance(matchId, userId, request.accept()));
+                interactionService.respondToStageAdvance(matchId, userId, request.accept()));
     }
 
-    @Operation(summary = "Terminate match")
+    @Operation(summary = "매칭 강제 종료")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{matchId}/terminate")
     public ResponseEntity<Void> terminateMatch(
@@ -59,7 +59,7 @@ public class InteractionController {
 
     // --- Quiz API ---
 
-    @Operation(summary = "Complete quiz stage")
+    @Operation(summary = "퀴즈 단계 완료 처리")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{matchId}/quiz/complete")
     public ResponseEntity<InteractionStateDto> completeQuiz(
@@ -68,7 +68,7 @@ public class InteractionController {
         return ResponseEntity.ok(interactionService.completeQuiz(matchId, userId));
     }
 
-    @Operation(summary = "Get quiz questions")
+    @Operation(summary = "퀴즈 문항 조회 (AI 기반 생성)")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{matchId}/quiz")
     public ResponseEntity<List<QuizQuestionDto>> getQuiz(
@@ -77,7 +77,7 @@ public class InteractionController {
         return ResponseEntity.ok(quizService.getQuiz(matchId, userId));
     }
 
-    @Operation(summary = "Submit quiz answers")
+    @Operation(summary = "퀴즈 답안 제출 및 채점")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{matchId}/quiz/submit")
     public ResponseEntity<QuizResponseDto> submitQuiz(
@@ -89,7 +89,7 @@ public class InteractionController {
 
     // --- Hint Question API ---
 
-    @Operation(summary = "Send hint question")
+    @Operation(summary = "힌트 질문 전송")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{matchId}/hints")
     public ResponseEntity<HintQuestionDto> sendHintQuestion(
@@ -97,10 +97,10 @@ public class InteractionController {
             @PathVariable UUID matchId,
             @Valid @RequestBody SendHintQuestionRequest request) {
         return ResponseEntity.ok(
-            hintQuestionService.sendHintQuestion(matchId, userId, request.question()));
+                hintQuestionService.sendHintQuestion(matchId, userId, request.question()));
     }
 
-    @Operation(summary = "Answer hint question")
+    @Operation(summary = "힌트 질문에 대한 답변 등록")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{matchId}/hints/{questionId}/answer")
     public ResponseEntity<HintQuestionDto> answerHintQuestion(
@@ -109,10 +109,10 @@ public class InteractionController {
             @PathVariable UUID questionId,
             @Valid @RequestBody AnswerHintQuestionRequest request) {
         return ResponseEntity.ok(
-            hintQuestionService.answerHintQuestion(questionId, userId, request.answer()));
+                hintQuestionService.answerHintQuestion(questionId, userId, request.answer()));
     }
 
-    @Operation(summary = "Get hint questions list")
+    @Operation(summary = "힌트 질문 및 답변 목록 전체 조회")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{matchId}/hints")
     public ResponseEntity<List<HintQuestionDto>> getHintQuestions(
