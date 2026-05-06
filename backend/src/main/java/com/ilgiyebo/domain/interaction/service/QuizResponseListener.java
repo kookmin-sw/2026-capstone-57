@@ -12,10 +12,6 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * AI가 생성한 퀴즈 결과를 SQS에서 수신하는 Consumer.
- * 수신된 퀴즈 데이터를 InteractionEntity에 저장한다.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -31,18 +27,17 @@ public class QuizResponseListener {
                 messageJson, QuizGenerateResponseMessage.class);
 
             if (!"SUCCESS".equals(response.status())) {
-                log.warn("AI 퀴즈 생성 실패 응답: matchId={}, status={}",
+                log.warn("AI quiz generation failed: matchId={}, status={}",
                     response.matchId(), response.status());
                 return;
             }
 
             if (response.quiz() == null || response.quiz().questions() == null
                     || response.quiz().questions().isEmpty()) {
-                log.warn("AI 퀴즈 응답에 문항이 없음: matchId={}", response.matchId());
+                log.warn("AI quiz response has no questions: matchId={}", response.matchId());
                 return;
             }
 
-            // AI 응답 형식 → 내부 QuizQuestionDto로 변환
             List<QuizQuestionDto> quizData = response.quiz().questions().stream()
                 .map(this::toQuizQuestionDto)
                 .toList();
@@ -50,11 +45,11 @@ public class QuizResponseListener {
             UUID matchId = UUID.fromString(response.matchId());
             interactionService.storeQuizData(matchId, quizData);
 
-            log.info("AI 퀴즈 응답 수신 및 저장 완료: matchId={}, questionCount={}",
+            log.info("AI quiz response received and stored: matchId={}, questionCount={}",
                 response.matchId(), quizData.size());
 
         } catch (Exception e) {
-            log.error("AI 퀴즈 응답 처리 실패: {}", messageJson, e);
+            log.error("Failed to process AI quiz response: {}", messageJson, e);
         }
     }
 

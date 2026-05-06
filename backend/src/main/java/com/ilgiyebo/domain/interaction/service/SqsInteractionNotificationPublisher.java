@@ -11,12 +11,6 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * SQS 방식으로 알림을 발행하는 구현체.
- * Spring AMQP(RabbitMQ)를 Amazon SQS 호환 브로커로 사용하거나,
- * 추후 AWS SDK SQS Client로 교체 가능하도록 추상화한다.
- * 현재는 Spring AMQP의 RabbitTemplate을 통해 메시지를 발행한다.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -81,11 +75,11 @@ public class SqsInteractionNotificationPublisher implements InteractionNotificat
         try {
             String json = objectMapper.writeValueAsString(message);
             rabbitTemplate.convertAndSend(exchange, routingKey, json);
-            log.debug("알림 발행 완료: exchange={}, routingKey={}, message={}", exchange, routingKey, json);
+            log.debug("Notification published: exchange={}, routingKey={}", exchange, routingKey);
         } catch (JsonProcessingException e) {
-            log.error("알림 메시지 직렬화 실패: {}", message, e);
+            log.error("Failed to serialize notification message: {}", message, e);
         } catch (Exception e) {
-            log.error("알림 발행 실패: exchange={}, routingKey={}", exchange, routingKey, e);
+            log.error("Failed to publish notification: exchange={}, routingKey={}", exchange, routingKey, e);
         }
     }
 }

@@ -13,7 +13,7 @@ import java.util.UUID;
 
 /**
  * AI에게 퀴즈 생성을 요청하는 SQS Producer.
- * 매칭 성사 시 또는 사용자가 최초 퀴즈 조회 시 호출된다.
+ * 매칭 당사자 중 한 사용자가 최초 퀴즈 조회 시 호출된다.
  */
 @Slf4j
 @Component
@@ -28,16 +28,16 @@ public class QuizRequestPublisher {
 
     /**
      * AI에게 퀴즈 생성 요청을 SQS로 발행한다.
-     * DB에서 조회한 상대방 프로필 정보를 함께 전달한다.
+     * DB에서 조회한 상대방의 프로필 정보를 함께 전달한다.
      *
      * @param matchId       매칭 ID
-     * @param requesterId   요청자 (퀴즈를 풀 사용자) ID
-     * @param targetUserId  퀴즈 대상 (상대방) ID
+     * @param requesterId   요청자(퀴즈를 풀 사용자) ID
+     * @param targetUserId  퀴즈 대상(상대방) ID
      * @param targetProfile 상대방 프로필 정보
      */
     public void requestQuizGeneration(UUID matchId, UUID requesterId, UUID targetUserId, TargetProfile targetProfile) {
         QuizGenerateRequestMessage message = QuizGenerateRequestMessage.of(
-            matchId, requesterId, targetUserId, targetProfile);
+                matchId, requesterId, targetUserId, targetProfile);
 
         try {
             String json = objectMapper.writeValueAsString(message);
