@@ -1,7 +1,8 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.interaction.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
 import com.ilgiyebo.config.JsonStringListConverter;
+import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -35,6 +36,10 @@ public class InteractionEntity extends BaseSchema {
     @Convert(converter = JsonStringListConverter.class)
     @Column(name = "quiz_completed_by", columnDefinition = "JSON")
     private List<String> quizCompletedBy;
+
+    @Convert(converter = JsonQuizDataConverter.class)
+    @Column(name = "quiz_data", columnDefinition = "JSON")
+    private List<QuizQuestionDto> quizData;
 
     @Column(name = "chat_start_time")
     private Instant chatStartTime;
