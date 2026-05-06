@@ -25,6 +25,7 @@ public class CampusBuildingPlaceEntity extends BaseSchema {
     @Column(nullable = false)
     private int floor;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 100)
-    private String type;
+    private PlaceType type;
 }
