@@ -6,7 +6,6 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Entity
 @Table(name = "`MATCH`")
@@ -18,17 +17,21 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class MatchEntity extends BaseSchema {
 
-    @Column(name = "user_a_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID userAId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_a_id", nullable = false)
+    private UserEntity userA;
 
-    @Column(name = "user_b_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID userBId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_b_id", nullable = false)
+    private UserEntity userB;
 
-    @Column(name = "slot_a_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID slotAId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "slot_a_id", nullable = false)
+    private SlotEntity slotA;
 
-    @Column(name = "slot_b_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID slotBId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "slot_b_id", nullable = false)
+    private SlotEntity slotB;
 
     @Builder.Default
     @Column(name = "is_quick_match", nullable = false)

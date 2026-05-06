@@ -113,7 +113,7 @@ public class ScheduleService {
 
         for (CampusBuildingEntity building : buildings) {
             if (place.startsWith(building.getName())) {
-                entity.setCampusBuildingId(building.getId());
+                entity.setCampusBuilding(building);
 
                 String remaining = place.substring(building.getName().length());
                 Matcher matcher = FLOOR_PATTERN.matcher(remaining);

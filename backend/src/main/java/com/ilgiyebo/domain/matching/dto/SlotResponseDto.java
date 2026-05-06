@@ -19,9 +19,9 @@ public record SlotResponseDto(
     public static SlotResponseDto from(SlotEntity entity) {
         return new SlotResponseDto(
             entity.getId(),
-            entity.getUserId(),
+            entity.getUser().getId(),
             entity.getPriority(),
-            entity.getCurrentMatchId(),
+            entity.getCurrentMatch() != null ? entity.getCurrentMatch().getId() : null,
             entity.isQuickMatch(),
             entity.getStatus(),
             null
@@ -31,9 +31,9 @@ public record SlotResponseDto(
     public static SlotResponseDto from(SlotEntity entity, @Nullable MatchedUserDto matchedUser) {
         return new SlotResponseDto(
             entity.getId(),
-            entity.getUserId(),
+            entity.getUser().getId(),
             entity.getPriority(),
-            entity.getCurrentMatchId(),
+            entity.getCurrentMatch() != null ? entity.getCurrentMatch().getId() : null,
             entity.isQuickMatch(),
             entity.getStatus(),
             matchedUser

@@ -114,7 +114,7 @@ public class AuthServiceImpl implements AuthService {
 
         // 초기 슬롯 1개 자동 부여
         SlotEntity slot = SlotEntity.builder()
-                .userId(user.getId())
+                .user(user)
                 .status(SlotStatus.EMPTY)
                 .build();
         slotRepository.save(slot);

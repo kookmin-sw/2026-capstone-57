@@ -17,8 +17,9 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class SlotEntity extends BaseSchema {
 
-    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity user;
 
     /**
      * 매칭 우선순위: 이 슬롯에서 매칭할 때 어떤 기준을 우선시할지.
@@ -29,8 +30,9 @@ public class SlotEntity extends BaseSchema {
     @Column(name = "priority", nullable = false)
     private SlotPriority priority = SlotPriority.HOBBY;
 
-    @Column(name = "current_match_id", columnDefinition = "BINARY(16)")
-    private UUID currentMatchId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_match_id")
+    private MatchEntity currentMatch;
 
     @Builder.Default
     @Column(name = "is_quick_match", nullable = false)

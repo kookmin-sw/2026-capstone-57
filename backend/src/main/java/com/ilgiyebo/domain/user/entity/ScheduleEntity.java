@@ -2,6 +2,7 @@ package com.ilgiyebo.domain;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ilgiyebo.common.entity.BaseSchema;
+import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -42,8 +43,9 @@ public class ScheduleEntity extends BaseSchema {
     @NotNull
     private String place;
 
-    @Column(name = "campus_building_id", columnDefinition = "BINARY(16)")
-    private UUID campusBuildingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "campus_building_id")
+    private CampusBuildingEntity campusBuilding;
 
     @Column(name = "floor")
     private Integer floor;

@@ -11,6 +11,7 @@ import com.ilgiyebo.domain.SlotEntity;
 import com.ilgiyebo.domain.SlotPriority;
 import com.ilgiyebo.domain.SlotStatus;
 import com.ilgiyebo.domain.StageStatus;
+import com.ilgiyebo.domain.UserEntity;
 import com.ilgiyebo.domain.campus.entity.CampusBuildingPlaceEntity;
 import com.ilgiyebo.domain.campus.entity.CampusPathEntity;
 import com.ilgiyebo.domain.matching.exception.MatchingException;
@@ -69,10 +70,10 @@ public class MatchingServiceImpl implements MatchingService {
 
         return slots.stream()
                 .map(slot -> {
-                    if (slot.getCurrentMatchId() == null) {
+                    if (slot.getCurrentMatch() == null) {
                         return SlotResponseDto.from(slot);
                     }
-                    MatchedUserDto matchedUser = resolveMatchedUser(slot.getCurrentMatchId(), userId);
+                    MatchedUserDto matchedUser = resolveMatchedUser(slot.getCurrentMatch().getId(), userId);
                     return SlotResponseDto.from(slot, matchedUser);
                 })
                 .toList();
@@ -86,9 +87,12 @@ public class MatchingServiceImpl implements MatchingService {
         }
 
         // TODO: 슬롯 해금 시 경험치 조건 필요
+        
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(MatchingException.USER_NOT_FOUND::toException);
 
         SlotEntity slot = SlotEntity.builder()
-                .userId(userId)
+                .user(user)
                 .priority(SlotPriority.HOBBY)
                 .status(SlotStatus.EMPTY)
                 .build();
@@ -169,7 +173,7 @@ public class MatchingServiceImpl implements MatchingService {
 
         // 2. 사용자별 빈 슬롯 그룹핑
         Map<UUID, List<SlotEntity>> slotsByUser = emptySlots.stream()
-                .collect(Collectors.groupingBy(SlotEntity::getUserId));
+                .collect(Collectors.groupingBy(slot -> slot.getUser().getId()));
 
         // 3. 매칭 대상 사용자 목록 (시간표가 있는 사용자만)
         Set<UUID> candidateUsers = new HashSet<>();
@@ -230,11 +234,11 @@ public class MatchingServiceImpl implements MatchingService {
 
                         // 슬롯 상태 업데이트
                         slotA.setStatus(SlotStatus.ACTIVE);
-                        slotA.setCurrentMatchId(match.getId());
+                        slotA.setCurrentMatch(match);
                         slotRepository.save(slotA);
 
                         slotB.setStatus(SlotStatus.ACTIVE);
-                        slotB.setCurrentMatchId(match.getId());
+                        slotB.setCurrentMatch(match);
                         slotRepository.save(slotB);
 
                         matchedSlots.add(slotA.getId());
@@ -262,13 +266,18 @@ public class MatchingServiceImpl implements MatchingService {
     /**
      * 매칭 엔티티를 생성하고 저장한다.
      */
-    private MatchEntity createMatch(UUID userA, UUID userB, SlotEntity slotA, SlotEntity slotB,
+    private MatchEntity createMatch(UUID userAId, UUID userBId, SlotEntity slotA, SlotEntity slotB,
                                     LocalDate cycleStart, LocalDate cycleEnd) {
+        UserEntity userA = userRepository.findById(userAId)
+                .orElseThrow(MatchingException.USER_NOT_FOUND::toException);
+        UserEntity userB = userRepository.findById(userBId)
+                .orElseThrow(MatchingException.USER_NOT_FOUND::toException);
+
         MatchEntity match = MatchEntity.builder()
-                .userAId(userA)
-                .userBId(userB)
-                .slotAId(slotA.getId())
-                .slotBId(slotB.getId())
+                .userA(userA)
+                .userB(userB)
+                .slotA(slotA)
+                .slotB(slotB)
                 .cycleStartDate(cycleStart)
                 .cycleEndDate(cycleEnd)
                 .status(MatchStatus.ACTIVE)
@@ -370,12 +379,10 @@ public class MatchingServiceImpl implements MatchingService {
     private MatchedUserDto resolveMatchedUser(UUID matchId, UUID currentUserId) {
         return matchRepository.findById(matchId)
                 .map(match -> {
-                    UUID partnerId = match.getUserAId().equals(currentUserId)
-                            ? match.getUserBId()
-                            : match.getUserAId();
-                    return userRepository.findById(partnerId)
-                            .map(user -> new MatchedUserDto(user.getId(), user.getNickname()))
-                            .orElse(null);
+                    UserEntity partner = match.getUserA().getId().equals(currentUserId)
+                            ? match.getUserB()
+                            : match.getUserA();
+                    return new MatchedUserDto(partner.getId(), partner.getNickname());
                 })
                 .orElse(null);
     }
@@ -433,7 +440,7 @@ public class MatchingServiceImpl implements MatchingService {
     }
 
     private void verifyOwnership(SlotEntity slot, UUID userId) {
-        if (!slot.getUserId().equals(userId)) {
+        if (!slot.getUser().getId().equals(userId)) {
             throw MatchingException.SLOT_NOT_OWNED.toException();
         }
     }
