@@ -11,7 +11,7 @@ import com.ilgiyebo.domain.SlotEntity;
 import com.ilgiyebo.domain.SlotPriority;
 import com.ilgiyebo.domain.SlotStatus;
 import com.ilgiyebo.domain.StageStatus;
-import com.ilgiyebo.domain.campus.entity.PlaceEntity;
+import com.ilgiyebo.domain.campus.entity.CampusBuildingPlaceEntity;
 import com.ilgiyebo.domain.matching.exception.MatchingException;
 import com.ilgiyebo.dto.BatchMatchingResultDto;
 import com.ilgiyebo.dto.MatchedUserDto;
@@ -302,10 +302,10 @@ public class MatchingServiceImpl implements MatchingService {
         // 겹침 장소 인근 장소 조회 시도
         Optional<CampusBuildingEntity> building = campusBuildingRepository.findByName(overlap.fromBuilding());
         if (building.isPresent()) {
-            List<PlaceEntity> places = placeRepository.findByBuildingId(building.get().getId());
+            List<CampusBuildingPlaceEntity> places = placeRepository.findByBuildingId(building.get().getId());
             if (!places.isEmpty()) {
                 // 첫 번째 장소를 미션 장소로 선택
-                PlaceEntity selectedPlace = places.get(0);
+                CampusBuildingPlaceEntity selectedPlace = places.get(0);
                 location = selectedPlace.getName();
                 activity = selectedPlace.getType() + "에서 만남";
             }
