@@ -1,7 +1,6 @@
 package com.ilgiyebo.service;
 
-import com.ilgiyebo.domain.CampusBuildingEntity;
-import com.ilgiyebo.domain.CampusVenueEntity;
+import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
 import com.ilgiyebo.domain.InteractionEntity;
 import com.ilgiyebo.domain.MatchEntity;
 import com.ilgiyebo.domain.MatchStatus;
@@ -12,6 +11,7 @@ import com.ilgiyebo.domain.SlotEntity;
 import com.ilgiyebo.domain.SlotPriority;
 import com.ilgiyebo.domain.SlotStatus;
 import com.ilgiyebo.domain.StageStatus;
+import com.ilgiyebo.domain.campus.entity.PlaceEntity;
 import com.ilgiyebo.domain.matching.exception.MatchingException;
 import com.ilgiyebo.dto.BatchMatchingResultDto;
 import com.ilgiyebo.dto.MatchedUserDto;
@@ -19,9 +19,9 @@ import com.ilgiyebo.dto.OverlapLocationDto;
 import com.ilgiyebo.dto.RouteOverlapDto;
 import com.ilgiyebo.dto.SlotResponseDto;
 import com.ilgiyebo.repository.BlockRepository;
-import com.ilgiyebo.repository.CampusBuildingRepository;
-import com.ilgiyebo.repository.CampusPathRepository;
-import com.ilgiyebo.repository.CampusVenueRepository;
+import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
+import com.ilgiyebo.domain.campus.repository.CampusPathRepository;
+import com.ilgiyebo.domain.campus.repository.PlaceRepository;
 import com.ilgiyebo.repository.InteractionRepository;
 import com.ilgiyebo.repository.MatchRepository;
 import com.ilgiyebo.repository.MissionRepository;
@@ -56,7 +56,7 @@ public class MatchingServiceImpl implements MatchingService {
     private final BlockRepository blockRepository;
     private final CampusBuildingRepository campusBuildingRepository;
     private final CampusPathRepository campusPathRepository;
-    private final CampusVenueRepository campusVenueRepository;
+    private final PlaceRepository placeRepository;
     private final MatchRepository matchRepository;
     private final MissionRepository missionRepository;
     private final InteractionRepository interactionRepository;
@@ -293,23 +293,21 @@ public class MatchingServiceImpl implements MatchingService {
 
     /**
      * 선택된 동선 겹침 정보를 기반으로 4단계 미션 데이터를 사전 생성한다.
-     * 겹침 장소 인근의 거점(카페, 매점 등)을 조회하여 미션 장소로 설정한다.
+     * 겹침 장소 인근의 장소(카페, 매점 등)를 조회하여 미션 장소로 설정한다.
      */
     private void createMissionFromOverlap(UUID matchId, OverlapLocationDto overlap, LocalDate cycleEnd) {
         String location = overlap.fromBuilding();
         String activity = "만남";
 
-        // 겹침 장소 인근 거점 조회 시도
+        // 겹침 장소 인근 장소 조회 시도
         Optional<CampusBuildingEntity> building = campusBuildingRepository.findByName(overlap.fromBuilding());
         if (building.isPresent()) {
-            List<CampusVenueEntity> nearbyVenues = campusVenueRepository.findByBuildingId(building.get().getId());
-            if (!nearbyVenues.isEmpty()) {
-                // 만남 적합도가 가장 높은 거점 선택
-                CampusVenueEntity bestVenue = nearbyVenues.stream()
-                        .max(Comparator.comparingInt(CampusVenueEntity::getMeetingSuitability))
-                        .get();
-                location = bestVenue.getName();
-                activity = bestVenue.getType().name() + "에서 만남";
+            List<PlaceEntity> places = placeRepository.findByBuildingId(building.get().getId());
+            if (!places.isEmpty()) {
+                // 첫 번째 장소를 미션 장소로 선택
+                PlaceEntity selectedPlace = places.get(0);
+                location = selectedPlace.getName();
+                activity = selectedPlace.getType() + "에서 만남";
             }
         }
 
@@ -393,8 +391,8 @@ public class MatchingServiceImpl implements MatchingService {
         UUID idA = buildingA.get().getId();
         UUID idB = buildingB.get().getId();
 
-        return campusPathRepository.findByFromBuildingIdAndToBuildingId(idA, idB).isPresent()
-                || campusPathRepository.findByFromBuildingIdAndToBuildingId(idB, idA).isPresent();
+        return !campusPathRepository.findByFromBuildingIdAndToBuildingId(idA, idB).isEmpty()
+                || !campusPathRepository.findByFromBuildingIdAndToBuildingId(idB, idA).isEmpty();
     }
 
     private SlotEntity findSlotOrThrow(UUID slotId) {

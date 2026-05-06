@@ -1,12 +1,10 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.campus.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.config.JsonStringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -19,19 +17,15 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class CampusPathEntity extends BaseSchema {
 
-    @Column(name = "from_building_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID fromBuildingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "from_building_id", nullable = false)
+    private CampusBuildingEntity fromBuilding;
 
-    @Column(name = "to_building_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID toBuildingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "to_building_id", nullable = false)
+    private CampusBuildingEntity toBuilding;
 
-    @Column(name = "walking_time_minutes", nullable = false)
-    private int walkingTimeMinutes;
-
-    @Convert(converter = JsonStringListConverter.class)
-    @Column(name = "passing_venue_ids", columnDefinition = "JSON")
-    private List<String> passingVenueIds;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "venue_id", nullable = false)
+    private CampusVenueEntity venue;
 }
