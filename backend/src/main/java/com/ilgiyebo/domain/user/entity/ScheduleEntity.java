@@ -42,6 +42,12 @@ public class ScheduleEntity extends BaseSchema {
     @NotNull
     private String place;
 
+    @Column(name = "campus_building_id", columnDefinition = "BINARY(16)")
+    private UUID campusBuildingId;
+
+    @Column(name = "floor")
+    private Integer floor;
+
     @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
     private UUID userId;
 
