@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Entity
@@ -21,9 +21,22 @@ public class PlanEntryEntity extends BaseSchema {
     @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
     private UUID userId;
 
-    @Column(name = "entry_date", nullable = false)
-    private LocalDate entryDate;
+    @Column(name = "day_of_week", nullable = false)
+    private int dayOfWeek;
 
-    @Column(columnDefinition = "JSON")
-    private String entries;
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
+
+    @Column(name = "end_time", nullable = false)
+    private LocalTime endTime;
+
+    @Column
+    private String location;
+
+    @Column(name = "name")
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private PlanItemType type;
 }
