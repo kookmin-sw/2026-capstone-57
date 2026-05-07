@@ -28,12 +28,6 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
-
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -49,6 +43,14 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
+
+    cloud:
+      aws:
+        region:
+          static: ${AWS_REGION:ap-northeast-2}
+        credentials:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          secret-key: ${AWS_SECRET_ACCESS_KEY:}
 
 server:
   port: 8080
@@ -84,3 +86,16 @@ aws:
   region: ${AWS_REGION:ap-northeast-2}
   bedrock:
     model-id: ${BEDROCK_MODEL_ID:anthropic.claude-3-sonnet-20240229-v1:0}
+
+sqs:
+  queue:
+    stage: interaction-stage-queue
+    match: interaction-match-queue
+    quiz-request: ai-quiz-request-queue
+    hint:
+      question: interaction-hint-question-queue
+      answer: interaction-hint-answer-queue
+
+quiz:
+  response:
+    queue: ai-quiz-response-queue
