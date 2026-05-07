@@ -10,4 +10,10 @@ public record QuizResponseDto(
     Integer correctCount,
     Integer totalCount,
     String partnerSummary
-) {}
+) {
+    // from 메서드 추가
+    public static QuizResponseDto from(UUID matchId, List<QuizQuestionDto> questions,
+                                       int correctCount, int totalCount, String summary) {
+        return new QuizResponseDto(matchId, questions, true, correctCount, totalCount, summary);
+    }
+}

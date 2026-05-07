@@ -59,15 +59,16 @@ public class QuizServiceImpl implements QuizService {
         UserEntity partner = userRepository.findById(partnerId)
                 .orElseThrow(InteractionException.MATCH_NOT_FOUND::toException);
 
-        TargetProfile targetProfile = new TargetProfile(
-                partner.getName(),
-                partner.getNickname(),
-                partner.getUniversity(),
-                partner.getMajor(),
-                partner.getHobbies(),
-                partner.getInterests(),
-                partner.getPersonalityTypes()
-        );
+        // 파라미터가 많은 객체 생성을 빌더 패턴으로 가독성 있게 수정
+        TargetProfile targetProfile = TargetProfile.builder()
+                .name(partner.getName())
+                .nickname(partner.getNickname())
+                .university(partner.getUniversity())
+                .major(partner.getMajor())
+                .hobbies(partner.getHobbies())
+                .interests(partner.getInterests())
+                .personalityType(partner.getPersonalityTypes())
+                .build();
 
         quizRequestPublisher.requestQuizGeneration(matchId, userId, partnerId, targetProfile);
         log.info("AI 퀴즈 생성 요청 완료: 매칭ID={}, 대상유저ID={}", matchId, partnerId);
@@ -106,7 +107,6 @@ public class QuizServiceImpl implements QuizService {
             throw InteractionException.QUIZ_ANSWER_COUNT_MISMATCH.toException();
         }
 
-        // 유저의 답안(quizAnswer)을 저장하기 위해 새로운 리스트 생성 및 채점
         List<QuizQuestionDto> updatedQuestions = new ArrayList<>();
         int correctCount = 0;
 
@@ -114,7 +114,6 @@ public class QuizServiceImpl implements QuizService {
             QuizQuestionDto oldQ = originalQuestions.get(i);
             Integer userAnswer = userAnswers.get(i);
 
-            // Record는 불변이므로 새로 생성하여 quizAnswer 부분만 채움
             QuizQuestionDto updatedQ = new QuizQuestionDto(
                     oldQ.quizIndex(),
                     oldQ.question(),
@@ -129,7 +128,6 @@ public class QuizServiceImpl implements QuizService {
             }
         }
 
-        // 유저 답안이 포함된 퀴즈 데이터를 DB에 다시 업데이트
         interaction.setQuizData(updatedQuestions);
         interactionRepository.save(interaction);
 
@@ -137,10 +135,10 @@ public class QuizServiceImpl implements QuizService {
 
         String partnerSummary = String.format("정답 개수: %d/%d", correctCount, totalCount);
 
-        return new QuizResponseDto(
+        // from 정적 팩토리 메서드 사용
+        return QuizResponseDto.from(
                 matchId,
-                updatedQuestions, // 업데이트된 퀴즈 목록을 반환
-                true,
+                updatedQuestions,
                 correctCount,
                 totalCount,
                 partnerSummary

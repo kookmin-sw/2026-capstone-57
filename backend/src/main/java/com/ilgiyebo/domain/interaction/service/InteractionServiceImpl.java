@@ -1,7 +1,7 @@
 package com.ilgiyebo.domain.interaction.service;
 
 import com.ilgiyebo.domain.interaction.dto.InteractionStateDto;
-import com.ilgiyebo.domain.interaction.dto.InteractionStateDto.*;
+import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.exception.InteractionException;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
@@ -34,7 +34,9 @@ public class InteractionServiceImpl implements InteractionService {
         MatchEntity match = findMatch(matchId);
         validateUserInMatch(match, userId);
         InteractionEntity interaction = findInteraction(matchId);
-        return toDto(interaction, match);
+
+        // DTO의 from 메서드 사용
+        return InteractionStateDto.from(interaction, match);
     }
 
     @Override
@@ -55,8 +57,8 @@ public class InteractionServiceImpl implements InteractionService {
         interactionRepository.save(interaction);
 
         notificationPublisher.publishMatchTerminated(
-            matchId, match.getUserA().getId(), match.getUserB().getId(), reason);
-        log.info("Match terminated: matchId={}, reason={}", matchId, reason);
+                matchId, match.getUserA().getId(), match.getUserB().getId(), reason);
+        log.info("매칭 종료 완료: 매칭ID={}, 사유={}", matchId, reason);
     }
 
     @Override
@@ -93,18 +95,19 @@ public class InteractionServiceImpl implements InteractionService {
             interactionRepository.save(interaction);
 
             notificationPublisher.publishStageCompleted(
-                matchId, userId, completedStage, 2);
+                    matchId, userId, completedStage, 2);
         } else {
             interaction.setStageStatus(StageStatus.WAITING);
             interactionRepository.save(interaction);
         }
 
-        return toDto(interaction, match);
+        // DTO의 from 메서드 사용
+        return InteractionStateDto.from(interaction, match);
     }
 
     @Override
     @Transactional
-    public void storeQuizData(UUID matchId, List<com.ilgiyebo.domain.interaction.dto.QuizQuestionDto> quizData) {
+    public void storeQuizData(UUID matchId, List<QuizQuestionDto> quizData) {
         InteractionEntity interaction = findInteraction(matchId);
 
         if (interaction.getCurrentStage() != 1) {
@@ -113,54 +116,23 @@ public class InteractionServiceImpl implements InteractionService {
 
         interaction.setQuizData(quizData);
         interactionRepository.save(interaction);
-        log.info("Quiz data stored via SQS: matchId={}, questionCount={}", matchId, quizData.size());
+        log.info("SQS를 통해 퀴즈 데이터 저장 완료: 매칭ID={}, 문항수={}", matchId, quizData.size());
     }
 
     // --- Private helpers ---
     private MatchEntity findMatch(UUID matchId) {
         return matchRepository.findById(matchId)
-            .orElseThrow(InteractionException.MATCH_NOT_FOUND::toException);
+                .orElseThrow(InteractionException.MATCH_NOT_FOUND::toException);
     }
 
     private InteractionEntity findInteraction(UUID matchId) {
         return interactionRepository.findByMatchId(matchId)
-            .orElseThrow(InteractionException.INTERACTION_NOT_FOUND::toException);
+                .orElseThrow(InteractionException.INTERACTION_NOT_FOUND::toException);
     }
 
     private void validateUserInMatch(MatchEntity match, UUID userId) {
         if (!match.getUserA().getId().equals(userId) && !match.getUserB().getId().equals(userId)) {
             throw InteractionException.USER_NOT_IN_MATCH.toException();
         }
-    }
-
-    private InteractionStateDto toDto(InteractionEntity interaction, MatchEntity match) {
-        InteractionStateDto.StageDataDto stageData = buildStageData(interaction);
-        return new InteractionStateDto(
-            interaction.getId(),
-            interaction.getMatch().getId(),
-            interaction.getCurrentStage(),
-            interaction.getStageStatus(),
-            match.getCycleStartDate(),
-            match.getCycleEndDate(),
-            stageData
-        );
-    }
-
-    private InteractionStateDto.StageDataDto buildStageData(InteractionEntity interaction) {
-        return switch (interaction.getCurrentStage()) {
-            case 1 -> new QuizData(
-                interaction.getQuizCompletedBy() != null ? interaction.getQuizCompletedBy() : List.of());
-            case 2 -> new ChatData(
-                interaction.getChatStartTime(), interaction.getChatEndTime());
-            case 3 -> new GameData(
-                interaction.getGameType(), interaction.isGameCompleted());
-            case 4 -> new MissionData(
-                interaction.getMissionId(),
-                interaction.getMissionConfirmedBy() != null ? interaction.getMissionConfirmedBy() : List.of(),
-                interaction.isMissionExtended());
-            case 5 -> new ReviewData(
-                interaction.getReviewCompletedBy() != null ? interaction.getReviewCompletedBy() : List.of());
-            default -> new QuizData(List.of());
-        };
     }
 }

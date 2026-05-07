@@ -1,8 +1,10 @@
 package com.ilgiyebo.domain.interaction.service;
 
 import com.ilgiyebo.domain.interaction.dto.InteractionStateDto;
+import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import com.ilgiyebo.domain.interaction.entity.TerminationReason;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface InteractionService {
@@ -16,6 +18,6 @@ public interface InteractionService {
     /** 퀴즈 완료 처리 (AIService에서 호출) */
     InteractionStateDto completeQuiz(UUID matchId, UUID userId);
 
-    /** SQS를 통해 AI가 생성한 퀴즈 데이터를 저장 */
-    void storeQuizData(UUID matchId, java.util.List<com.ilgiyebo.domain.interaction.dto.QuizQuestionDto> quizData);
+    // 타입을 깔끔하게 수정
+    void storeQuizData(UUID matchId, List<QuizQuestionDto> quizData);
 }

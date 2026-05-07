@@ -46,14 +46,13 @@ public class HintQuestionServiceImpl implements HintQuestionService {
             throw InteractionException.ALREADY_TERMINATED.toException();
         }
 
-        // 💡 연관관계 저장을 위해 발신자/수신자 UserEntity 객체 가져오기
         UserEntity sender = match.getUserA().getId().equals(senderId) ? match.getUserA() : match.getUserB();
         UserEntity responder = match.getUserA().getId().equals(senderId) ? match.getUserB() : match.getUserA();
 
         HintQuestionEntity entity = HintQuestionEntity.builder()
-                .match(match)       // 👈 객체 주입
-                .sender(sender)     // 👈 객체 주입
-                .responder(responder) // 👈 객체 주입
+                .match(match)
+                .sender(sender)
+                .responder(responder)
                 .question(question)
                 .status(HintQuestionStatus.PENDING)
                 .build();
@@ -61,9 +60,10 @@ public class HintQuestionServiceImpl implements HintQuestionService {
         entity = hintQuestionRepository.save(entity);
 
         notificationPublisher.publishHintQuestionReceived(responder.getId(), matchId, entity.getId());
-        log.info("Hint question sent: matchId={}, senderId={}, questionId={}", matchId, senderId, entity.getId());
+        log.info("힌트 질문 전송 완료: 매칭ID={}, 발신자ID={}, 질문ID={}", matchId, senderId, entity.getId());
 
-        return toDto(entity);
+        // DTO의 from 메서드 사용
+        return HintQuestionDto.from(entity);
     }
 
     @Override
@@ -72,7 +72,7 @@ public class HintQuestionServiceImpl implements HintQuestionService {
         HintQuestionEntity entity = hintQuestionRepository.findById(questionId)
                 .orElseThrow(InteractionException.HINT_QUESTION_NOT_FOUND::toException);
 
-        if (!entity.getResponder().getId().equals(responderId)) { // 👈 Getter 변경
+        if (!entity.getResponder().getId().equals(responderId)) {
             throw InteractionException.NOT_RESPONDER.toException();
         }
         if (entity.getStatus() == HintQuestionStatus.ANSWERED) {
@@ -81,14 +81,14 @@ public class HintQuestionServiceImpl implements HintQuestionService {
 
         entity.setAnswer(answer);
         entity.setStatus(HintQuestionStatus.ANSWERED);
-        // ❌ entity.setAnsweredAt(Instant.now()); 삭제됨
 
         entity = hintQuestionRepository.save(entity);
 
-        notificationPublisher.publishHintAnswerReceived(entity.getSender().getId(), entity.getMatch().getId(), questionId); // 👈 Getter 변경
-        log.info("Hint question answered: questionId={}, responderId={}", questionId, responderId);
+        notificationPublisher.publishHintAnswerReceived(entity.getSender().getId(), entity.getMatch().getId(), questionId);
+        log.info("힌트 질문 답변 완료: 질문ID={}, 응답자ID={}", questionId, responderId);
 
-        return toDto(entity);
+        // DTO의 from 메서드 사용
+        return HintQuestionDto.from(entity);
     }
 
     @Override
@@ -100,7 +100,7 @@ public class HintQuestionServiceImpl implements HintQuestionService {
 
         List<HintQuestionEntity> entities = hintQuestionRepository.findByMatchId(matchId);
         return entities.stream()
-                .map(this::toDto)
+                .map(HintQuestionDto::from) // map 안에서 from 메서드 참조
                 .toList();
     }
 
@@ -109,17 +109,5 @@ public class HintQuestionServiceImpl implements HintQuestionService {
             throw InteractionException.USER_NOT_IN_MATCH.toException();
         }
     }
-
-    private HintQuestionDto toDto(HintQuestionEntity entity) {
-        return new HintQuestionDto(
-                entity.getId(),
-                entity.getMatch().getId(), // 👈 Getter 변경
-                entity.getSender().getId(), // 👈 Getter 변경
-                entity.getResponder().getId(), // 👈 Getter 변경
-                entity.getQuestion(),
-                entity.getAnswer(),
-                entity.getStatus(),
-                entity.getCreatedAt()
-        );
-    }
+    // ❌ toDto 삭제됨
 }

@@ -1,10 +1,12 @@
 package com.ilgiyebo.domain.interaction.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Builder;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+
 
 /**
  * AI quiz generation request SQS message.
@@ -20,15 +22,16 @@ public record QuizGenerateRequestMessage(
     TargetProfile targetProfile
 ) {
 
+    @Builder // TargetProfile 객체 생성을 위한 빌더 패턴 적용
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record TargetProfile(
-        String name,
-        String nickname,
-        String university,
-        String major,
-        List<String> hobbies,
-        List<String> interests,
-        List<String> personalityType
+            String name,
+            String nickname,
+            String university,
+            String major,
+            List<String> hobbies,
+            List<String> interests,
+            List<String> personalityType
     ) {}
 
     public static QuizGenerateRequestMessage of(
