@@ -2,11 +2,11 @@ package com.ilgiyebo.domain.interaction.service;
 
 import com.ilgiyebo.domain.interaction.dto.InteractionStateDto;
 import com.ilgiyebo.domain.interaction.dto.InteractionStateDto.*;
+import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.exception.InteractionException;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.MatchEntity;
 import com.ilgiyebo.domain.MatchStatus;
-import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.entity.TerminationReason;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.repository.MatchRepository;
@@ -34,35 +34,6 @@ public class InteractionServiceImpl implements InteractionService {
         MatchEntity match = findMatch(matchId);
         validateUserInMatch(match, userId);
         InteractionEntity interaction = findInteraction(matchId);
-        return toDto(interaction, match);
-    }
-
-    @Override
-    @Transactional
-    public InteractionStateDto respondToStageAdvance(UUID matchId, UUID userId, boolean accept) {
-        MatchEntity match = findMatch(matchId);
-        validateUserInMatch(match, userId);
-        InteractionEntity interaction = findInteraction(matchId);
-
-        if (interaction.getStageStatus() == StageStatus.TERMINATED) {
-            throw InteractionException.ALREADY_TERMINATED.toException();
-        }
-
-        if (!accept) {
-            interaction.setStageStatus(StageStatus.TERMINATED);
-            interaction.setTerminationReason(TerminationReason.USER_REJECTED.name());
-            match.setStatus(MatchStatus.TERMINATED);
-            matchRepository.save(match);
-            interactionRepository.save(interaction);
-
-            notificationPublisher.publishMatchTerminated(
-                matchId, match.getUserA().getId(), match.getUserB().getId(), TerminationReason.USER_REJECTED);
-            return toDto(interaction, match);
-        }
-
-        advanceStageIfReady(interaction, match);
-        interactionRepository.save(interaction);
-
         return toDto(interaction, match);
     }
 
@@ -146,44 +117,6 @@ public class InteractionServiceImpl implements InteractionService {
     }
 
     // --- Private helpers ---
-
-    private void advanceStageIfReady(InteractionEntity interaction, MatchEntity match) {
-        int currentStage = interaction.getCurrentStage();
-
-        switch (currentStage) {
-            case 1 -> {
-                throw InteractionException.STAGE_NOT_ADVANCEABLE.toException();
-            }
-            case 2 -> {
-                int completedStage = interaction.getCurrentStage();
-                interaction.setCurrentStage(3);
-                interaction.setStageStatus(StageStatus.IN_PROGRESS);
-                notificationPublisher.publishStageCompleted(
-                    match.getId(), match.getUserA().getId(), completedStage, 3);
-            }
-            case 3 -> {
-                int completedStage = interaction.getCurrentStage();
-                interaction.setCurrentStage(4);
-                interaction.setStageStatus(StageStatus.IN_PROGRESS);
-                notificationPublisher.publishStageCompleted(
-                    match.getId(), match.getUserA().getId(), completedStage, 4);
-            }
-            case 4 -> {
-                int completedStage = interaction.getCurrentStage();
-                interaction.setCurrentStage(5);
-                interaction.setStageStatus(StageStatus.IN_PROGRESS);
-                notificationPublisher.publishStageCompleted(
-                    match.getId(), match.getUserA().getId(), completedStage, 5);
-            }
-            case 5 -> {
-                interaction.setStageStatus(StageStatus.COMPLETED);
-                match.setStatus(MatchStatus.COMPLETED);
-                matchRepository.save(match);
-            }
-            default -> throw InteractionException.STAGE_NOT_ADVANCEABLE.toException();
-        }
-    }
-
     private MatchEntity findMatch(UUID matchId) {
         return matchRepository.findById(matchId)
             .orElseThrow(InteractionException.MATCH_NOT_FOUND::toException);

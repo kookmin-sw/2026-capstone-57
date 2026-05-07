@@ -30,17 +30,6 @@ public class InteractionController {
         return ResponseEntity.ok(interactionService.getInteractionState(matchId, userId));
     }
 
-    @Operation(summary = "다음 단계 진행 수락 및 거절")
-    @PreAuthorize("isAuthenticated()")
-    @PostMapping("/{matchId}/advance")
-    public ResponseEntity<InteractionStateDto> respondToStageAdvance(
-            @AuthenticationPrincipal UUID userId,
-            @PathVariable UUID matchId,
-            @Valid @RequestBody StageAdvanceRequest request) {
-        return ResponseEntity.ok(
-                interactionService.respondToStageAdvance(matchId, userId, request.accept()));
-    }
-
     @Operation(summary = "매칭 강제 종료")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{matchId}/terminate")

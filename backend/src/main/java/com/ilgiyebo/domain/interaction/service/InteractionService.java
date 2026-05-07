@@ -10,9 +10,6 @@ public interface InteractionService {
     /** 현재 상호작용 상태 조회 */
     InteractionStateDto getInteractionState(UUID matchId, UUID userId);
 
-    /** 단계 진행 동의/거절 처리 */
-    InteractionStateDto respondToStageAdvance(UUID matchId, UUID userId, boolean accept);
-
     /** 매칭 종료 (거절, 기한 만료, 신고 등) */
     void terminateMatch(UUID matchId, TerminationReason reason);
 
