@@ -19,6 +19,6 @@ public enum ChatException {
     private final HttpStatus status;
 
     public BusinessException toException() {
-        return new BusinessException(this.message, this.status);
+        return new BusinessException(this.status, this.message);
     }
 }
