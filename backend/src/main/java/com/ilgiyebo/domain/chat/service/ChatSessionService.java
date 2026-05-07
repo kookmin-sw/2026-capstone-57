@@ -17,4 +17,13 @@ public interface ChatSessionService {
     void endExpiredSessions();
 
     void validateParticipant(UUID userId, UUID matchId);
+
+    /**
+     * Validates that the session is ACTIVE.
+     * Checks Redis cache first for performance, falls back to DB on cache miss.
+     *
+     * @param sessionId the session ID to validate
+     * @throws com.ilgiyebo.common.exception.BusinessException if session is not ACTIVE
+     */
+    void validateSessionActive(UUID sessionId);
 }

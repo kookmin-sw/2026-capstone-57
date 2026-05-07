@@ -160,6 +160,29 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public void validateSessionActive(UUID sessionId) {
+        // Check Redis cache first for performance optimization
+        String cacheKey = CACHE_KEY_PREFIX + sessionId;
+        Object cachedStatus = redisTemplate.opsForHash().get(cacheKey, "status");
+
+        if (cachedStatus != null) {
+            if (!ChatSessionStatus.ACTIVE.name().equals(cachedStatus.toString())) {
+                throw ChatException.SESSION_ALREADY_ENDED.toException();
+            }
+            return;
+        }
+
+        // Fallback to DB on cache miss
+        ChatSessionEntity session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(ChatException.SESSION_NOT_FOUND::toException);
+
+        if (session.getStatus() != ChatSessionStatus.ACTIVE) {
+            throw ChatException.SESSION_ALREADY_ENDED.toException();
+        }
+    }
+
     private void cacheSession(ChatSessionEntity session) {
         String key = CACHE_KEY_PREFIX + session.getId();
         long ttlSeconds = Duration.between(Instant.now(), session.getEndTime()).getSeconds();
