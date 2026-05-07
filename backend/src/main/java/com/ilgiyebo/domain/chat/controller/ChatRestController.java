@@ -1,6 +1,7 @@
 package com.ilgiyebo.domain.chat.controller;
 
 import com.ilgiyebo.domain.chat.dto.ChatMessageDto;
+import com.ilgiyebo.domain.chat.dto.ChatSessionCreateRequest;
 import com.ilgiyebo.domain.chat.dto.ChatSessionDto;
 import com.ilgiyebo.domain.chat.entity.ChatMessageEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
@@ -9,7 +10,9 @@ import com.ilgiyebo.domain.chat.service.ChatSessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -50,6 +53,17 @@ public class ChatRestController {
         chatSessionService.validateParticipant(userId, session.getMatchId());
         List<ChatMessageEntity> messages = chatMessageService.getMessagesBySessionId(sessionId);
         return ResponseEntity.ok(messages.stream().map(this::toMessageDto).toList());
+    }
+
+    @Operation(summary = "채팅 세션 생성", description = "매치 ID로 새 채팅 세션을 생성한다")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/sessions")
+    public ResponseEntity<ChatSessionDto> createSession(
+            @AuthenticationPrincipal UUID userId,
+            @Valid @RequestBody ChatSessionCreateRequest request) {
+        chatSessionService.validateParticipant(userId, request.matchId());
+        ChatSessionEntity session = chatSessionService.createSession(request.matchId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(toSessionDto(session));
     }
 
     private ChatSessionDto toSessionDto(ChatSessionEntity entity) {
