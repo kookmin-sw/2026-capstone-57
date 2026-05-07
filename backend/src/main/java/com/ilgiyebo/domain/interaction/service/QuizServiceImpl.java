@@ -123,7 +123,7 @@ public class QuizServiceImpl implements QuizService {
             );
             updatedQuestions.add(updatedQ);
 
-            if (userAnswer == oldQ.correctAnswer()) {
+            if (userAnswer != null && userAnswer.equals(oldQ.correctAnswer())) {
                 correctCount++;
             }
         }
