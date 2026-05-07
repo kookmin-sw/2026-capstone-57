@@ -1,0 +1,2 @@
+-- HINT_QUESTION 테이블에 quiz_index 컬럼 추가
+ALTER TABLE HINT_QUESTION ADD COLUMN quiz_index INT NOT NULL;
