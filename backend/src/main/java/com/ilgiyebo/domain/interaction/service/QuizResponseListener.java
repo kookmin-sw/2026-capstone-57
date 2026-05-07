@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,37 +29,39 @@ public class QuizResponseListener {
 
             if (!"SUCCESS".equals(response.status())) {
                 log.warn("AI 퀴즈 생성 실패: 매칭ID={}, 상태={}",
-                        response.matchId(), response.status()); // 👈 한글 로그로 변경
+                        response.matchId(), response.status());
                 return;
             }
 
             if (response.quiz() == null || response.quiz().questions() == null
                     || response.quiz().questions().isEmpty()) {
-                log.warn("AI 퀴즈 응답에 문항 데이터가 없습니다: 매칭ID={}", response.matchId()); // 👈 한글 로그로 변경
+                log.warn("AI 퀴즈 응답에 문항 데이터가 없습니다: 매칭ID={}", response.matchId());
                 return;
             }
 
-            List<QuizQuestionDto> quizData = response.quiz().questions().stream()
-                    .map(this::toQuizQuestionDto)
-                    .toList();
+            // 💡 리뷰 반영(커밋 4): for문을 사용하여 quizIndex 부여, explanation 제거, quizAnswer는 null로 초기화
+            List<AiQuizQuestion> aiQuestions = response.quiz().questions();
+            List<QuizQuestionDto> quizData = new ArrayList<>();
+
+            for (int i = 0; i < aiQuestions.size(); i++) {
+                AiQuizQuestion aiQ = aiQuestions.get(i);
+                quizData.add(new QuizQuestionDto(
+                        i + 1,                // quizIndex: 1부터 시작
+                        aiQ.questionText(),
+                        aiQ.choices(),
+                        aiQ.correctIndex(),
+                        null                  // quizAnswer: 유저가 아직 풀기 전이므로 null
+                ));
+            }
 
             UUID matchId = UUID.fromString(response.matchId());
             interactionService.storeQuizData(matchId, quizData);
 
             log.info("AI 퀴즈 응답 수신 및 DB 저장 완료: 매칭ID={}, 문항수={}",
-                    response.matchId(), quizData.size()); // 👈 한글 로그로 변경
+                    response.matchId(), quizData.size());
 
         } catch (Exception e) {
             log.error("AI 퀴즈 응답 처리 중 서버 에러 발생: {}", messageJson, e);
         }
-    }
-
-    private QuizQuestionDto toQuizQuestionDto(AiQuizQuestion aiQuestion) {
-        return new QuizQuestionDto(
-                aiQuestion.questionText(),
-                aiQuestion.choices(),
-                aiQuestion.correctIndex(),
-                aiQuestion.explanation()
-        );
     }
 }

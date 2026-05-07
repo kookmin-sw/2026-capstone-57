@@ -35,6 +35,9 @@ public class HintQuestionEntity extends BaseSchema {
     @Column(columnDefinition = "TEXT")
     private String answer;
 
+    @Column(name = "quiz_index", nullable = false)
+    private int quizIndex;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

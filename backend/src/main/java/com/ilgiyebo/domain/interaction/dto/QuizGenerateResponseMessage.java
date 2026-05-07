@@ -33,7 +33,6 @@ public record QuizGenerateResponseMessage(
     public record AiQuizQuestion(
         String questionText,
         List<String> choices,
-        int correctIndex,
-        String explanation
+        int correctIndex
     ) {}
 }
