@@ -54,6 +54,7 @@ public class HintQuestionServiceImpl implements HintQuestionService {
                 .sender(sender)
                 .responder(responder)
                 .question(question)
+                .quizIndex(interaction.getCurrentStage())
                 .status(HintQuestionStatus.PENDING)
                 .build();
 
