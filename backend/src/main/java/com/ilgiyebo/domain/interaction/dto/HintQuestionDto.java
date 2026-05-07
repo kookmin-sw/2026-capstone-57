@@ -14,6 +14,5 @@ public record HintQuestionDto(
     String question,
     String answer,
     HintQuestionStatus status,
-    LocalDateTime createdAt,
-    Instant answeredAt
+    LocalDateTime createdAt
 ) {}

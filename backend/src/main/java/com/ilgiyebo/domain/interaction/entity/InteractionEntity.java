@@ -2,6 +2,7 @@ package com.ilgiyebo.domain.interaction.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
 import com.ilgiyebo.config.JsonStringListConverter;
+import com.ilgiyebo.domain.MatchEntity;
 import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,8 +22,9 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class InteractionEntity extends BaseSchema {
 
-    @Column(name = "match_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID matchId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "match_id", nullable = false)
+    private MatchEntity match;
 
     @Builder.Default
     @Column(name = "current_stage", nullable = false)

@@ -137,7 +137,7 @@ public class InteractionServiceImpl implements InteractionService {
         InteractionStateDto.StageDataDto stageData = buildStageData(interaction);
         return new InteractionStateDto(
             interaction.getId(),
-            interaction.getMatchId(),
+            interaction.getMatch().getId(),
             interaction.getCurrentStage(),
             interaction.getStageStatus(),
             match.getCycleStartDate(),
