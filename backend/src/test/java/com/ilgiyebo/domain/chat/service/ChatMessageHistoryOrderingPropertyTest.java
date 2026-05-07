@@ -3,7 +3,6 @@ package com.ilgiyebo.domain.chat.service;
 import com.ilgiyebo.domain.chat.entity.ChatMessageEntity;
 import com.ilgiyebo.repository.ChatMessageRepository;
 import net.jqwik.api.*;
-import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,19 +25,15 @@ class ChatMessageHistoryOrderingPropertyTest {
 
     private ChatMessageRepository chatMessageRepository;
     private ChatSessionService chatSessionService;
-    @SuppressWarnings("unchecked")
-    private RedisTemplate<String, Object> redisTemplate;
 
     private ChatMessageServiceImpl chatMessageService;
 
     private void setupMocks() {
         chatMessageRepository = mock(ChatMessageRepository.class);
         chatSessionService = mock(ChatSessionService.class);
-        redisTemplate = mock(RedisTemplate.class);
         chatMessageService = new ChatMessageServiceImpl(
                 chatMessageRepository,
-                chatSessionService,
-                redisTemplate
+                chatSessionService
         );
     }
 

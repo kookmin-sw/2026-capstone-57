@@ -5,8 +5,6 @@ import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionStatus;
 import com.ilgiyebo.repository.ChatMessageRepository;
 import net.jqwik.api.*;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.Instant;
 import java.util.List;
@@ -14,7 +12,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -29,18 +26,13 @@ class ChatMessagePersistenceRoundTripPropertyTest {
 
     private final ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
     private final ChatSessionService chatSessionService = mock(ChatSessionService.class);
-    @SuppressWarnings("unchecked")
-    private final RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
-    @SuppressWarnings("unchecked")
-    private final HashOperations<String, Object, Object> hashOperations = mock(HashOperations.class);
 
     private final ChatMessageServiceImpl chatMessageService;
 
     ChatMessagePersistenceRoundTripPropertyTest() {
         chatMessageService = new ChatMessageServiceImpl(
                 chatMessageRepository,
-                chatSessionService,
-                redisTemplate
+                chatSessionService
         );
     }
 
@@ -60,10 +52,8 @@ class ChatMessagePersistenceRoundTripPropertyTest {
             @ForAll("randomUUIDs") UUID matchId,
             @ForAll("validContent") String content) {
 
-        // Arrange: mock Redis cache to indicate session is ACTIVE
-        when(redisTemplate.opsForHash()).thenReturn(hashOperations);
-        when(hashOperations.get("chat:session:" + sessionId, "status"))
-                .thenReturn(ChatSessionStatus.ACTIVE.name());
+        // Arrange: mock validateSessionActive to pass (session is ACTIVE)
+        doNothing().when(chatSessionService).validateSessionActive(sessionId);
 
         // Mock session retrieval for participant validation
         ChatSessionEntity session = ChatSessionEntity.builder()

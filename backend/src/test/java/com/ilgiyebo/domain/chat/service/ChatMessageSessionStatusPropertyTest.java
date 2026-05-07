@@ -4,10 +4,9 @@ import com.ilgiyebo.common.exception.BusinessException;
 import com.ilgiyebo.domain.chat.entity.ChatMessageEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionStatus;
+import com.ilgiyebo.domain.chat.exception.ChatException;
 import com.ilgiyebo.repository.ChatMessageRepository;
 import net.jqwik.api.*;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -29,22 +28,15 @@ class ChatMessageSessionStatusPropertyTest {
 
     private ChatMessageRepository chatMessageRepository;
     private ChatSessionService chatSessionService;
-    @SuppressWarnings("unchecked")
-    private RedisTemplate<String, Object> redisTemplate;
-    @SuppressWarnings("unchecked")
-    private HashOperations<String, Object, Object> hashOperations;
 
     private ChatMessageServiceImpl chatMessageService;
 
     private void setupMocks() {
         chatMessageRepository = mock(ChatMessageRepository.class);
         chatSessionService = mock(ChatSessionService.class);
-        redisTemplate = mock(RedisTemplate.class);
-        hashOperations = mock(HashOperations.class);
         chatMessageService = new ChatMessageServiceImpl(
                 chatMessageRepository,
-                chatSessionService,
-                redisTemplate
+                chatSessionService
         );
     }
 
@@ -64,10 +56,8 @@ class ChatMessageSessionStatusPropertyTest {
 
         setupMocks();
 
-        // Arrange: Redis cache indicates ACTIVE
-        when(redisTemplate.opsForHash()).thenReturn(hashOperations);
-        when(hashOperations.get("chat:session:" + sessionId, "status"))
-                .thenReturn(ChatSessionStatus.ACTIVE.name());
+        // Arrange: validateSessionActive passes (session is ACTIVE)
+        doNothing().when(chatSessionService).validateSessionActive(sessionId);
 
         ChatSessionEntity session = ChatSessionEntity.builder()
                 .matchId(matchId)
@@ -93,63 +83,23 @@ class ChatMessageSessionStatusPropertyTest {
     }
 
     /**
-     * Property 6b: ENDED sessions reject messages (via Redis cache).
+     * Property 6b: ENDED sessions reject messages.
      *
-     * For any ENDED session (status cached in Redis), saveMessage throws
-     * BusinessException with SESSION_ALREADY_ENDED message.
+     * For any ENDED session, validateSessionActive throws BusinessException
+     * with SESSION_ALREADY_ENDED message, and saveMessage propagates it.
      */
     @Property(tries = 100)
     @Tag("Feature: chat-realtime-messaging, Property 6: Session Status Determines Message Acceptance")
-    void endedSessionRejectsMessagesViaCachedStatus(
+    void endedSessionRejectsMessages(
             @ForAll("randomUUIDs") UUID sessionId,
             @ForAll("randomUUIDs") UUID senderId,
             @ForAll("validContent") String content) {
 
         setupMocks();
 
-        // Arrange: Redis cache indicates ENDED
-        when(redisTemplate.opsForHash()).thenReturn(hashOperations);
-        when(hashOperations.get("chat:session:" + sessionId, "status"))
-                .thenReturn(ChatSessionStatus.ENDED.name());
-
-        // Act & Assert: message is rejected
-        assertThatThrownBy(() -> chatMessageService.saveMessage(sessionId, senderId, content))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("이미 종료된 채팅 세션입니다");
-
-        // Verify no message was persisted
-        verify(chatMessageRepository, never()).save(any());
-    }
-
-    /**
-     * Property 6c: ENDED sessions reject messages (via DB fallback).
-     *
-     * When Redis cache has no entry, the service falls back to DB.
-     * If the session status in DB is ENDED, saveMessage throws BusinessException.
-     */
-    @Property(tries = 100)
-    @Tag("Feature: chat-realtime-messaging, Property 6: Session Status Determines Message Acceptance")
-    void endedSessionRejectsMessagesViaDbFallback(
-            @ForAll("randomUUIDs") UUID sessionId,
-            @ForAll("randomUUIDs") UUID senderId,
-            @ForAll("randomUUIDs") UUID matchId,
-            @ForAll("validContent") String content) {
-
-        setupMocks();
-
-        // Arrange: Redis cache miss (returns null)
-        when(redisTemplate.opsForHash()).thenReturn(hashOperations);
-        when(hashOperations.get("chat:session:" + sessionId, "status"))
-                .thenReturn(null);
-
-        // DB returns session with ENDED status
-        ChatSessionEntity endedSession = ChatSessionEntity.builder()
-                .matchId(matchId)
-                .startTime(Instant.now().minusSeconds(600))
-                .endTime(Instant.now())
-                .status(ChatSessionStatus.ENDED)
-                .build();
-        when(chatSessionService.getSessionById(sessionId)).thenReturn(endedSession);
+        // Arrange: validateSessionActive throws (session is ENDED)
+        doThrow(ChatException.SESSION_ALREADY_ENDED.toException())
+                .when(chatSessionService).validateSessionActive(sessionId);
 
         // Act & Assert: message is rejected
         assertThatThrownBy(() -> chatMessageService.saveMessage(sessionId, senderId, content))
