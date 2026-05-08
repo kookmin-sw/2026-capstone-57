@@ -30,13 +30,13 @@ QUIZ_REQUEST = {
     "targetUserId": "user-target-001",
     "requestedAt": "2024-05-08T12:00:00Z",
     "targetProfile": {
-        "name": "홍길동",
-        "nickname": "길동이",
+        "name": "황찬우",
+        "nickname": "바보",
         "university": "국민대학교",
-        "major": "컴퓨터공학과",
-        "hobbies": ["독서", "게임", "운동"],
-        "interests": ["AI", "백엔드 개발"],
-        "personalityType": ["INTJ"],
+        "major": "소프트웨어",
+        "hobbies": ["게임", "야구", "축구"],
+        "interests": ["AI", "게임"],
+        "personalityType": ["INTP"],
     },
 }
 
