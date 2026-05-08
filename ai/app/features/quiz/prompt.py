@@ -24,6 +24,19 @@ DEFAULT_QUIZ_PROMPT_TEMPLATE = """
       4. 오답은 그럴듯하지만 명확히 구분 가능해야 합니다
       5. 각 문제에 정답의 근거를 설명하는 explanation을 포함해주세요
       6. 이름을 직접적으로 퀴즈 내용에 추가하지 않아야 합니다
+
+      예시 : 
+       {{
+        "questions": [
+          {{
+            "questionText": "상대방의 MBTI 맨 앞 글자는?",
+            "choices": ["I", "E],
+            "correctIndex": 0,
+            "explanation": "상대방은 밖에 있는걸 더 좋아해요."
+          }}
+        ]
+      }}
+
       
       응답 형식 (JSON만 반환):
       {{
