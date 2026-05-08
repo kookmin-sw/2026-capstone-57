@@ -17,7 +17,7 @@ DEFAULT_QUIZ_PROMPT_TEMPLATE = """
       상대방 프로필:
       {profile_section}
       
-      다음 조건을 만족하는 퀴즈 {{questionCount}}개를 JSON 형식으로 생성해주세요:
+      다음 조건을 만족하는 퀴즈 5개를 JSON 형식으로 생성해주세요:
       1. 각 문제는 상대방에 대해 알아가는 데 도움이 되는 내용이어야 합니다
       2. 각 문제는 4개의 선택지를 가져야 합니다
       3. 정답은 상대방의 프로필 정보를 기반으로 해야 합니다
@@ -26,16 +26,16 @@ DEFAULT_QUIZ_PROMPT_TEMPLATE = """
       6. 이름을 직접적으로 퀴즈 내용에 추가하지 않아야 합니다
       
       응답 형식 (JSON만 반환):
-      {
+      {{
         "questions": [
-          {
+          {{
             "questionText": "문제 텍스트",
             "choices": ["선택지1", "선택지2", "선택지3", "선택지4"],
             "correctIndex": 0,
             "explanation": "정답 근거 설명"
-          }
+          }}
         ]
-      }"""
+      }}"""
 
 
 def build_profile_section(profile: TargetProfile) -> str:
