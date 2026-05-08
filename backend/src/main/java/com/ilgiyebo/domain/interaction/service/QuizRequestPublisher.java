@@ -17,7 +17,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QuizRequestPublisher {
 
-    @Value("${sqs.queue.quiz-request:ai-quiz-request-queue}")
+    @Value("${cloud.aws.sqs.quiz-request-queue}")
     private String quizRequestQueue;
 
     private final SqsTemplate sqsTemplate;

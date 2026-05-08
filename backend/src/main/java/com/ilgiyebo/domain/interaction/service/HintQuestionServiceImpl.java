@@ -27,7 +27,6 @@ public class HintQuestionServiceImpl implements HintQuestionService {
     private final HintQuestionRepository hintQuestionRepository;
     private final InteractionRepository interactionRepository;
     private final MatchRepository matchRepository;
-    private final InteractionNotificationPublisher notificationPublisher;
 
     @Override
     @Transactional
@@ -60,7 +59,6 @@ public class HintQuestionServiceImpl implements HintQuestionService {
 
         entity = hintQuestionRepository.save(entity);
 
-        notificationPublisher.publishHintQuestionReceived(responder.getId(), matchId, entity.getId());
         log.info("힌트 질문 전송 완료: 매칭ID={}, 발신자ID={}, 질문ID={}", matchId, senderId, entity.getId());
 
         // DTO의 from 메서드 사용
@@ -85,7 +83,6 @@ public class HintQuestionServiceImpl implements HintQuestionService {
 
         entity = hintQuestionRepository.save(entity);
 
-        notificationPublisher.publishHintAnswerReceived(entity.getSender().getId(), entity.getMatch().getId(), questionId);
         log.info("힌트 질문 답변 완료: 질문ID={}, 응답자ID={}", questionId, responderId);
 
         // DTO의 from 메서드 사용

@@ -290,8 +290,9 @@ public class MatchingServiceImpl implements MatchingService {
      * 매칭에 대한 상호작용 엔티티를 생성한다.
      */
     private void createInteraction(UUID matchId) {
+        MatchEntity matchRef = matchRepository.getReferenceById(matchId);
         InteractionEntity interaction = InteractionEntity.builder()
-                .matchId(matchId)
+                .match(matchRef)
                 .currentStage(1)
                 .stageStatus(StageStatus.IN_PROGRESS)
                 .quizCompletedBy(List.of())
