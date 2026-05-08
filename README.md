@@ -1,8 +1,13 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/Lvs6kcL8)
 
 # 🌤️ 일기예보 (Ilgi-yebo)
-> **"일기로 예견하는 보석같은 만남"**
-> 코로나19 이후 새로운 사람을 만나는 것에 부담감을 느끼는 대학생들을 위한 **일상/동선 기반 소셜 매칭 서비스**입니다.
+**"일기로 예견하는 보석같은 만남"**  
+
+코로나19 이후 새로운 사람을 만나는 것에 부담감을 느끼는 대학생들을 위한 일상/동선 기반 소셜 매칭 서비스입니다.
+
+🔗 **Quick Links:** [🏠 팀 페이지](https://kookmin-sw.github.io/2026-capstone-57/) | [💻 팀 GitHub](https://github.com/kookmin-sw/2026-capstone-57)
+
+> 국민대학교 2026 캡스톤 디자인 프로젝트 · 57팀
 <br>
 
 ## 1. 프로젝트 소개
