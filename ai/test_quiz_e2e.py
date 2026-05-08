@@ -30,13 +30,13 @@ QUIZ_REQUEST = {
     "targetUserId": "user-target-001",
     "requestedAt": "2024-05-08T12:00:00Z",
     "targetProfile": {
-        "name": "김철수",
-        "nickname": "멍청이",
+        "name": "홍길동",
+        "nickname": "길동이",
         "university": "국민대학교",
-        "major": "국어국문학과",
-        "hobbies": ["게임", "독서", "영화감상"],
-        "interests": ["요리", "산책"],
-        "personalityType": ["INTP"],
+        "major": "컴퓨터공학과",
+        "hobbies": ["독서", "게임", "운동"],
+        "interests": ["AI", "백엔드 개발"],
+        "personalityType": ["INTJ"],
     },
 }
 
@@ -117,7 +117,7 @@ def step_4_check_response():
     response = sqs.receive_message(
         QueueUrl=settings.sqs_quiz_response_queue,
         MaxNumberOfMessages=1,
-        WaitTimeSeconds=20,
+        WaitTimeSeconds=10,
     )
 
     messages = response.get("Messages", [])
