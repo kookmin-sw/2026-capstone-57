@@ -41,14 +41,16 @@ def receive_from_queue(queue_url: str, queue_name: str, delete: bool = False):
         print(f"   ❌ 수신 실패: {e}")
 
 
-# 요청 큐 확인 (보낸 메시지가 아직 있는지)
+# 요청 큐 확인 (수신 후 삭제)
 receive_from_queue(
     settings.sqs_quiz_request_queue,
     "Quiz Request Queue",
+    delete=True,
 )
 
-# 응답 큐 확인 (AI 서비스가 처리한 결과)
+# 응답 큐 확인 (수신 후 삭제)
 receive_from_queue(
     settings.sqs_quiz_response_queue,
     "Quiz Response Queue",
+    delete=True,
 )
