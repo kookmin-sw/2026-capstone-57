@@ -45,6 +45,7 @@ DEFAULT_QUIZ_PROMPT_TEMPLATE = """
 {profile_section}
 
 위 규칙과 예시를 완벽히 준수하여 오직 JSON 데이터만 반환하세요.
+"""
 
 
 def build_profile_section(profile: TargetProfile) -> str:
