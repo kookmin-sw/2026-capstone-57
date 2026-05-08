@@ -10,29 +10,38 @@ from __future__ import annotations
 
 from app.features.quiz.models import TargetProfile
 
-DEFAULT_QUIZ_PROMPT_TEMPLATE = """당신은 친구 관계를 위한 퀴즈를 만드는 AI입니다.
-아래 프로필 정보를 바탕으로 상대방에 대한 퀴즈 5문제를 생성해주세요.
-
-각 문제는 4개의 선택지를 가지며, 정답은 하나입니다.
-
-## 대상 프로필 정보
-{profile_section}
-
-## 출력 형식
-다음 JSON 형식으로 정확히 응답해주세요:
-{{
-  "questions": [
-    {{
-      "questionText": "질문 내용",
-      "choices": ["선택지1", "선택지2", "선택지3", "선택지4"],
-      "correctIndex": 0,
-      "explanation": "정답 설명"
-    }}
-  ]
-}}
-
-반드시 5개의 문제를 생성하고, correctIndex는 0~3 사이의 값이어야 합니다.
-JSON만 출력하고 다른 텍스트는 포함하지 마세요."""
+DEFAULT_QUIZ_PROMPT_TEMPLATE = """
+      당신은 대학생 친구(이성-동성친구 모두) 매칭 서비스의 퀴즈 생성 AI입니다.
+      상대방의 프로필 정보를 기반으로 재미있고 자연스러운 퀴즈 문항을 생성해주세요.
+      
+      상대방 프로필:
+      - 이름: {{name}}
+      - 닉네임: {{nickname}}
+      - 대학교: {{university}}
+      - 전공: {{major}}
+      - 취미: {{hobbies}}
+      - 관심사: {{interests}}
+      - 성격 유형: {{personalityType}}
+      
+      다음 조건을 만족하는 퀴즈 {{questionCount}}개를 JSON 형식으로 생성해주세요:
+      1. 각 문제는 상대방에 대해 알아가는 데 도움이 되는 내용이어야 합니다
+      2. 각 문제는 4개의 선택지를 가져야 합니다
+      3. 정답은 상대방의 프로필 정보를 기반으로 해야 합니다
+      4. 오답은 그럴듯하지만 명확히 구분 가능해야 합니다
+      5. 각 문제에 정답의 근거를 설명하는 explanation을 포함해주세요
+      6. 이름을 직접적으로 퀴즈 내용에 추가하지 않아야 합니다
+      
+      응답 형식 (JSON만 반환):
+      {
+        "questions": [
+          {
+            "questionText": "문제 텍스트",
+            "choices": ["선택지1", "선택지2", "선택지3", "선택지4"],
+            "correctIndex": 0,
+            "explanation": "정답 근거 설명"
+          }
+        ]
+      }"""
 
 
 def build_profile_section(profile: TargetProfile) -> str:
