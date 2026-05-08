@@ -1,16 +1,21 @@
 package com.ilgiyebo.service;
 
-import com.ilgiyebo.domain.CampusBuildingEntity;
-import com.ilgiyebo.domain.CampusPathEntity;
-import com.ilgiyebo.domain.InteractionEntity;
+import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
+import com.ilgiyebo.domain.campus.entity.CampusPathEntity;
+import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.MatchEntity;
 import com.ilgiyebo.domain.MissionEntity;
 import com.ilgiyebo.domain.ScheduleEntity;
 import com.ilgiyebo.domain.SlotEntity;
 import com.ilgiyebo.domain.SlotStatus;
+import com.ilgiyebo.domain.UserEntity;
 import com.ilgiyebo.dto.BatchMatchingResultDto;
 import com.ilgiyebo.dto.OverlapLocationDto;
 import com.ilgiyebo.dto.RouteOverlapDto;
+import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
+import com.ilgiyebo.domain.campus.repository.CampusPathRepository;
+import com.ilgiyebo.domain.campus.repository.PlaceRepository;
+import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +41,7 @@ class MatchingServiceImplTest {
     @Mock private BlockRepository blockRepository;
     @Mock private CampusBuildingRepository campusBuildingRepository;
     @Mock private CampusPathRepository campusPathRepository;
-    @Mock private CampusVenueRepository campusVenueRepository;
+    @Mock private PlaceRepository placeRepository;
     @Mock private MatchRepository matchRepository;
     @Mock private MissionRepository missionRepository;
     @Mock private InteractionRepository interactionRepository;
@@ -45,13 +50,17 @@ class MatchingServiceImplTest {
 
     private final UUID userA = UUID.randomUUID();
     private final UUID userB = UUID.randomUUID();
+    private UserEntity userEntityA;
+    private UserEntity userEntityB;
 
     @BeforeEach
     void setUp() {
+        userEntityA = UserEntity.builder().id(userA).build();
+        userEntityB = UserEntity.builder().id(userB).build();
         matchingService = new MatchingServiceImpl(
                 slotRepository, userRepository, scheduleRepository,
                 blockRepository, campusBuildingRepository, campusPathRepository,
-                campusVenueRepository, matchRepository, missionRepository,
+                placeRepository, matchRepository, missionRepository,
                 interactionRepository);
     }
 
@@ -121,9 +130,9 @@ class MatchingServiceImplTest {
         when(campusBuildingRepository.findByName("공학관")).thenReturn(Optional.of(buildingA));
         when(campusBuildingRepository.findByName("과학관")).thenReturn(Optional.of(buildingB));
         when(campusPathRepository.findByFromBuildingIdAndToBuildingId(buildingIdA, buildingIdB))
-                .thenReturn(Optional.of(CampusPathEntity.builder()
-                        .fromBuildingId(buildingIdA).toBuildingId(buildingIdB)
-                        .walkingTimeMinutes(3).build()));
+                .thenReturn(List.of(CampusPathEntity.builder()
+                        .fromBuilding(buildingA).toBuilding(buildingB)
+                        .build()));
 
         RouteOverlapDto result = matchingService.calculateRouteOverlap(userA, userB);
 
@@ -215,9 +224,9 @@ class MatchingServiceImplTest {
     @Test
     void executeBatchMatching_twoUsersWithOverlap_createsMatch() {
         SlotEntity slotA = SlotEntity.builder()
-                .id(UUID.randomUUID()).userId(userA).status(SlotStatus.EMPTY).build();
+                .id(UUID.randomUUID()).user(userEntityA).status(SlotStatus.EMPTY).build();
         SlotEntity slotB = SlotEntity.builder()
-                .id(UUID.randomUUID()).userId(userB).status(SlotStatus.EMPTY).build();
+                .id(UUID.randomUUID()).user(userEntityB).status(SlotStatus.EMPTY).build();
 
         when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of(slotA, slotB));
 
@@ -252,9 +261,9 @@ class MatchingServiceImplTest {
     @Test
     void executeBatchMatching_blockedUsers_doesNotMatch() {
         SlotEntity slotA = SlotEntity.builder()
-                .id(UUID.randomUUID()).userId(userA).status(SlotStatus.EMPTY).build();
+                .id(UUID.randomUUID()).user(userEntityA).status(SlotStatus.EMPTY).build();
         SlotEntity slotB = SlotEntity.builder()
-                .id(UUID.randomUUID()).userId(userB).status(SlotStatus.EMPTY).build();
+                .id(UUID.randomUUID()).user(userEntityB).status(SlotStatus.EMPTY).build();
 
         when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of(slotA, slotB));
 
@@ -275,9 +284,9 @@ class MatchingServiceImplTest {
     @Test
     void executeBatchMatching_noOverlap_doesNotMatch() {
         SlotEntity slotA = SlotEntity.builder()
-                .id(UUID.randomUUID()).userId(userA).status(SlotStatus.EMPTY).build();
+                .id(UUID.randomUUID()).user(userEntityA).status(SlotStatus.EMPTY).build();
         SlotEntity slotB = SlotEntity.builder()
-                .id(UUID.randomUUID()).userId(userB).status(SlotStatus.EMPTY).build();
+                .id(UUID.randomUUID()).user(userEntityB).status(SlotStatus.EMPTY).build();
 
         when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of(slotA, slotB));
 
@@ -299,9 +308,9 @@ class MatchingServiceImplTest {
     @Test
     void executeBatchMatching_userWithNoSchedule_excluded() {
         SlotEntity slotA = SlotEntity.builder()
-                .id(UUID.randomUUID()).userId(userA).status(SlotStatus.EMPTY).build();
+                .id(UUID.randomUUID()).user(userEntityA).status(SlotStatus.EMPTY).build();
         SlotEntity slotB = SlotEntity.builder()
-                .id(UUID.randomUUID()).userId(userB).status(SlotStatus.EMPTY).build();
+                .id(UUID.randomUUID()).user(userEntityB).status(SlotStatus.EMPTY).build();
 
         when(slotRepository.findByStatus(SlotStatus.EMPTY)).thenReturn(List.of(slotA, slotB));
 

@@ -2,11 +2,11 @@ package com.ilgiyebo.domain.chat.service;
 
 import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionStatus;
-import com.ilgiyebo.domain.InteractionEntity;
+import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.MatchEntity;
 import com.ilgiyebo.domain.MatchStatus;
 import com.ilgiyebo.repository.ChatSessionRepository;
-import com.ilgiyebo.repository.InteractionRepository;
+import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.repository.MatchRepository;
 import net.jqwik.api.*;
 import org.mockito.ArgumentCaptor;
@@ -84,7 +84,7 @@ class ChatSessionInteractionSyncPropertyTest {
 
         // Mock InteractionEntity that exists for this match
         InteractionEntity interaction = InteractionEntity.builder()
-                .matchId(matchId)
+                .match(match)
                 .build();
         when(interactionRepository.findByMatchId(matchId)).thenReturn(Optional.of(interaction));
         when(interactionRepository.save(any(InteractionEntity.class)))
@@ -137,7 +137,7 @@ class ChatSessionInteractionSyncPropertyTest {
 
         // Mock InteractionEntity that exists for this match
         InteractionEntity interaction = InteractionEntity.builder()
-                .matchId(matchId)
+                .match(MatchEntity.builder().id(matchId).build())
                 .chatStartTime(startTime)
                 .build();
         when(interactionRepository.findByMatchId(matchId)).thenReturn(Optional.of(interaction));

@@ -4,7 +4,7 @@ import com.ilgiyebo.common.exception.BusinessException;
 import com.ilgiyebo.domain.MatchEntity;
 import com.ilgiyebo.domain.MatchStatus;
 import com.ilgiyebo.repository.ChatSessionRepository;
-import com.ilgiyebo.repository.InteractionRepository;
+import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.repository.MatchRepository;
 import net.jqwik.api.*;
 import org.springframework.data.redis.core.RedisTemplate;

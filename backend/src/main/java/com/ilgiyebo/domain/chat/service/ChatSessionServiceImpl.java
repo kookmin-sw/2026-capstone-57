@@ -4,8 +4,8 @@ import com.ilgiyebo.domain.chat.dto.SessionEndedEvent;
 import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionStatus;
 import com.ilgiyebo.domain.chat.exception.ChatException;
-import com.ilgiyebo.domain.InteractionEntity;
-import com.ilgiyebo.repository.InteractionRepository;
+import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
+import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.domain.MatchEntity;
 import com.ilgiyebo.domain.MatchStatus;
 import com.ilgiyebo.repository.MatchRepository;
@@ -155,7 +155,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         MatchEntity match = matchRepository.findById(matchId)
                 .orElseThrow(ChatException.SESSION_NOT_FOUND::toException);
 
-        if (!userId.equals(match.getUserAId()) && !userId.equals(match.getUserBId())) {
+        if (!userId.equals(match.getUserA().getId()) && !userId.equals(match.getUserB().getId())) {
             throw ChatException.NOT_PARTICIPANT.toException();
         }
     }

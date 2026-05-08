@@ -2,8 +2,9 @@ package com.ilgiyebo.domain.chat.service;
 
 import com.ilgiyebo.common.exception.BusinessException;
 import com.ilgiyebo.domain.MatchEntity;
+import com.ilgiyebo.domain.UserEntity;
 import com.ilgiyebo.repository.ChatSessionRepository;
-import com.ilgiyebo.repository.InteractionRepository;
+import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.repository.MatchRepository;
 import net.jqwik.api.*;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -63,8 +64,12 @@ class ChatSessionParticipantAuthorizationPropertyTest {
 
         // Arrange: mock MatchRepository to return a match with userAId and userBId
         MatchEntity match = mock(MatchEntity.class);
-        when(match.getUserAId()).thenReturn(userAId);
-        when(match.getUserBId()).thenReturn(userBId);
+        UserEntity userAEntity = mock(UserEntity.class);
+        UserEntity userBEntity = mock(UserEntity.class);
+        when(userAEntity.getId()).thenReturn(userAId);
+        when(userBEntity.getId()).thenReturn(userBId);
+        when(match.getUserA()).thenReturn(userAEntity);
+        when(match.getUserB()).thenReturn(userBEntity);
         when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
 
         // Select either userA or userB as the requesting user
@@ -95,8 +100,12 @@ class ChatSessionParticipantAuthorizationPropertyTest {
 
         // Arrange: mock MatchRepository to return a match with userAId and userBId
         MatchEntity match = mock(MatchEntity.class);
-        when(match.getUserAId()).thenReturn(userAId);
-        when(match.getUserBId()).thenReturn(userBId);
+        UserEntity userAEntity = mock(UserEntity.class);
+        UserEntity userBEntity = mock(UserEntity.class);
+        when(userAEntity.getId()).thenReturn(userAId);
+        when(userBEntity.getId()).thenReturn(userBId);
+        when(match.getUserA()).thenReturn(userAEntity);
+        when(match.getUserB()).thenReturn(userBEntity);
         when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
 
         // Act & Assert: validateParticipant should throw BusinessException with FORBIDDEN

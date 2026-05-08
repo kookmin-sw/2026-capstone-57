@@ -20,3 +20,4 @@ Thumbs.db
 .kiro/specs/ilgi-yebo/.config.kiro
 backend/src/main/java/com/ilgiyebo/domain/chat/.kiro/*
 .kiro/specs/ai-service-separation/.config.kiro
+backend/src/main/resources/mock-data.sql
