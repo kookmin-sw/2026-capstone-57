@@ -1,12 +1,11 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.interaction.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
+import com.ilgiyebo.domain.MatchEntity;
+import com.ilgiyebo.domain.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.time.Instant;
-import java.util.UUID;
 
 @Entity
 @Table(name = "HINT_QUESTION")
@@ -18,14 +17,17 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class HintQuestionEntity extends BaseSchema {
 
-    @Column(name = "match_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID matchId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "match_id", nullable = false)
+    private MatchEntity match;
 
-    @Column(name = "sender_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID senderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_id", nullable = false)
+    private UserEntity sender;
 
-    @Column(name = "responder_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID responderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responder_id", nullable = false)
+    private UserEntity responder;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String question;
@@ -33,11 +35,11 @@ public class HintQuestionEntity extends BaseSchema {
     @Column(columnDefinition = "TEXT")
     private String answer;
 
+    @Column(name = "quiz_index", nullable = false)
+    private int quizIndex;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private HintQuestionStatus status = HintQuestionStatus.PENDING;
-
-    @Column(name = "answered_at")
-    private Instant answeredAt;
 }

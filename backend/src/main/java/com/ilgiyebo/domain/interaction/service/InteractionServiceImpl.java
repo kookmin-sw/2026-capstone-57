@@ -1,0 +1,138 @@
+package com.ilgiyebo.domain.interaction.service;
+
+import com.ilgiyebo.domain.interaction.dto.InteractionStateDto;
+import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
+import com.ilgiyebo.domain.interaction.entity.StageStatus;
+import com.ilgiyebo.domain.interaction.exception.InteractionException;
+import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
+import com.ilgiyebo.domain.MatchEntity;
+import com.ilgiyebo.domain.MatchStatus;
+import com.ilgiyebo.domain.interaction.entity.TerminationReason;
+import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
+import com.ilgiyebo.repository.MatchRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class InteractionServiceImpl implements InteractionService {
+
+    private final InteractionRepository interactionRepository;
+    private final MatchRepository matchRepository;
+    private final InteractionNotificationPublisher notificationPublisher;
+
+    @Override
+    @Transactional(readOnly = true)
+    public InteractionStateDto getInteractionState(UUID matchId, UUID userId) {
+        MatchEntity match = findMatch(matchId);
+        validateUserInMatch(match, userId);
+        InteractionEntity interaction = findInteraction(matchId);
+
+        // DTO의 from 메서드 사용
+        return InteractionStateDto.from(interaction, match);
+    }
+
+    @Override
+    @Transactional
+    public void terminateMatch(UUID matchId, TerminationReason reason) {
+        MatchEntity match = findMatch(matchId);
+        InteractionEntity interaction = findInteraction(matchId);
+
+        if (interaction.getStageStatus() == StageStatus.TERMINATED) {
+            return;
+        }
+
+        interaction.setStageStatus(StageStatus.TERMINATED);
+        interaction.setTerminationReason(reason.name());
+        match.setStatus(MatchStatus.TERMINATED);
+
+        matchRepository.save(match);
+        interactionRepository.save(interaction);
+
+        notificationPublisher.publishMatchTerminated(
+                matchId, match.getUserA().getId(), match.getUserB().getId(), reason);
+        log.info("매칭 종료 완료: 매칭ID={}, 사유={}", matchId, reason);
+    }
+
+    @Override
+    @Transactional
+    public InteractionStateDto completeQuiz(UUID matchId, UUID userId) {
+        MatchEntity match = findMatch(matchId);
+        validateUserInMatch(match, userId);
+        InteractionEntity interaction = findInteraction(matchId);
+
+        if (interaction.getCurrentStage() != 1) {
+            throw InteractionException.QUIZ_NOT_COMPLETED.toException();
+        }
+
+        if (interaction.getStageStatus() == StageStatus.TERMINATED) {
+            throw InteractionException.ALREADY_TERMINATED.toException();
+        }
+
+        List<String> completedBy = interaction.getQuizCompletedBy();
+        if (completedBy == null) {
+            completedBy = new ArrayList<>();
+        }
+
+        String userIdStr = userId.toString();
+        if (!completedBy.contains(userIdStr)) {
+            completedBy = new ArrayList<>(completedBy);
+            completedBy.add(userIdStr);
+            interaction.setQuizCompletedBy(completedBy);
+        }
+
+        if (completedBy.size() >= 2) {
+            int completedStage = interaction.getCurrentStage();
+            interaction.setCurrentStage(2);
+            interaction.setStageStatus(StageStatus.IN_PROGRESS);
+            interactionRepository.save(interaction);
+
+            notificationPublisher.publishStageCompleted(
+                    matchId, userId, completedStage, 2);
+        } else {
+            interaction.setStageStatus(StageStatus.WAITING);
+            interactionRepository.save(interaction);
+        }
+
+        // DTO의 from 메서드 사용
+        return InteractionStateDto.from(interaction, match);
+    }
+
+    @Override
+    @Transactional
+    public void storeQuizData(UUID matchId, List<QuizQuestionDto> quizData) {
+        InteractionEntity interaction = findInteraction(matchId);
+
+        if (interaction.getCurrentStage() != 1) {
+            throw InteractionException.NOT_IN_QUIZ_STAGE.toException();
+        }
+
+        interaction.setQuizData(quizData);
+        interactionRepository.save(interaction);
+        log.info("SQS를 통해 퀴즈 데이터 저장 완료: 매칭ID={}, 문항수={}", matchId, quizData.size());
+    }
+
+    // --- Private helpers ---
+    private MatchEntity findMatch(UUID matchId) {
+        return matchRepository.findById(matchId)
+                .orElseThrow(InteractionException.MATCH_NOT_FOUND::toException);
+    }
+
+    private InteractionEntity findInteraction(UUID matchId) {
+        return interactionRepository.findByMatchId(matchId)
+                .orElseThrow(InteractionException.INTERACTION_NOT_FOUND::toException);
+    }
+
+    private void validateUserInMatch(MatchEntity match, UUID userId) {
+        if (!match.getUserA().getId().equals(userId) && !match.getUserB().getId().equals(userId)) {
+            throw InteractionException.USER_NOT_IN_MATCH.toException();
+        }
+    }
+}
