@@ -22,7 +22,7 @@
 
 ---
 
-## 2. 🎥 소개 영상
+## 2. 소개 영상
 > 💡 **업데이트 예정:** 프로젝트 데모 및 소개 영상은 현재 제작 중이며, 추후 이곳에 추가될 예정입니다.
 
 ---
@@ -56,7 +56,7 @@
 
 ---
 
-## 5. 🚀 사용법 (Getting Started)
+## 5. 사용법 (Getting Started)
 
 ### ⚙️ 시스템 요구사항
 * **Java 17** 이상
@@ -99,7 +99,7 @@ AWS_SECRET_ACCESS_KEY=your_secret_key
 
 ---
 
-## 6. 🛠 기술 스택 (Tech Stack)
+## 6. 기술 스택 (Tech Stack)
 
 ### Backend
 * **Framework:** Spring Boot 3.x, Spring Web, Spring Security
