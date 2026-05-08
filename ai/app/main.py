@@ -80,8 +80,6 @@ async def lifespan(app: FastAPI):
     publisher = SQSPublisher(
         region=settings.aws_region,
         max_retries=settings.sqs_publish_max_retries,
-        aws_access_key_id=settings.aws_access_key_id,
-        aws_secret_access_key=settings.aws_secret_access_key,
     )
 
     conversation_manager = ConversationManager(
@@ -124,8 +122,6 @@ async def lifespan(app: FastAPI):
         region=settings.aws_region,
         poll_interval=settings.sqs_poll_interval_seconds,
         max_concurrent=settings.sqs_max_concurrent_messages,
-        aws_access_key_id=settings.aws_access_key_id,
-        aws_secret_access_key=settings.aws_secret_access_key,
     )
 
     poller.register_queue(

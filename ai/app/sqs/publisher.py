@@ -36,8 +36,6 @@ class SQSPublisher:
         region: AWS 리전 이름.
         max_retries: 발행 실패 시 최대 재시도 횟수 (기본 3).
         retry_base_delay: 재시도 간 기본 대기 시간 (초). 지수 백오프 적용.
-        aws_access_key_id: AWS 액세스 키 (선택, None이면 기본 자격증명 체인 사용).
-        aws_secret_access_key: AWS 시크릿 키 (선택).
         endpoint_url: SQS 엔드포인트 URL (선택, 로컬 테스트용).
     """
 
@@ -46,23 +44,14 @@ class SQSPublisher:
         region: str = "ap-northeast-2",
         max_retries: int = 3,
         retry_base_delay: float = 0.5,
-        aws_access_key_id: str | None = None,
-        aws_secret_access_key: str | None = None,
         endpoint_url: str | None = None,
     ) -> None:
         self._region = region
         self._max_retries = max_retries
         self._retry_base_delay = retry_base_delay
-        self._aws_access_key_id = aws_access_key_id
-        self._aws_secret_access_key = aws_secret_access_key
         self._endpoint_url = endpoint_url
 
-        session_kwargs: dict[str, Any] = {"region_name": self._region}
-        if self._aws_access_key_id:
-            session_kwargs["aws_access_key_id"] = self._aws_access_key_id
-        if self._aws_secret_access_key:
-            session_kwargs["aws_secret_access_key"] = self._aws_secret_access_key
-        self._session = aioboto3.Session(**session_kwargs)
+        self._session = aioboto3.Session(region_name=self._region)
 
     async def publish(self, queue_url: str, message: BaseModel) -> bool:
         """메시지를 JSON 직렬화하여 큐로 전송한다.

@@ -51,14 +51,7 @@ class BedrockClient:
         self.max_tokens = settings.bedrock_max_tokens
         self.timeout_seconds = settings.bedrock_timeout_seconds
         self._region = settings.aws_region
-        self._access_key_id = settings.aws_access_key_id
-        self._secret_access_key = settings.aws_secret_access_key
-        session_kwargs: dict[str, str] = {"region_name": self._region}
-        if self._access_key_id:
-            session_kwargs["aws_access_key_id"] = self._access_key_id
-        if self._secret_access_key:
-            session_kwargs["aws_secret_access_key"] = self._secret_access_key
-        self._session = aioboto3.Session(**session_kwargs)
+        self._session = aioboto3.Session(region_name=self._region)
 
     async def invoke(self, prompt: str, max_tokens: int | None = None) -> str:
         """단일 프롬프트로 Claude 모델을 호출한다.

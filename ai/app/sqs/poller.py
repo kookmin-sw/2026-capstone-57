@@ -41,8 +41,6 @@ class SQSPoller:
         region: AWS 리전 이름.
         poll_interval: 폴링 간격 (초). 메시지가 없을 때 대기 시간.
         max_concurrent: 큐당 한 번에 수신할 최대 메시지 수 (1-10).
-        aws_access_key_id: AWS 액세스 키 (선택, None이면 기본 자격증명 체인 사용).
-        aws_secret_access_key: AWS 시크릿 키 (선택).
         endpoint_url: SQS 엔드포인트 URL (선택, 로컬 테스트용).
     """
 
@@ -51,15 +49,11 @@ class SQSPoller:
         region: str = "ap-northeast-2",
         poll_interval: float = 1.0,
         max_concurrent: int = 5,
-        aws_access_key_id: str | None = None,
-        aws_secret_access_key: str | None = None,
         endpoint_url: str | None = None,
     ) -> None:
         self._region = region
         self._poll_interval = poll_interval
         self._max_concurrent = min(max(max_concurrent, 1), 10)
-        self._aws_access_key_id = aws_access_key_id
-        self._aws_secret_access_key = aws_secret_access_key
         self._endpoint_url = endpoint_url
 
         # queue_url -> handler mapping
@@ -96,12 +90,7 @@ class SQSPoller:
 
         self._running = True
 
-        session_kwargs: dict[str, Any] = {"region_name": self._region}
-        if self._aws_access_key_id:
-            session_kwargs["aws_access_key_id"] = self._aws_access_key_id
-        if self._aws_secret_access_key:
-            session_kwargs["aws_secret_access_key"] = self._aws_secret_access_key
-        self._session = aioboto3.Session(**session_kwargs)
+        self._session = aioboto3.Session(region_name=self._region)
 
         for queue_url, handler in self._queues.items():
             task = asyncio.create_task(
