@@ -1,0 +1,9 @@
+spring:
+  cloud:
+    aws:
+      sqs:
+        listener:
+          auto-startup: false
+      credentials:
+        access-key: local-dev
+        secret-key: local-dev

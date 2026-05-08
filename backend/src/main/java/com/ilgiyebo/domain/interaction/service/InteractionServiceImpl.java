@@ -26,7 +26,6 @@ public class InteractionServiceImpl implements InteractionService {
 
     private final InteractionRepository interactionRepository;
     private final MatchRepository matchRepository;
-    private final InteractionNotificationPublisher notificationPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -56,8 +55,6 @@ public class InteractionServiceImpl implements InteractionService {
         matchRepository.save(match);
         interactionRepository.save(interaction);
 
-        notificationPublisher.publishMatchTerminated(
-                matchId, match.getUserA().getId(), match.getUserB().getId(), reason);
         log.info("매칭 종료 완료: 매칭ID={}, 사유={}", matchId, reason);
     }
 
@@ -89,13 +86,9 @@ public class InteractionServiceImpl implements InteractionService {
         }
 
         if (completedBy.size() >= 2) {
-            int completedStage = interaction.getCurrentStage();
             interaction.setCurrentStage(2);
             interaction.setStageStatus(StageStatus.IN_PROGRESS);
             interactionRepository.save(interaction);
-
-            notificationPublisher.publishStageCompleted(
-                    matchId, userId, completedStage, 2);
         } else {
             interaction.setStageStatus(StageStatus.WAITING);
             interactionRepository.save(interaction);

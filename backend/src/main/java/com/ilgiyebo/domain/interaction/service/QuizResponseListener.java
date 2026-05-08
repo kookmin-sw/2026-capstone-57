@@ -21,7 +21,7 @@ public class QuizResponseListener {
     private final InteractionService interactionService;
     private final ObjectMapper objectMapper;
 
-    @SqsListener("${quiz.response.queue:ai-quiz-response-queue}")
+    @SqsListener("${cloud.aws.sqs.quiz-response-queue}")
     public void handleQuizResponse(String messageJson) {
         try {
             QuizGenerateResponseMessage response = objectMapper.readValue(
