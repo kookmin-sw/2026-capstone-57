@@ -32,8 +32,6 @@ def _check_sqs(settings: Settings) -> CheckResult:
         client = boto3.client(
             "sqs",
             region_name=settings.aws_region,
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
         )
         client.list_queues(MaxResults=1)
         return CheckResult(status="healthy", message="Connected")
@@ -47,8 +45,6 @@ def _check_bedrock(settings: Settings) -> CheckResult:
         client = boto3.client(
             "bedrock",
             region_name=settings.aws_region,
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
         )
         client.list_foundation_models(maxResults=1)
         return CheckResult(status="healthy", message="Available")
