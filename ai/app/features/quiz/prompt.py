@@ -15,13 +15,7 @@ DEFAULT_QUIZ_PROMPT_TEMPLATE = """
       상대방의 프로필 정보를 기반으로 재미있고 자연스러운 퀴즈 문항을 생성해주세요.
       
       상대방 프로필:
-      - 이름: {{name}}
-      - 닉네임: {{nickname}}
-      - 대학교: {{university}}
-      - 전공: {{major}}
-      - 취미: {{hobbies}}
-      - 관심사: {{interests}}
-      - 성격 유형: {{personalityType}}
+      {profile_section}
       
       다음 조건을 만족하는 퀴즈 {{questionCount}}개를 JSON 형식으로 생성해주세요:
       1. 각 문제는 상대방에 대해 알아가는 데 도움이 되는 내용이어야 합니다
