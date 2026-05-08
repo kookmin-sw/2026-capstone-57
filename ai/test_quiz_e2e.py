@@ -94,6 +94,9 @@ async def step_3_process_quiz(message: dict):
     print("🧠 [3단계] 퀴즈 생성 처리 (Bedrock 호출)")
     print("=" * 60)
 
+    # 디버깅: publisher가 사용할 큐 URL 확인
+    print(f"   [DEBUG] Response Queue URL: '{settings.sqs_quiz_response_queue}'")
+
     bedrock_client = BedrockClient(settings)
     publisher = SQSPublisher(region=settings.aws_region)
     handler = QuizHandler(bedrock_client, publisher, settings)
@@ -106,6 +109,31 @@ async def step_3_process_quiz(message: dict):
     elapsed = time.time() - start
 
     print(f"   ✅ 처리 완료 ({elapsed:.1f}초 소요)")
+
+    # 디버깅: 발행 직후 직접 큐 확인
+    print("\n   [DEBUG] 발행 직후 Response Queue 직접 확인...")
+    import time as t
+    t.sleep(2)  # 2초 대기
+    debug_response = sqs.receive_message(
+        QueueUrl=settings.sqs_quiz_response_queue,
+        MaxNumberOfMessages=1,
+        WaitTimeSeconds=5,
+    )
+    debug_msgs = debug_response.get("Messages", [])
+    if debug_msgs:
+        body = json.loads(debug_msgs[0]["Body"])
+        print(f"   [DEBUG] ✅ 메시지 발견! status={body.get('status')}, questions={len(body.get('quiz', {}).get('questions', []))}개")
+        # 메시지를 다시 넣지 않고 삭제하지도 않음 (visibility timeout 후 다시 보임)
+    else:
+        print("   [DEBUG] ❌ 메시지 없음 - publisher가 다른 큐로 보냈을 가능성")
+        # 큐 메시지 수 확인
+        attrs = sqs.get_queue_attributes(
+            QueueUrl=settings.sqs_quiz_response_queue,
+            AttributeNames=["ApproximateNumberOfMessages", "ApproximateNumberOfMessagesNotVisible"],
+        )
+        visible = attrs["Attributes"]["ApproximateNumberOfMessages"]
+        not_visible = attrs["Attributes"]["ApproximateNumberOfMessagesNotVisible"]
+        print(f"   [DEBUG] 큐 상태: visible={visible}, not_visible={not_visible}")
 
 
 def step_4_check_response():
