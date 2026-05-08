@@ -6,6 +6,8 @@
 Requirements: 4.2
 """
 
+from __future__ import annotations
+
 from app.features.quiz.models import TargetProfile
 
 DEFAULT_QUIZ_PROMPT_TEMPLATE = """당신은 친구 관계를 위한 퀴즈를 만드는 AI입니다.

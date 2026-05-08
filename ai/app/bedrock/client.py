@@ -20,6 +20,8 @@ Claude 모델과의 통신을 담당하며, 단일턴/멀티턴 호출 및
     )
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
