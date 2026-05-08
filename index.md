@@ -1,67 +1,562 @@
-# 🌤️ 일기예보 (Ilgi-yebo)
-> **"일기로 예견하는 보석같은 만남"**
-> 코로나19 이후 새로운 사람을 만나는 것에 부담감을 느끼는 대학생들을 위한 **일상/동선 기반 소셜 매칭 서비스**입니다.
+---
+layout: default
+title: 일기예보
+---
 
-## 1. 📢 프로젝트 소개
-**일기예보**는 단순한 외모 기반의 데이팅 앱이 아닙니다. 사용자의 수업 시간표와 교내 이동 동선(캠퍼스 공간 데이터)의 교집합을 분석하여 자연스러운 만남의 기회를 제공합니다.
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
 
-사용자는 매일의 일기와 플래너를 작성하며 스스로를 발전시키고(‘나’), 매칭된 상대와 **5단계 상호작용(퀴즈 → 채팅 → 협동 게임 → 미션 → 회고)**을 거치며 안전하고 점진적으로 관계를 형성(‘너’와 ‘우리’)해 나갈 수 있습니다.
+  body { background-color: #fdf8f2; font-family: 'Noto Sans KR', sans-serif; }
 
-### ✨ 핵심 포인트
-* **동선 기반 AI 매칭:** AWS Bedrock 기반 LLM이 사용자의 시간표와 캠퍼스 데이터를 분석하여 최적의 동선 교집합을 찾아냅니다.
-* **안전한 5단계 상호작용:** 블라인드 퀴즈부터 시작해 서로 동의 하에만 다음 단계(채팅, 오프라인 미션 등)로 넘어가는 안전한 시스템을 지향합니다.
-* **성장형 소셜 라이프:** 일기 및 플래너 작성, 긍정적인 상호작용을 통해 경험치를 얻고 레벨업하는 게미피케이션(Gamification) 요소를 적용했습니다.
+  .markdown-body {
+    background-color: transparent;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 16px 100px;
+  }
+
+  .iy-section { margin-top: 36px; }
+
+  .iy-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .iy-section-header .title   { font-size: 17px; font-weight: 700; color: #1a1a1a; }
+  .iy-section-header .subtitle{ font-size: 12px; color: #aaa; margin-top: 3px; }
+
+  /* ── 히어로 ── */
+  .iy-hero {
+    background: linear-gradient(135deg, #eaf4ff 0%, #fff8ee 100%);
+    border-radius: 20px; padding: 28px 22px; margin-top: 16px;
+    text-align: center; box-shadow: 0 4px 20px rgba(59,138,222,0.08);
+  }
+  .iy-hero .tagline { font-size: 13px; color: #3b8ade; font-weight: 500; margin-bottom: 10px; }
+  .iy-hero .hero-logo {
+    font-size: 48px; margin-bottom: 4px; line-height: 1;
+  }
+  .iy-hero .hero-logo-text {
+    font-size: 32px; font-weight: 900;
+    background: linear-gradient(90deg, #ff4e50, #fc913a, #f9d423, #28a745, #007bff, #6f42c1);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: rainbow 4s linear infinite;
+    margin-bottom: 14px; letter-spacing: -0.02em;
+    text-shadow: 0 0 30px rgba(255,78,80,0.15);
+  }
+  @keyframes rainbow {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+  }
+  .iy-hero h2 { font-size: 20px; font-weight: 700; color: #1a1a1a; line-height: 1.4; margin: 0 0 12px; border: none; }
+  .iy-hero .desc { font-size: 13px; color: #666; line-height: 1.8; }
+  .iy-hero .badges { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .iy-hero .badge {
+    background: #fff; border-radius: 99px; padding: 5px 14px;
+    font-size: 12px; color: #555; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  }
+
+  /* ── 매칭 카드 ── */
+  .iy-card {
+    background: #fff; border-radius: 16px; padding: 16px 18px; margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    display: flex; align-items: center; gap: 14px; position: relative;
+  }
+  .iy-card.pending   { background: #fff; border: 1.5px dashed #ddd; box-shadow: none; }
+  .iy-card.completed { background: #fffbf0; box-shadow: 0 2px 10px rgba(255,200,50,0.10); }
+
+  .iy-avatar {
+    width: 46px; height: 46px; border-radius: 50%; background: #fdecd0;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+  }
+  .iy-avatar.gray   { background: #f0f0f0; color: #bbb; font-size: 20px; }
+  .iy-avatar.yellow { background: #ffd84d; color: #fff; }
+
+  .iy-card-body { flex: 1; min-width: 0; }
+  .iy-card-body .name           { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+  .iy-card-body .stage          { font-size: 12px; color: #3b8ade; margin-bottom: 8px; }
+  .iy-card-body .pending-text   { font-size: 14px; color: #bbb; }
+  .iy-card-body .completed-text { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+
+  .iy-progress { display: flex; gap: 4px; margin-top: 4px; }
+  .iy-progress .bar { flex: 1; height: 4px; border-radius: 99px; background: #e8e8e8; }
+  .iy-progress .bar.done   { background: #3b8ade; }
+  .iy-progress .bar.active { background: #a8c8f0; }
+
+  .iy-badge {
+    position: absolute; right: 16px; top: 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .iy-badge .icon {
+    width: 32px; height: 32px; border-radius: 50%; background: #f5f5f5;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .iy-badge .icon.yellow { background: #ffd84d; color: #fff; }
+  .iy-badge .label { font-size: 10px; color: #aaa; }
+
+  /* ── 핵심 기능 ── */
+  .iy-feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .iy-feature-card {
+    background: #fff; border-radius: 16px; padding: 18px 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .iy-feature-card .f-icon  { font-size: 26px; margin-bottom: 8px; }
+  .iy-feature-card .f-title { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
+  .iy-feature-card .f-desc  { font-size: 12px; color: #888; line-height: 1.6; }
+
+  /* ── 이용 방법 (스텝) ── */
+  .iy-steps { display: flex; flex-direction: column; }
+  .iy-step  { display: flex; gap: 14px; align-items: flex-start; position: relative; }
+  .iy-step:not(:last-child)::before {
+    content: ''; position: absolute; left: 19px; top: 40px;
+    width: 2px; height: calc(100% - 8px); background: #e8e8e8;
+  }
+  .iy-step .step-num {
+    width: 40px; height: 40px; border-radius: 50%; background: #3b8ade; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; flex-shrink: 0; z-index: 1;
+  }
+  .iy-step .step-body {
+    background: #fff; border-radius: 14px; padding: 14px 16px;
+    margin-bottom: 10px; flex: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .iy-step .step-body .s-title { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+  .iy-step .step-body .s-desc  { font-size: 12px; color: #888; line-height: 1.6; }
+
+  /* ── 사용자 흐름 ── */
+  .iy-flow { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+  .iy-flow-stages {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 4px; margin-bottom: 16px;
+  }
+  .iy-flow-stage { flex: 1; text-align: center; }
+  .iy-flow-stage .fs-icon {
+    width: 42px; height: 42px; border-radius: 50%; background: #eaf4ff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; margin: 0 auto 5px;
+  }
+  .iy-flow-stage .fs-label { font-size: 10px; color: #555; font-weight: 600; }
+  .iy-flow-arrow { color: #ccc; font-size: 16px; flex-shrink: 0; }
+  .iy-flow-desc {
+    border-top: 1px solid #f5f5f5; padding-top: 14px;
+    font-size: 12px; color: #888; line-height: 1.8; text-align: center;
+  }
+
+  /* ── 아키텍처 ── */
+  .iy-arch { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+  .iy-arch-layer { margin-bottom: 14px; }
+  .iy-arch-layer .layer-label {
+    font-size: 11px; font-weight: 700; color: #aaa;
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 7px;
+  }
+  .iy-arch-boxes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .iy-arch-box   { border-radius: 8px; padding: 6px 11px; font-size: 12px; font-weight: 500; }
+  .iy-arch-box.client  { background: #eaf4ff; color: #2c6fbd; }
+  .iy-arch-box.gateway { background: #fff3e0; color: #9a4f00; }
+  .iy-arch-box.service { background: #f0faf5; color: #1a7a50; }
+  .iy-arch-box.data    { background: #fdf2ff; color: #7a1aaa; }
+  .iy-arch-box.ai      { background: #fff8e6; color: #9a6200; }
+  .iy-arch-divider {
+    display: flex; align-items: center; gap: 8px; margin: 10px 0; color: #ddd; font-size: 12px;
+  }
+  .iy-arch-divider::before, .iy-arch-divider::after {
+    content: ''; flex: 1; height: 1px; background: #f0f0f0;
+  }
+
+  /* ── 기술 스택 ── */
+  .iy-stack-group { margin-bottom: 16px; }
+  .iy-stack-group .sg-label { font-size: 12px; font-weight: 700; color: #aaa; margin-bottom: 8px; }
+  .iy-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .iy-chip {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 99px;
+    padding: 5px 13px; font-size: 12px; color: #555;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .iy-chip.blue   { background: #edf4ff; border-color: #b8d4f8; color: #2c6fbd; }
+  .iy-chip.amber  { background: #fff8e6; border-color: #ffd98a; color: #9a6200; }
+  .iy-chip.green  { background: #edfaf4; border-color: #9de8c3; color: #1a7a50; }
+  .iy-chip.purple { background: #f5f0ff; border-color: #c8aff8; color: #6020c0; }
+
+  /* ── 팀 소개 ── */
+  .iy-team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .iy-team-card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .iy-team-card .t-avatar {
+    width: 38px; height: 38px; border-radius: 50%; background: #eaf4ff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; margin-bottom: 10px;
+  }
+  .iy-team-card .t-name { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
+  .iy-team-card .t-role { font-size: 11px; color: #3b8ade; font-weight: 600; margin-bottom: 7px; }
+  .iy-team-card .t-desc { font-size: 11px; color: #888; line-height: 1.65; }
+
+  /* ── 깃허브 링크 ── */
+  .iy-links { display: flex; gap: 10px; margin-top: 14px; }
+  .iy-link-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: #fff; border-radius: 14px; padding: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    text-decoration: none; font-size: 13px; font-weight: 700; color: #1a1a1a;
+  }
+  .iy-link-btn .lb-icon { font-size: 22px; }
+  .iy-link-btn.primary  { background: #1a1a1a; color: #fff; }
+
+  /* ── 하단 네비 ── */
+  .iy-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 520px;
+    background: #fff; border-top: 1px solid #f0f0f0;
+    display: flex; justify-content: space-around;
+    padding: 10px 0 14px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.06); z-index: 100;
+  }
+  .iy-nav a {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    text-decoration: none; color: #bbb; font-size: 10px;
+  }
+  .iy-nav a.active { color: #3b8ade; }
+  .iy-nav a .nav-icon { font-size: 22px; }
+</style>
+
+<!-- ── 히어로 ── -->
+<div class="iy-hero">
+  <div class="tagline">"일기로 예견하는 보석같은 만남"</div>
+  <div class="hero-logo">📔</div>
+  <div class="hero-logo-text">일기예보</div>
+  <h2>캠퍼스 동선으로<br>자연스럽게 연결되다</h2>
+  <div class="desc">코로나19 이후 새로운 사람을 만나는 것이 부담스러운 대학생들을 위해,<br>수업 시간표와 교내 이동 동선의 교집합을 분석하여<br>자연스러운 만남의 기회를 제공하는 소셜 매칭 서비스입니다.</div>
+  <div class="badges">
+    <span class="badge">🎓 대학생 전용</span>
+    <span class="badge">📍 동선 기반 매칭</span>
+    <span class="badge">🛡️ 5단계 안전 시스템</span>
+  </div>
+</div>
 
 ---
 
-## 2. 🎥 소개 영상
-> 💡 **업데이트 예정:** 프로젝트 데모 및 소개 영상은 현재 제작 중이며, 추후 이곳에 추가될 예정입니다.
+<!-- ── 데모 UI ── -->
+<div class="iy-section">
+  <div class="iy-section-header">
+    <div>
+      <div class="title">📱 예시 화면</div>
+      <div class="subtitle">이런 화면이 펼쳐집니다</div>
+    </div>
+  </div>
+  <div class="iy-card">
+    <div class="iy-avatar">🌤️</div>
+    <div class="iy-card-body">
+      <div class="name">하늘빛</div>
+      <div class="stage">📖 회고 단계 진행 중</div>
+      <div class="iy-progress">
+        <div class="bar done"></div><div class="bar done"></div>
+        <div class="bar done"></div><div class="bar done"></div>
+        <div class="bar active"></div>
+      </div>
+    </div>
+    <div class="iy-badge"><div class="icon">⭐</div><div class="label">취미</div></div>
+  </div>
+  <div class="iy-card pending">
+    <div class="iy-avatar gray">🕐</div>
+    <div class="iy-card-body"><div class="pending-text">월요일에 새로운 만남</div></div>
+    <div class="iy-badge"><div class="icon">🕐</div><div class="label">관심사</div></div>
+  </div>
+  <div class="iy-card completed">
+    <div class="iy-avatar yellow">✓</div>
+    <div class="iy-card-body"><div class="completed-text">매칭 완료 ⚡</div></div>
+    <div class="iy-badge"><div class="icon yellow">✓</div><div class="label">이상형</div></div>
+  </div>
+</div>
 
 ---
 
-## 3. 👥 팀 소개
-| 이름 | 역할 및 담당 |
-| :--- | :--- |
-| **김아리** | **[매칭 & 사용자 인증]**<br>- 대학교 이메일 파싱 및 JWT 기반 로그인/보안 시스템 구현<br>- Spring Batch를 활용한 자정 배치 매칭 스케줄러 개발<br>- 빈 슬롯 관리 및 사용자 속성 기반 추천 알고리즘 설계 |
-| **선현승** | **[실시간 상호작용 (게임)]**<br>- Spring WebSocket 및 Redis를 활용한 3단계 협동 게임 세션 구현<br>- 실시간 게임 상태 동기화 및 완료 시 친밀도 점수 부여 로직<br>- 매칭된 사용자 간의 상호작용 상태(FSM) 전환 파이프라인 관리 |
-| **정영미** | **[일상 기록 & 퀴즈 도메인]**<br>- 플래너(일정/동선) 및 일기(감정 태그) 도메인 핵심 비즈니스 로직 구현<br>- 1단계 상호작용(퀴즈) 비동기 힌트 질문(AWS SQS 연동) 처리<br>- 활동별 경험치 획득, 레벨업 및 슬롯 해금 성장 시스템 구축 |
-| **황찬우** | **[AI & 공간 데이터]**<br>- AWS Bedrock(LLM) 연동 및 맞춤형 퀴즈/미션/회고 생성 프롬프트 엔지니어링<br>- 시간표와 캠퍼스 공간 데이터를 융합한 AI 동선 교집합 추론 로직 설계<br>- AI 기반 대화 아이스브레이킹 및 회고 질문 자동 생성 |
+<!-- ── 핵심 기능 ── -->
+<div class="iy-section">
+  <div class="iy-section-header"><div><div class="title">✨ 핵심 기능</div></div></div>
+  <div class="iy-feature-grid">
+    <div class="iy-feature-card">
+      <div class="f-icon">🗺️</div>
+      <div class="f-title">동선 기반 매칭</div>
+      <div class="f-desc">시간표와 캠퍼스 공간 데이터를 분석해 자연스럽게 마주칠 수 있는 상대를 추천합니다.</div>
+    </div>
+    <div class="iy-feature-card">
+      <div class="f-icon">🛡️</div>
+      <div class="f-title">5단계 안전 시스템</div>
+      <div class="f-desc">퀴즈→채팅→게임→미션→회고, 서로 동의 하에만 다음 단계로 진행합니다.</div>
+    </div>
+    <div class="iy-feature-card">
+      <div class="f-icon">🤖</div>
+      <div class="f-title">AI 콘텐츠 생성</div>
+      <div class="f-desc">Amazon Bedrock LLM이 프로필 기반 퀴즈, 미션, 회고 질문을 자동으로 생성합니다.</div>
+    </div>
+    <div class="iy-feature-card">
+      <div class="f-icon">🌱</div>
+      <div class="f-title">성장형 소셜</div>
+      <div class="f-desc">일기·플래너 작성과 상호작용으로 경험치를 쌓고 새로운 슬롯을 해금합니다.</div>
+    </div>
+  </div>
+</div>
 
 ---
 
-## 4. 🏗️ 시스템 아키텍처
-일기예보는 대규모 트래픽과 확장을 고려하여 **마이크로서비스 지향형 아키텍처(MSA)** 사상을 일부 차용하고, AWS 클라우드 네이티브 환경에서 구축되었습니다.
-
-*   **Client:** React Native 기반 모바일 애플리케이션이 사용자 인터페이스를 담당합니다.
-*   **API Gateway:** AWS ALB(Application Load Balancer)를 통해 트래픽을 각 서비스로 분산합니다.
-*   **Backend Services (Spring Boot):** ECS Fargate 컨테이너 기반으로 독립적인 도메인 서비스를 운영합니다.
-    *   **인증/사용자:** JWT 기반 보안 및 이메일 인증 처리
-    *   **매칭 엔진:** 배치 처리를 통한 최적 상대 매칭 로직 수행
-    *   **상호작용:** 채팅(WebSocket), 게임, 미션 상태 관리
-    *   **AI 서비스:** AWS SDK를 통해 Bedrock과 통신하며 동선 추론 및 콘텐츠 생성
-*   **Data Layer:** 
-    *   **MySQL (Aurora):** 메인 비즈니스 데이터 저장
-    *   **Redis:** 실시간 채팅 세션 및 게임 상태 캐싱
-    *   **Amazon SQS:** 알림 및 비동기 작업 메시지 큐
-*   **External AI:** Amazon Bedrock을 활용한 LLM 기반 맞춤형 서비스 제공
+<!-- ── 서비스 이용 방법 ── -->
+<div class="iy-section">
+  <div class="iy-section-header"><div><div class="title">📋 서비스 이용 방법</div></div></div>
+  <div class="iy-steps">
+    <div class="iy-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="s-title">대학 이메일로 가입</div>
+        <div class="s-desc">학교 이메일 인증으로 재학생 여부를 확인합니다. 취미·관심사·성격 유형 등 프로필을 설정하면 초기 슬롯 1개가 부여됩니다.</div>
+      </div>
+    </div>
+    <div class="iy-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="s-title">시간표 등록</div>
+        <div class="s-desc">학기 초 수업 시간표를 등록합니다. 매일 플래너를 작성하면 더 정확한 동선 기반 매칭이 가능합니다.</div>
+      </div>
+    </div>
+    <div class="iy-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="s-title">매주 월요일 자정, 매칭 성사</div>
+        <div class="s-desc">배치 매칭 시스템이 동선이 겹치는 상대를 자동으로 찾아 매칭합니다. 매칭 주기는 월요일~금요일 5일입니다.</div>
+      </div>
+    </div>
+    <div class="iy-step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="s-title">5단계 상호작용 진행</div>
+        <div class="s-desc">퀴즈→채팅(30분)→협동 게임→오프라인 미션→회고 순서로 점진적으로 관계를 쌓아갑니다.</div>
+      </div>
+    </div>
+    <div class="iy-step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="s-title">경험치 획득 & 레벨업</div>
+        <div class="s-desc">활동마다 경험치를 쌓고 레벨업하면 새로운 매칭 슬롯이 해금됩니다. 더 많은 인연을 만나보세요.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 ---
 
-## 5. 🛠 기술 스택 (Tech Stack)
+<!-- ── 사용자 흐름 ── -->
+<div class="iy-section">
+  <div class="iy-section-header"><div><div class="title">🔄 사용자 흐름</div></div></div>
+  <div class="iy-flow">
+    <div class="iy-flow-stages">
+      <div class="iy-flow-stage">
+        <div class="fs-icon">❓</div><div class="fs-label">퀴즈</div>
+      </div>
+      <div class="iy-flow-arrow">›</div>
+      <div class="iy-flow-stage">
+        <div class="fs-icon">💬</div><div class="fs-label">채팅</div>
+      </div>
+      <div class="iy-flow-arrow">›</div>
+      <div class="iy-flow-stage">
+        <div class="fs-icon">🎮</div><div class="fs-label">게임</div>
+      </div>
+      <div class="iy-flow-arrow">›</div>
+      <div class="iy-flow-stage">
+        <div class="fs-icon">🗺️</div><div class="fs-label">미션</div>
+      </div>
+      <div class="iy-flow-arrow">›</div>
+      <div class="iy-flow-stage">
+        <div class="fs-icon">📖</div><div class="fs-label">회고</div>
+      </div>
+    </div>
+    <div class="iy-flow-desc">
+      매 단계마다 <strong>양쪽 모두 동의</strong>해야 다음 단계로 진행됩니다.<br>
+      거부 시 매칭이 안전하게 종료되며, 퀴즈 단계에서는 힌트 질문으로 상대를 탐색할 수 있습니다.<br>
+      신고·차단 시스템으로 언제든 안전하게 매칭을 종료할 수 있습니다.
+    </div>
+  </div>
+</div>
 
-### Backend
-* **Framework:** Spring Boot 3.x, Spring Web, Spring Security
-* **Data Access:** Spring Data JPA, Spring Data Redis
-* **Batch/Async:** Spring Batch, Spring Scheduler, Spring AMQP, WebSocket
-* **Testing:** JUnit 5, Mockito, jqwik (Property-Based Testing), Testcontainers
+---
 
-### Database & Cloud
-* **RDBMS:** MySQL (AWS RDS Aurora 호환)
-* **In-Memory/Cache:** Redis (Amazon ElastiCache)
-* **Message Queue:** Amazon SQS / MQ
-* **Infrastructure:** AWS ECS Fargate, ALB, S3
-* **DB Migration:** Flyway
+<!-- ── 아키텍처 ── -->
+<div class="iy-section">
+  <div class="iy-section-header">
+    <div>
+      <div class="title">🏗️ 아키텍처</div>
+      <div class="subtitle">단일 Spring Boot 앱 · AWS 클라우드 네이티브</div>
+    </div>
+  </div>
+  <div class="iy-arch">
+    <div class="iy-arch-layer">
+      <div class="layer-label">Client</div>
+      <div class="iy-arch-boxes">
+        <div class="iy-arch-box client">React Native 모바일 앱</div>
+      </div>
+    </div>
+    <div class="iy-arch-divider">↓ HTTPS</div>
+    <div class="iy-arch-layer">
+      <div class="layer-label">API Gateway</div>
+      <div class="iy-arch-boxes">
+        <div class="iy-arch-box gateway">AWS ALB (Application Load Balancer)</div>
+      </div>
+    </div>
+    <div class="iy-arch-divider">↓</div>
+    <div class="iy-arch-layer">
+      <div class="layer-label">Backend · ECS Fargate</div>
+      <div class="iy-arch-boxes">
+        <div class="iy-arch-box service">인증 / 사용자</div>
+        <div class="iy-arch-box service">매칭 엔진</div>
+        <div class="iy-arch-box service">상호작용</div>
+        <div class="iy-arch-box service">채팅 WebSocket</div>
+        <div class="iy-arch-box service">게임 WebSocket</div>
+        <div class="iy-arch-box service">경험치 / 안전 / 알림</div>
+        <div class="iy-arch-box service">캠퍼스 공간 데이터</div>
+      </div>
+    </div>
+    <div class="iy-arch-divider">↓</div>
+    <div class="iy-arch-layer">
+      <div class="layer-label">Data Layer</div>
+      <div class="iy-arch-boxes">
+        <div class="iy-arch-box data">MySQL Aurora</div>
+        <div class="iy-arch-box data">Redis ElastiCache</div>
+        <div class="iy-arch-box data">Amazon SQS</div>
+        <div class="iy-arch-box data">Amazon S3</div>
+      </div>
+    </div>
+    <div class="iy-arch-divider">↕ AWS SDK v2</div>
+    <div class="iy-arch-layer">
+      <div class="layer-label">AI</div>
+      <div class="iy-arch-boxes">
+        <div class="iy-arch-box ai">Amazon Bedrock (LLM)</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-### AI & API
-* **LLM Integration:** Amazon Bedrock (AWS SDK for Java v2)
-* **API Docs:** Springdoc OpenAPI (Swagger UI)
+---
+
+<!-- ── 기술 스택 ── -->
+<div class="iy-section">
+  <div class="iy-section-header"><div><div class="title">🛠️ 기술 스택</div></div></div>
+
+  <div class="iy-stack-group">
+    <div class="sg-label">Backend</div>
+    <div class="iy-chips">
+      <span class="iy-chip blue">Spring Boot 3</span>
+      <span class="iy-chip blue">Spring Security</span>
+      <span class="iy-chip blue">Spring Data JPA</span>
+      <span class="iy-chip blue">Spring WebSocket</span>
+      <span class="iy-chip blue">Spring Batch</span>
+      <span class="iy-chip blue">Spring Scheduler</span>
+    </div>
+  </div>
+  <div class="iy-stack-group">
+    <div class="sg-label">AWS & Infra</div>
+    <div class="iy-chips">
+      <span class="iy-chip amber">Amazon Bedrock</span>
+      <span class="iy-chip amber">Amazon SQS</span>
+      <span class="iy-chip amber">ECS Fargate</span>
+      <span class="iy-chip amber">ALB</span>
+      <span class="iy-chip amber">RDS Aurora</span>
+      <span class="iy-chip amber">ElastiCache</span>
+      <span class="iy-chip amber">S3</span>
+      <span class="iy-chip amber">AWS SDK v2</span>
+    </div>
+  </div>
+  <div class="iy-stack-group">
+    <div class="sg-label">Database</div>
+    <div class="iy-chips">
+      <span class="iy-chip green">MySQL 8.0</span>
+      <span class="iy-chip green">Redis</span>
+      <span class="iy-chip green">Flyway</span>
+    </div>
+  </div>
+  <div class="iy-stack-group">
+    <div class="sg-label">Testing</div>
+    <div class="iy-chips">
+      <span class="iy-chip purple">JUnit 5</span>
+      <span class="iy-chip purple">Mockito</span>
+      <span class="iy-chip purple">jqwik (PBT)</span>
+      <span class="iy-chip purple">Testcontainers</span>
+    </div>
+  </div>
+  <div class="iy-stack-group">
+    <div class="sg-label">Client & Docs</div>
+    <div class="iy-chips">
+      <span class="iy-chip">React Native</span>
+      <span class="iy-chip">Springdoc Swagger UI</span>
+      <span class="iy-chip">JWT</span>
+    </div>
+  </div>
+</div>
+
+---
+
+<!-- ── 팀 소개 ── -->
+<div class="iy-section">
+  <div class="iy-section-header"><div><div class="title">👥 팀 소개</div></div></div>
+  <div class="iy-team-grid">
+    <div class="iy-team-card">
+      <div class="t-avatar">🌸</div>
+      <div class="t-name">김아리</div>
+      <div class="t-role">매칭 & 사용자 인증</div>
+      <div class="t-desc">대학 이메일 인증 · JWT 보안 · 월요일 자정 배치 매칭 스케줄러 · 슬롯 관리</div>
+    </div>
+    <div class="iy-team-card">
+      <div class="t-avatar">⚡</div>
+      <div class="t-name">선현승</div>
+      <div class="t-role">실시간 상호작용</div>
+      <div class="t-desc">WebSocket 게임 세션 · Redis 상태 동기화 · FSM 전환 파이프라인</div>
+    </div>
+    <div class="iy-team-card">
+      <div class="t-avatar">📔</div>
+      <div class="t-name">정영미</div>
+      <div class="t-role">일상 기록 & 퀴즈</div>
+      <div class="t-desc">플래너·일기 도메인 · SQS 힌트 질문 처리 · 경험치 성장 시스템</div>
+    </div>
+    <div class="iy-team-card">
+      <div class="t-avatar">🤖</div>
+      <div class="t-name">황찬우</div>
+      <div class="t-role">AI & 공간 데이터</div>
+      <div class="t-desc">Bedrock LLM 연동 · 프롬프트 엔지니어링 · 캠퍼스 동선 추론 설계</div>
+    </div>
+  </div>
+</div>
+
+---
+
+<!-- ── 깃허브 링크 ── -->
+<div class="iy-section">
+  <div class="iy-section-header"><div><div class="title">🔗 링크</div></div></div>
+  <div class="iy-links">
+    <a class="iy-link-btn primary" href="https://github.com/kookmin-sw/2026-capstone-57" target="_blank">
+      <span class="lb-icon">🐙</span>
+      <div>
+        <div style="font-size:11px;opacity:.6;font-weight:400;">소스 코드</div>
+        GitHub
+      </div>
+    </a>
+    <a class="iy-link-btn" href="https://kookmin-sw.github.io/2026-capstone-57/" target="_blank">
+      <span class="lb-icon">🏠</span>
+      <div>
+        <div style="font-size:11px;color:#aaa;font-weight:400;">팀 페이지</div>
+        홈페이지
+      </div>
+    </a>
+  </div>
+</div>
+
+<br>
+<p style="text-align:center;font-size:12px;color:#bbb;margin-top:24px;">
+  국민대학교 2026 캡스톤 디자인 프로젝트 · 57팀
+</p>
+
+<!-- ── 하단 네비게이션 ── -->
+<nav class="iy-nav">
+  <a href="#" class="active"><span class="nav-icon">🏠</span>홈</a>
+  <a href="#"><span class="nav-icon">🤝</span>만남</a>
+  <a href="#"><span class="nav-icon">📅</span>플래너</a>
+  <a href="#"><span class="nav-icon">📔</span>일기</a>
+  <a href="#"><span class="nav-icon">👤</span>MY</a>
+</nav>
