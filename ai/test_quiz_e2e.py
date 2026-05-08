@@ -30,12 +30,12 @@ QUIZ_REQUEST = {
     "targetUserId": "user-target-001",
     "requestedAt": "2024-05-08T12:00:00Z",
     "targetProfile": {
-        "name": "황찬우",
-        "nickname": "바보",
+        "name": "김철수",
+        "nickname": "멍청이",
         "university": "국민대학교",
-        "major": "소프트웨어",
-        "hobbies": ["게임", "야구", "축구"],
-        "interests": ["AI", "게임"],
+        "major": "국어국문학과",
+        "hobbies": ["게임", "독서", "영화감상"],
+        "interests": ["요리", "산책"],
         "personalityType": ["INTP"],
     },
 }
