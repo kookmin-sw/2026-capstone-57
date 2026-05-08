@@ -78,11 +78,12 @@ class SQSPublisher:
 
         try:
             async with self._session.client("sqs", **client_kwargs) as sqs_client:
-                await sqs_client.send_message(
+                response = await sqs_client.send_message(
                     QueueUrl=queue_url,
                     MessageBody=message_body,
                 )
-            logger.info(f"메시지 발행 성공: queue={queue_name}")
+            msg_id = response.get("MessageId", "unknown")
+            logger.info(f"메시지 발행 성공: queue={queue_name}, MessageId={msg_id}, QueueUrl={queue_url}")
             return True
         except Exception:
             logger.exception(f"메시지 발행 실패: queue={queue_name}")
@@ -124,12 +125,13 @@ class SQSPublisher:
                 async with self._session.client(
                     "sqs", **client_kwargs
                 ) as sqs_client:
-                    await sqs_client.send_message(
+                    response = await sqs_client.send_message(
                         QueueUrl=queue_url,
                         MessageBody=message_body,
                     )
+                msg_id = response.get("MessageId", "unknown")
                 logger.info(
-                    f"메시지 발행 성공: queue={queue_name}",
+                    f"메시지 발행 성공: queue={queue_name}, MessageId={msg_id}, QueueUrl={queue_url}",
                     extra={"attempt": attempt},
                 )
                 return True
