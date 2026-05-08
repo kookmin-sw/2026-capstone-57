@@ -117,7 +117,7 @@ def step_4_check_response():
     response = sqs.receive_message(
         QueueUrl=settings.sqs_quiz_response_queue,
         MaxNumberOfMessages=1,
-        WaitTimeSeconds=10,
+        WaitTimeSeconds=20,
     )
 
     messages = response.get("Messages", [])
