@@ -15,6 +15,8 @@ Pydantic 모델을 JSON 직렬화하여 지정된 SQS 큐로 전송한다.
     await publisher.publish(queue_url, response_message)
 """
 
+from __future__ import annotations
+
 import asyncio
 
 import aioboto3

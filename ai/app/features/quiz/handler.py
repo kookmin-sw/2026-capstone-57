@@ -9,6 +9,8 @@
 Requirements: 4.1, 4.6, 9.1, 9.4
 """
 
+from __future__ import annotations
+
 import asyncio
 from datetime import datetime, timezone
 

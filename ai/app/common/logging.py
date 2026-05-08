@@ -4,6 +4,8 @@ Python logging 모듈을 JSON 포맷으로 출력하도록 구성한다.
 correlation_id, feature, error_type 등 추적에 필요한 필드를 포함한다.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from contextvars import ContextVar

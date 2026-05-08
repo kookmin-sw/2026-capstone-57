@@ -4,6 +4,8 @@
 Requirements: 4.5, 4.7
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 

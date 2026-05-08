@@ -17,6 +17,8 @@ SQS에서 수신된 메시지의 `action` 필드를 기반으로
     await router.route("quiz-requests", raw_sqs_message)
 """
 
+from __future__ import annotations
+
 import json
 from collections.abc import Callable, Coroutine
 from typing import Any
