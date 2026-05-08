@@ -1,11 +1,11 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.user.service;
 
-import com.ilgiyebo.domain.UserEntity;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.user.exception.UserException;
-import com.ilgiyebo.dto.ParsedEmailInfo;
-import com.ilgiyebo.dto.ProfileSetup;
-import com.ilgiyebo.dto.UserProfileDto;
-import com.ilgiyebo.repository.UserRepository;
+import com.ilgiyebo.domain.user.dto.ParsedEmailInfo;
+import com.ilgiyebo.domain.user.dto.ProfileSetup;
+import com.ilgiyebo.domain.user.dto.UserProfileDto;
+import com.ilgiyebo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

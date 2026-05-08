@@ -1,8 +1,8 @@
-package com.ilgiyebo.controller;
+package com.ilgiyebo.domain.matching.controller;
 
-import com.ilgiyebo.domain.SlotPriority;
-import com.ilgiyebo.dto.SlotResponseDto;
-import com.ilgiyebo.service.MatchingService;
+import com.ilgiyebo.domain.matching.entity.SlotPriority;
+import com.ilgiyebo.domain.matching.dto.SlotResponseDto;
+import com.ilgiyebo.domain.matching.service.MatchingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

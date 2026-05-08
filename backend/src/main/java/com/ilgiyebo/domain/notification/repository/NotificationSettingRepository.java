@@ -1,6 +1,6 @@
-package com.ilgiyebo.repository;
+package com.ilgiyebo.domain.notification.repository;
 
-import com.ilgiyebo.domain.NotificationSettingEntity;
+import com.ilgiyebo.domain.notification.entity.NotificationSettingEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;

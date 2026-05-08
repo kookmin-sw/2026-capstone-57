@@ -1,6 +1,6 @@
 package com.ilgiyebo.domain.interaction.dto;
 
-import com.ilgiyebo.domain.MatchEntity;
+import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
 

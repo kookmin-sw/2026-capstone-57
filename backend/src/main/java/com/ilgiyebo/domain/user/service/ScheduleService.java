@@ -1,15 +1,15 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.user.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.ilgiyebo.domain.ScheduleEntity;
+import com.ilgiyebo.domain.user.entity.ScheduleEntity;
 import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
 import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
 import com.ilgiyebo.domain.user.exception.UserException;
-import com.ilgiyebo.dto.ScheduleResponse;
-import com.ilgiyebo.repository.ScheduleRepository;
-import com.ilgiyebo.repository.UserRepository;
+import com.ilgiyebo.domain.user.dto.ScheduleResponse;
+import com.ilgiyebo.domain.user.repository.ScheduleRepository;
+import com.ilgiyebo.domain.user.repository.UserRepository;
 import kong.unirest.core.ContentType;
 import kong.unirest.core.Unirest;
 import lombok.RequiredArgsConstructor;

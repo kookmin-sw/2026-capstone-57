@@ -1,6 +1,6 @@
-package com.ilgiyebo.repository;
+package com.ilgiyebo.domain.diary.repository;
 
-import com.ilgiyebo.domain.DiaryEntryEntity;
+import com.ilgiyebo.domain.diary.entity.DiaryEntryEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

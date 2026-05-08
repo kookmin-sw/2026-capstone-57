@@ -1,8 +1,8 @@
 package com.ilgiyebo.domain.interaction.service;
 
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
-import com.ilgiyebo.domain.MatchEntity;
-import com.ilgiyebo.domain.UserEntity;
+import com.ilgiyebo.domain.matching.entity.MatchEntity;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.interaction.dto.QuizGenerateRequestMessage.TargetProfile;
 import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import com.ilgiyebo.domain.interaction.dto.QuizResponseDto;
@@ -10,8 +10,8 @@ import com.ilgiyebo.domain.interaction.dto.QuizSubmitRequest;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.exception.InteractionException;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
-import com.ilgiyebo.repository.MatchRepository;
-import com.ilgiyebo.repository.UserRepository;
+import com.ilgiyebo.domain.matching.repository.MatchRepository;
+import com.ilgiyebo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

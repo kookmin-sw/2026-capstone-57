@@ -1,9 +1,9 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.matching.service;
 
-import com.ilgiyebo.domain.SlotPriority;
-import com.ilgiyebo.dto.BatchMatchingResultDto;
-import com.ilgiyebo.dto.RouteOverlapDto;
-import com.ilgiyebo.dto.SlotResponseDto;
+import com.ilgiyebo.domain.matching.entity.SlotPriority;
+import com.ilgiyebo.domain.matching.dto.BatchMatchingResultDto;
+import com.ilgiyebo.domain.matching.dto.RouteOverlapDto;
+import com.ilgiyebo.domain.matching.dto.SlotResponseDto;
 
 import java.util.List;
 import java.util.UUID;

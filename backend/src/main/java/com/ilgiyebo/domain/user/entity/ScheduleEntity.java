@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.user.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ilgiyebo.common.entity.BaseSchema;

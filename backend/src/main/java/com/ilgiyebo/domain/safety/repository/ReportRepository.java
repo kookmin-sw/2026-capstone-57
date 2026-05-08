@@ -1,6 +1,6 @@
-package com.ilgiyebo.repository;
+package com.ilgiyebo.domain.safety.repository;
 
-import com.ilgiyebo.domain.ReportEntity;
+import com.ilgiyebo.domain.safety.entity.ReportEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 

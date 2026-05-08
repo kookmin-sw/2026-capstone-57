@@ -1,8 +1,8 @@
 package com.ilgiyebo.domain.interaction.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.domain.MatchEntity;
-import com.ilgiyebo.domain.UserEntity;
+import com.ilgiyebo.domain.matching.entity.MatchEntity;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.safety.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
 import jakarta.persistence.*;

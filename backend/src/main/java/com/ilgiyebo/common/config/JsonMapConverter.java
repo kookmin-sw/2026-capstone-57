@@ -1,4 +1,4 @@
-package com.ilgiyebo.config;
+package com.ilgiyebo.common.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

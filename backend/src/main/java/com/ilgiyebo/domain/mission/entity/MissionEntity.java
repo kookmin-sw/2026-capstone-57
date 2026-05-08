@@ -1,7 +1,7 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.mission.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.config.JsonStringListConverter;
+import com.ilgiyebo.common.config.JsonStringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
