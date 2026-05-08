@@ -46,11 +46,6 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-  cloud:
-    aws:
-      region:
-        static: ${AWS_REGION:us-east-1}
-
 server:
   port: 8080
 
