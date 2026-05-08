@@ -31,7 +31,7 @@ DEFAULT_QUIZ_PROMPT_TEMPLATE = """
       "explanation": "소프트웨어를 전공하고 있어요! 코딩 이야기로 친해져 볼까요?"
     }},
     {{
-      "questionText": "비 오는 주말, 이 친구가 방 안에서 가장 즐겨할 취미는?",
+      "questionText": "주말 저녁, 이 친구가 가장 즐겨할 취미는?",
       "choices": ["넷플릭스 정주행", "요리 레시피 도전", "디스코드 켜고 게임", "조용히 독서"],
       "correctIndex": 2,
       "explanation": "게임을 아주 좋아하는 친구랍니다! 같이 게임 한 판 어때요?"
