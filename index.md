@@ -6,83 +6,102 @@ title: 일기예보
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
 
-  body { background-color: #fdf8f2; font-family: 'Noto Sans KR', sans-serif; }
+  body { background-color: #fdf8f2; font-family: 'Noto Sans KR', sans-serif; scroll-behavior: smooth; }
+
+  [id] { scroll-margin-top: 20px; }
+
+  /* ── 스크롤 페이드인 ── */
+  .iy-section, .iy-hero { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .iy-section.visible, .iy-hero.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── 숫자 하이라이트 ── */
+  .iy-stats {
+    display: flex; justify-content: space-around; gap: 8px;
+    background: linear-gradient(135deg, #e8eeff, #f3eeff);
+    border: 1px solid #ddd8f0;
+    border-radius: 16px; padding: 28px 16px; margin-top: 28px;
+    box-shadow: 0 2px 12px rgba(124,58,237,0.06);
+  }
+  .iy-stat { text-align: center; }
+  .iy-stat .num { font-size: 32px; font-weight: 900; color: #4338ca; line-height: 1.2; }
+  .iy-stat .label { font-size: 13px; color: #888; margin-top: 6px; }
+
+  /* ── 네비 active 하이라이트 ── */
+  .iy-nav a.now { color: #1a56db; }
+  .iy-nav a.now .nav-icon { transform: scale(1.15); }
+  .iy-nav a { transition: color 0.2s; }
+  .iy-nav a .nav-icon { transition: transform 0.2s; }
 
   .markdown-body {
     background-color: transparent;
-    max-width: 520px;
+    max-width: 780px;
     margin: 0 auto;
-    padding: 0 16px 100px;
+    padding: 0 24px 100px;
   }
 
-  .iy-section { margin-top: 36px; }
+  .iy-section { margin-top: 48px; }
 
   .iy-section-header {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: 18px;
   }
-  .iy-section-header .title   { font-size: 17px; font-weight: 700; color: #1a1a1a; }
-  .iy-section-header .subtitle{ font-size: 12px; color: #aaa; margin-top: 3px; }
+  .iy-section-header .title   { font-size: 24px; font-weight: 700; color: #1a1a1a; }
+  .iy-section-header .subtitle{ font-size: 15px; color: #aaa; margin-top: 3px; }
 
   /* ── 히어로 ── */
   .iy-hero {
     background: linear-gradient(135deg, #eaf4ff 0%, #fff8ee 100%);
-    border-radius: 20px; padding: 28px 22px; margin-top: 16px;
+    border-radius: 24px; padding: 48px 36px; margin-top: 20px;
     text-align: center; box-shadow: 0 4px 20px rgba(59,138,222,0.08);
   }
-  .iy-hero .tagline { font-size: 13px; color: #3b8ade; font-weight: 500; margin-bottom: 10px; }
+  .iy-hero .tagline { font-size: 16px; color: #3b8ade; font-weight: 500; margin-bottom: 14px; }
   .iy-hero .hero-logo {
-    font-size: 48px; margin-bottom: 4px; line-height: 1;
+    font-size: 64px; margin-bottom: 8px; line-height: 1;
   }
   .iy-hero .hero-logo-text {
-    font-size: 32px; font-weight: 900;
-    background: linear-gradient(90deg, #ff4e50, #fc913a, #f9d423, #28a745, #007bff, #6f42c1);
-    background-size: 300% 100%;
+    font-size: 40px; font-weight: 900;
+    background: linear-gradient(135deg, #1a56db, #7c3aed);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: rainbow 4s linear infinite;
-    margin-bottom: 14px; letter-spacing: -0.02em;
-    text-shadow: 0 0 30px rgba(255,78,80,0.15);
+    margin-bottom: 16px; letter-spacing: -0.02em;
   }
-  @keyframes rainbow {
-    0%   { background-position: 0% 50%; }
-    100% { background-position: 300% 50%; }
-  }
-  .iy-hero h2 { font-size: 20px; font-weight: 700; color: #1a1a1a; line-height: 1.4; margin: 0 0 12px; border: none; }
-  .iy-hero .desc { font-size: 13px; color: #666; line-height: 1.8; }
-  .iy-hero .badges { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .iy-hero h2 { font-size: 28px; font-weight: 700; color: #1a1a1a; line-height: 1.4; margin: 0 0 16px; border: none; }
+  .iy-hero .desc { font-size: 16px; color: #666; line-height: 1.8; }
+  .iy-hero .badges { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
   .iy-hero .badge {
-    background: #fff; border-radius: 99px; padding: 5px 14px;
-    font-size: 12px; color: #555; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    background: #fff; border-radius: 99px; padding: 8px 18px;
+    font-size: 15px; color: #555; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+  .iy-hero .badge:hover { transform: scale(1.07); box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
 
   /* ── 매칭 카드 ── */
   .iy-card {
-    background: #fff; border-radius: 16px; padding: 16px 18px; margin-bottom: 10px;
+    background: #fff; border-radius: 18px; padding: 18px 22px; margin-bottom: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-    display: flex; align-items: center; gap: 14px; position: relative;
+    display: flex; align-items: center; gap: 16px; position: relative;
   }
   .iy-card.pending   { background: #fff; border: 1.5px dashed #ddd; box-shadow: none; }
   .iy-card.completed { background: #fffbf0; box-shadow: 0 2px 10px rgba(255,200,50,0.10); }
 
   .iy-avatar {
-    width: 46px; height: 46px; border-radius: 50%; background: #fdecd0;
-    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+    width: 52px; height: 52px; border-radius: 50%; background: #fdecd0;
+    display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
   }
   .iy-avatar.gray   { background: #f0f0f0; color: #bbb; font-size: 20px; }
   .iy-avatar.yellow { background: #ffd84d; color: #fff; }
 
   .iy-card-body { flex: 1; min-width: 0; }
-  .iy-card-body .name           { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
-  .iy-card-body .stage          { font-size: 12px; color: #3b8ade; margin-bottom: 8px; }
-  .iy-card-body .pending-text   { font-size: 14px; color: #bbb; }
-  .iy-card-body .completed-text { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+  .iy-card-body .name           { font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+  .iy-card-body .stage          { font-size: 14px; color: #3b8ade; margin-bottom: 8px; }
+  .iy-card-body .pending-text   { font-size: 16px; color: #bbb; }
+  .iy-card-body .completed-text { font-size: 17px; font-weight: 700; color: #1a1a1a; }
 
-  .iy-progress { display: flex; gap: 4px; margin-top: 4px; }
-  .iy-progress .bar { flex: 1; height: 4px; border-radius: 99px; background: #e8e8e8; }
+  .iy-progress { display: flex; gap: 5px; margin-top: 6px; }
+  .iy-progress .bar { flex: 1; height: 6px; border-radius: 99px; background: #e8e8e8; }
   .iy-progress .bar.done   { background: #3b8ade; }
   .iy-progress .bar.active { background: #a8c8f0; }
 
@@ -98,62 +117,66 @@ title: 일기예보
   .iy-badge .label { font-size: 10px; color: #aaa; }
 
   /* ── 핵심 기능 ── */
-  .iy-feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .iy-feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .iy-feature-card {
-    background: #fff; border-radius: 16px; padding: 18px 16px;
+    background: #fff; border-radius: 18px; padding: 26px 22px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  .iy-feature-card .f-icon  { font-size: 26px; margin-bottom: 8px; }
-  .iy-feature-card .f-title { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
-  .iy-feature-card .f-desc  { font-size: 12px; color: #888; line-height: 1.6; }
+  .iy-feature-card:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+  .iy-feature-card .f-icon  { font-size: 34px; margin-bottom: 12px; }
+  .iy-feature-card .f-title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 10px; }
+  .iy-feature-card .f-desc  { font-size: 15px; color: #888; line-height: 1.7; }
 
   /* ── 이용 방법 (스텝) ── */
   .iy-steps { display: flex; flex-direction: column; }
-  .iy-step  { display: flex; gap: 14px; align-items: flex-start; position: relative; }
+  .iy-step  { display: flex; gap: 16px; align-items: flex-start; position: relative; }
   .iy-step:not(:last-child)::before {
-    content: ''; position: absolute; left: 19px; top: 40px;
+    content: ''; position: absolute; left: 23px; top: 48px;
     width: 2px; height: calc(100% - 8px); background: #e8e8e8;
   }
   .iy-step .step-num {
-    width: 40px; height: 40px; border-radius: 50%; background: #3b8ade; color: #fff;
+    width: 48px; height: 48px; border-radius: 50%; background: #3b8ade; color: #fff;
     display: flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: 700; flex-shrink: 0; z-index: 1;
+    font-size: 18px; font-weight: 700; flex-shrink: 0; z-index: 1;
   }
   .iy-step .step-body {
-    background: #fff; border-radius: 14px; padding: 14px 16px;
-    margin-bottom: 10px; flex: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    background: #fff; border-radius: 16px; padding: 20px 22px;
+    margin-bottom: 14px; flex: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  .iy-step .step-body .s-title { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-  .iy-step .step-body .s-desc  { font-size: 12px; color: #888; line-height: 1.6; }
+  .iy-step .step-body:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+  .iy-step .step-body .s-title { font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
+  .iy-step .step-body .s-desc  { font-size: 15px; color: #888; line-height: 1.7; }
 
   /* ── 사용자 흐름 ── */
-  .iy-flow { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+  .iy-flow { background: #fff; border-radius: 18px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
   .iy-flow-stages {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 4px; margin-bottom: 16px;
+    gap: 4px; margin-bottom: 20px;
   }
   .iy-flow-stage { flex: 1; text-align: center; }
   .iy-flow-stage .fs-icon {
-    width: 42px; height: 42px; border-radius: 50%; background: #eaf4ff;
+    width: 56px; height: 56px; border-radius: 50%; background: #eaf4ff;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; margin: 0 auto 5px;
+    font-size: 24px; margin: 0 auto 6px;
   }
-  .iy-flow-stage .fs-label { font-size: 10px; color: #555; font-weight: 600; }
-  .iy-flow-arrow { color: #ccc; font-size: 16px; flex-shrink: 0; }
+  .iy-flow-stage .fs-label { font-size: 13px; color: #555; font-weight: 600; }
+  .iy-flow-arrow { color: #ccc; font-size: 20px; flex-shrink: 0; }
   .iy-flow-desc {
-    border-top: 1px solid #f5f5f5; padding-top: 14px;
-    font-size: 12px; color: #888; line-height: 1.8; text-align: center;
+    border-top: 1px solid #f5f5f5; padding-top: 18px;
+    font-size: 15px; color: #888; line-height: 1.8; text-align: center;
   }
 
   /* ── 아키텍처 ── */
-  .iy-arch { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-  .iy-arch-layer { margin-bottom: 14px; }
+  .iy-arch { background: #fff; border-radius: 18px; padding: 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+  .iy-arch-layer { margin-bottom: 16px; }
   .iy-arch-layer .layer-label {
-    font-size: 11px; font-weight: 700; color: #aaa;
-    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 7px;
+    font-size: 12px; font-weight: 700; color: #aaa;
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
   }
-  .iy-arch-boxes { display: flex; flex-wrap: wrap; gap: 6px; }
-  .iy-arch-box   { border-radius: 8px; padding: 6px 11px; font-size: 12px; font-weight: 500; }
+  .iy-arch-boxes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .iy-arch-box   { border-radius: 10px; padding: 8px 14px; font-size: 14px; font-weight: 500; }
   .iy-arch-box.client  { background: #eaf4ff; color: #2c6fbd; }
   .iy-arch-box.gateway { background: #fff3e0; color: #9a4f00; }
   .iy-arch-box.service { background: #f0faf5; color: #1a7a50; }
@@ -172,7 +195,7 @@ title: 일기예보
   .iy-chips { display: flex; flex-wrap: wrap; gap: 7px; }
   .iy-chip {
     background: #fff; border: 1px solid #e8e8e8; border-radius: 99px;
-    padding: 5px 13px; font-size: 12px; color: #555;
+    padding: 7px 16px; font-size: 14px; color: #555;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   }
   .iy-chip.blue   { background: #edf4ff; border-color: #b8d4f8; color: #2c6fbd; }
@@ -181,47 +204,50 @@ title: 일기예보
   .iy-chip.purple { background: #f5f0ff; border-color: #c8aff8; color: #6020c0; }
 
   /* ── 팀 소개 ── */
-  .iy-team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .iy-team-card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .iy-team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .iy-team-card { background: #fff; border-radius: 16px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .iy-team-card:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
   .iy-team-card .t-avatar {
-    width: 38px; height: 38px; border-radius: 50%; background: #eaf4ff;
+    width: 44px; height: 44px; border-radius: 50%; background: #eaf4ff;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; margin-bottom: 10px;
+    font-size: 22px; margin-bottom: 12px;
   }
-  .iy-team-card .t-name { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
-  .iy-team-card .t-role { font-size: 11px; color: #3b8ade; font-weight: 600; margin-bottom: 7px; }
-  .iy-team-card .t-desc { font-size: 11px; color: #888; line-height: 1.65; }
+  .iy-team-card .t-name { font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+  .iy-team-card .t-role { font-size: 13px; color: #3b8ade; font-weight: 600; margin-bottom: 8px; }
+  .iy-team-card .t-desc { font-size: 13px; color: #888; line-height: 1.7; }
 
   /* ── 깃허브 링크 ── */
-  .iy-links { display: flex; gap: 10px; margin-top: 14px; }
+  .iy-links { display: flex; gap: 14px; margin-top: 16px; }
   .iy-link-btn {
-    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: #fff; border-radius: 14px; padding: 14px;
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; border-radius: 16px; padding: 18px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-    text-decoration: none; font-size: 13px; font-weight: 700; color: #1a1a1a;
+    text-decoration: none; font-size: 15px; font-weight: 700; color: #1a1a1a;
   }
-  .iy-link-btn .lb-icon { font-size: 22px; }
+  .iy-link-btn .lb-icon { font-size: 26px; }
   .iy-link-btn.primary  { background: #1a1a1a; color: #fff; }
 
   /* ── 하단 네비 ── */
   .iy-nav {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 520px;
+    width: 100%; max-width: 780px;
     background: #fff; border-top: 1px solid #f0f0f0;
     display: flex; justify-content: space-around;
-    padding: 10px 0 14px;
+    padding: 12px 0 16px;
     box-shadow: 0 -4px 16px rgba(0,0,0,0.06); z-index: 100;
   }
   .iy-nav a {
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    text-decoration: none; color: #bbb; font-size: 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    text-decoration: none; color: #bbb; font-size: 12px;
+    transition: transform 0.2s ease, color 0.2s ease;
   }
+  .iy-nav a:hover { transform: scale(1.15); color: #3b8ade; }
   .iy-nav a.active { color: #3b8ade; }
-  .iy-nav a .nav-icon { font-size: 22px; }
+  .iy-nav a .nav-icon { font-size: 24px; }
 </style>
 
 <!-- ── 히어로 ── -->
-<div class="iy-hero">
+<div id="home" class="iy-hero">
   <div class="tagline">"일기로 예견하는 보석같은 만남"</div>
   <div class="hero-logo">📔</div>
   <div class="hero-logo-text">일기예보</div>
@@ -232,6 +258,14 @@ title: 일기예보
     <span class="badge">📍 동선 기반 매칭</span>
     <span class="badge">🛡️ 5단계 안전 시스템</span>
   </div>
+</div>
+
+<!-- ── 핵심 숫자 ── -->
+<div class="iy-stats">
+  <div class="iy-stat"><div class="num">5</div><div class="label">단계별 상호작용</div></div>
+  <div class="iy-stat"><div class="num">AI</div><div class="label">퀴즈·미션 생성</div></div>
+  <div class="iy-stat"><div class="num">📍</div><div class="label">캠퍼스 기반</div></div>
+  <div class="iy-stat"><div class="num">LV.UP</div><div class="label">경험치 성장</div></div>
 </div>
 
 ---
@@ -267,12 +301,15 @@ title: 일기예보
     <div class="iy-card-body"><div class="completed-text">매칭 완료 ⚡</div></div>
     <div class="iy-badge"><div class="icon yellow">✓</div><div class="label">이상형</div></div>
   </div>
+  <p style="font-size:15px;color:#888;line-height:1.8;margin-top:14px;">
+    각 카드는 <strong>슬롯</strong>입니다.<br>슬롯마다 취미·관심사·이상형 등 원하는 속성으로 바꿀 수 있어 나만의 조건에 맞는 상대를 추천받을 수 있습니다.
+  </p>
 </div>
 
 ---
 
 <!-- ── 핵심 기능 ── -->
-<div class="iy-section">
+<div id="features" class="iy-section">
   <div class="iy-section-header"><div><div class="title">✨ 핵심 기능</div></div></div>
   <div class="iy-feature-grid">
     <div class="iy-feature-card">
@@ -283,7 +320,7 @@ title: 일기예보
     <div class="iy-feature-card">
       <div class="f-icon">🛡️</div>
       <div class="f-title">5단계 안전 시스템</div>
-      <div class="f-desc">퀴즈→채팅→게임→미션→회고, 서로 동의 하에만 다음 단계로 진행합니다.</div>
+      <div class="f-desc">퀴즈→채팅→게임→미션→회고,<br>서로 동의 하에만 다음 단계로 진행합니다.</div>
     </div>
     <div class="iy-feature-card">
       <div class="f-icon">🤖</div>
@@ -301,14 +338,14 @@ title: 일기예보
 ---
 
 <!-- ── 서비스 이용 방법 ── -->
-<div class="iy-section">
+<div id="howto" class="iy-section">
   <div class="iy-section-header"><div><div class="title">📋 서비스 이용 방법</div></div></div>
   <div class="iy-steps">
     <div class="iy-step">
       <div class="step-num">1</div>
       <div class="step-body">
         <div class="s-title">대학 이메일로 가입</div>
-        <div class="s-desc">학교 이메일 인증으로 재학생 여부를 확인합니다. 취미·관심사·성격 유형 등 프로필을 설정하면 초기 슬롯 1개가 부여됩니다.</div>
+        <div class="s-desc">학교 이메일 인증으로 재학생 여부를 확인합니다.<br>취미·관심사·성격 유형 등 프로필을 설정하면 초기 슬롯 1개가 부여됩니다.</div>
       </div>
     </div>
     <div class="iy-step">
@@ -322,7 +359,7 @@ title: 일기예보
       <div class="step-num">3</div>
       <div class="step-body">
         <div class="s-title">매주 월요일 자정, 매칭 성사</div>
-        <div class="s-desc">배치 매칭 시스템이 동선이 겹치는 상대를 자동으로 찾아 매칭합니다. 매칭 주기는 월요일~금요일 5일입니다.</div>
+        <div class="s-desc">배치 매칭 시스템이 동선이 겹치는 상대를 자동으로 찾아 매칭합니다.<br>매칭 주기는 월요일~금요일 5일입니다.</div>
       </div>
     </div>
     <div class="iy-step">
@@ -345,7 +382,7 @@ title: 일기예보
 ---
 
 <!-- ── 사용자 흐름 ── -->
-<div class="iy-section">
+<div id="flow" class="iy-section">
   <div class="iy-section-header"><div><div class="title">🔄 사용자 흐름</div></div></div>
   <div class="iy-flow">
     <div class="iy-flow-stages">
@@ -371,7 +408,7 @@ title: 일기예보
     </div>
     <div class="iy-flow-desc">
       매 단계마다 <strong>양쪽 모두 동의</strong>해야 다음 단계로 진행됩니다.<br>
-      거부 시 매칭이 안전하게 종료되며, 퀴즈 단계에서는 힌트 질문으로 상대를 탐색할 수 있습니다.<br>
+      거부 시 매칭이 안전하게 종료되며 퀴즈 단계에서는 힌트 질문으로 상대를 탐색할 수 있습니다.<br>
       신고·차단 시스템으로 언제든 안전하게 매칭을 종료할 수 있습니다.
     </div>
   </div>
@@ -494,7 +531,7 @@ title: 일기예보
 ---
 
 <!-- ── 팀 소개 ── -->
-<div class="iy-section">
+<div id="team" class="iy-section">
   <div class="iy-section-header"><div><div class="title">👥 팀 소개</div></div></div>
   <div class="iy-team-grid">
     <div class="iy-team-card">
@@ -527,7 +564,7 @@ title: 일기예보
 ---
 
 <!-- ── 깃허브 링크 ── -->
-<div class="iy-section">
+<div id="links" class="iy-section">
   <div class="iy-section-header"><div><div class="title">🔗 링크</div></div></div>
   <div class="iy-links">
     <a class="iy-link-btn primary" href="https://github.com/kookmin-sw/2026-capstone-57" target="_blank">
@@ -554,9 +591,46 @@ title: 일기예보
 
 <!-- ── 하단 네비게이션 ── -->
 <nav class="iy-nav">
-  <a href="#" class="active"><span class="nav-icon">🏠</span>홈</a>
-  <a href="#"><span class="nav-icon">🤝</span>만남</a>
-  <a href="#"><span class="nav-icon">📅</span>플래너</a>
-  <a href="#"><span class="nav-icon">📔</span>일기</a>
-  <a href="#"><span class="nav-icon">👤</span>MY</a>
+  <a href="#home" class="active"><span class="nav-icon">🏠</span>홈</a>
+  <a href="#features"><span class="nav-icon">✨</span>기능</a>
+  <a href="#howto"><span class="nav-icon">📋</span>이용방법</a>
+  <a href="#flow"><span class="nav-icon">🔄</span>사용자흐름</a>
+  <a href="#team"><span class="nav-icon">👥</span>팀소개</a>
 </nav>
+
+<script>
+// 새로고침 시 맨 위로
+if (history.scrollRestoration) history.scrollRestoration = 'manual';
+window.scrollTo(0, 0);
+
+// 스크롤 페이드인
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) {
+    if (e.isIntersecting) e.target.classList.add('visible');
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.iy-section, .iy-hero').forEach(function(el) {
+  observer.observe(el);
+});
+
+// 네비 하이라이트
+var sections = ['home','features','howto','flow','team'];
+function updateNav() {
+  var current = 'home';
+  for (var i = sections.length - 1; i >= 0; i--) {
+    var el = document.getElementById(sections[i]);
+    if (el) {
+      var rect = el.getBoundingClientRect();
+      if (rect.top <= 150) { current = sections[i]; break; }
+    }
+  }
+  document.querySelectorAll('.iy-nav a').forEach(function(a) {
+    a.classList.remove('active','now');
+    if (a.getAttribute('href') === '#' + current) {
+      a.classList.add('active','now');
+    }
+  });
+}
+window.addEventListener('scroll', updateNav);
+updateNav();
+</script>
