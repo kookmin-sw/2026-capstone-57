@@ -9,9 +9,9 @@ import java.util.UUID;
 
 public interface ScheduleRepository extends JpaRepository<ScheduleEntity, UUID> {
 
-    List<ScheduleEntity> findAllByUser_Id(UUID userId);
+    List<ScheduleEntity> findAllByUserId(UUID userId);
 
-    List<ScheduleEntity> findAllByUser_IdAndDayOfWeek(UUID userId, DayOfWeek dayOfWeek);
+    List<ScheduleEntity> findAllByUserIdAndDayOfWeek(UUID userId, DayOfWeek dayOfWeek);
 
-    void deleteByUser_Id(UUID userId);
+    void deleteByUserId(UUID userId);
 }

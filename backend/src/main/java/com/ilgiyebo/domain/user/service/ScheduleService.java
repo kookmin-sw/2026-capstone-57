@@ -41,7 +41,7 @@ public class ScheduleService {
     @Transactional(readOnly = true)
     public ScheduleResponse getMySchedule(UUID userId) {
         validateUserExists(userId);
-        List<ScheduleEntity> schedules = scheduleRepository.findAllByUser_Id(userId);
+        List<ScheduleEntity> schedules = scheduleRepository.findAllByUserId(userId);
         return ScheduleResponse.from(schedules);
     }
 
@@ -50,7 +50,7 @@ public class ScheduleService {
     public ScheduleResponse upsertMySchedule(UUID userId, String identifier) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(UserException.USER_NOT_FOUND::toException);
-        scheduleRepository.deleteByUser_Id(userId);
+        scheduleRepository.deleteByUserId(userId);
 
         // 건물 이름 목록 조회 (이름 길이 내림차순 정렬)
         List<CampusBuildingEntity> buildings = campusBuildingRepository.findAll();

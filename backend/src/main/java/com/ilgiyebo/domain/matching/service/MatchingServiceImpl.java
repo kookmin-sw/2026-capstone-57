@@ -117,8 +117,8 @@ public class MatchingServiceImpl implements MatchingService {
     @Override
     @Transactional(readOnly = true)
     public RouteOverlapDto calculateRouteOverlap(UUID userA, UUID userB) {
-        List<ScheduleEntity> schedulesA = scheduleRepository.findAllByUser_Id(userA);
-        List<ScheduleEntity> schedulesB = scheduleRepository.findAllByUser_Id(userB);
+        List<ScheduleEntity> schedulesA = scheduleRepository.findAllByUserId(userA);
+        List<ScheduleEntity> schedulesB = scheduleRepository.findAllByUserId(userB);
 
         if (schedulesA.isEmpty() || schedulesB.isEmpty()) {
             return new RouteOverlapDto(false, List.of());
@@ -149,8 +149,8 @@ public class MatchingServiceImpl implements MatchingService {
     @Override
     @Transactional(readOnly = true)
     public boolean isBlocked(UUID userA, UUID userB) {
-        return blockRepository.existsByUser_IdAndBlockedUser_Id(userA, userB)
-                || blockRepository.existsByUser_IdAndBlockedUser_Id(userB, userA);
+        return blockRepository.existsByUserIdAndBlockedUserId(userA, userB)
+                || blockRepository.existsByUserIdAndBlockedUserId(userB, userA);
     }
 
     @Override
@@ -178,7 +178,7 @@ public class MatchingServiceImpl implements MatchingService {
         // 3. 매칭 대상 사용자 목록 (시간표가 있는 사용자만)
         Set<UUID> candidateUsers = new HashSet<>();
         for (UUID userId : slotsByUser.keySet()) {
-            List<ScheduleEntity> schedules = scheduleRepository.findAllByUser_Id(userId);
+            List<ScheduleEntity> schedules = scheduleRepository.findAllByUserId(userId);
             if (!schedules.isEmpty()) {
                 candidateUsers.add(userId);
             }
