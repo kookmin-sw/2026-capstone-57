@@ -44,7 +44,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     @Transactional
     public ChatSessionEntity createSession(UUID matchId) {
         MatchEntity match = matchRepository.findById(matchId)
-                .orElseThrow(ChatException.SESSION_NOT_FOUND::toException);
+                .orElseThrow(ChatException.MATCH_NOT_FOUND::toException);
 
         if (match.getStatus() != MatchStatus.ACTIVE) {
             throw ChatException.MATCH_NOT_ACTIVE.toException();
@@ -153,7 +153,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     @Transactional(readOnly = true)
     public void validateParticipant(UUID userId, UUID matchId) {
         MatchEntity match = matchRepository.findById(matchId)
-                .orElseThrow(ChatException.SESSION_NOT_FOUND::toException);
+                .orElseThrow(ChatException.MATCH_NOT_FOUND::toException);
 
         if (!userId.equals(match.getUserA().getId()) && !userId.equals(match.getUserB().getId())) {
             throw ChatException.NOT_PARTICIPANT.toException();
