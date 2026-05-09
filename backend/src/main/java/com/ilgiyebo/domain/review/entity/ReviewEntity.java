@@ -1,11 +1,11 @@
 package com.ilgiyebo.domain.review.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
+import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.UUID;
 
 @Entity
 @Table(name = "REVIEW")
@@ -17,11 +17,13 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class ReviewEntity extends BaseSchema {
 
-    @Column(name = "interaction_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID interactionId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "interaction_id", nullable = false)
+    private InteractionEntity interaction;
 
-    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

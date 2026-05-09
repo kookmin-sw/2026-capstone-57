@@ -6,5 +6,5 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ReviewSessionRepository extends JpaRepository<ReviewSessionEntity, UUID> {
-    Optional<ReviewSessionEntity> findByInteractionIdAndUserId(UUID interactionId, UUID userId);
+    Optional<ReviewSessionEntity> findByInteraction_IdAndUser_Id(UUID interactionId, UUID userId);
 }
