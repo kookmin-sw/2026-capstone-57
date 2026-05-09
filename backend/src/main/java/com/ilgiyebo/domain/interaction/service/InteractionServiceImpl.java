@@ -100,16 +100,24 @@ public class InteractionServiceImpl implements InteractionService {
 
     @Override
     @Transactional
-    public void storeQuizData(UUID matchId, List<QuizQuestionDto> quizData) {
+    public void storeQuizData(UUID matchId, UUID requesterId, List<QuizQuestionDto> quizData) {
+        MatchEntity match = findMatch(matchId);
         InteractionEntity interaction = findInteraction(matchId);
 
         if (interaction.getCurrentStage() != 1) {
             throw InteractionException.NOT_IN_QUIZ_STAGE.toException();
         }
 
-        interaction.setQuizData(quizData);
+        boolean isUserA = match.getUserA().getId().equals(requesterId);
+        if (isUserA) {
+            interaction.setQuizDataA(quizData);
+        } else {
+            interaction.setQuizDataB(quizData);
+        }
+
         interactionRepository.save(interaction);
-        log.info("SQS를 통해 퀴즈 데이터 저장 완료: 매칭ID={}, 문항수={}", matchId, quizData.size());
+        log.info("SQS를 통해 퀴즈 데이터 저장 완료: 매칭ID={}, 요청유저ID={}, 문항수={}",
+                matchId, requesterId, quizData.size());
     }
 
     // --- Private helpers ---

@@ -40,12 +40,20 @@ public class InteractionEntity extends BaseSchema {
     private List<String> quizCompletedBy;
 
     @Builder.Default
-    @Column(name = "quiz_requested", nullable = false)
-    private boolean quizRequested = false;
+    @Column(name = "quiz_requested_a", nullable = false)
+    private boolean quizRequestedA = false;
+
+    @Builder.Default
+    @Column(name = "quiz_requested_b", nullable = false)
+    private boolean quizRequestedB = false;
 
     @Convert(converter = JsonQuizDataConverter.class)
-    @Column(name = "quiz_data", columnDefinition = "JSON")
-    private List<QuizQuestionDto> quizData;
+    @Column(name = "quiz_data_a", columnDefinition = "JSON")
+    private List<QuizQuestionDto> quizDataA;
+
+    @Convert(converter = JsonQuizDataConverter.class)
+    @Column(name = "quiz_data_b", columnDefinition = "JSON")
+    private List<QuizQuestionDto> quizDataB;
 
     @Column(name = "chat_start_time")
     private Instant chatStartTime;

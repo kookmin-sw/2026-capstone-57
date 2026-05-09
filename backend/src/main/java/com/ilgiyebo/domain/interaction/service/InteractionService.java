@@ -18,6 +18,6 @@ public interface InteractionService {
     /** 퀴즈 완료 처리 (AIService에서 호출) */
     InteractionStateDto completeQuiz(UUID matchId, UUID userId);
 
-    // 타입을 깔끔하게 수정
-    void storeQuizData(UUID matchId, List<QuizQuestionDto> quizData);
+    /** 퀴즈 데이터 저장 (요청자 기준으로 해당 유저의 퀴즈 슬롯에 저장) */
+    void storeQuizData(UUID matchId, UUID requesterId, List<QuizQuestionDto> quizData);
 }

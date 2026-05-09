@@ -54,7 +54,8 @@ public class QuizResponseListener {
             }
 
             UUID matchId = UUID.fromString(response.matchId());
-            interactionService.storeQuizData(matchId, quizData);
+            UUID requesterId = UUID.fromString(response.requesterId());
+            interactionService.storeQuizData(matchId, requesterId, quizData);
 
             log.info("AI 퀴즈 응답 수신 및 DB 저장 완료: 매칭ID={}, 문항수={}",
                     response.matchId(), quizData.size());

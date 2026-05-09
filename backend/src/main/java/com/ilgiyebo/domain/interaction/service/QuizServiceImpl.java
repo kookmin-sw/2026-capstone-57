@@ -46,20 +46,30 @@ public class QuizServiceImpl implements QuizService {
             throw InteractionException.NOT_IN_QUIZ_STAGE.toException();
         }
 
-        // 1. DB에 퀴즈가 이미 존재하면 정답 제외하고 반환
-        if (interaction.getQuizData() != null && !interaction.getQuizData().isEmpty()) {
-            return interaction.getQuizData().stream()
+        boolean isUserA = match.getUserA().getId().equals(userId);
+
+        // 1. DB에 해당 유저의 퀴즈가 이미 존재하면 정답 제외하고 반환
+        List<QuizQuestionDto> quizData = isUserA
+                ? interaction.getQuizDataA()
+                : interaction.getQuizDataB();
+
+        if (quizData != null && !quizData.isEmpty()) {
+            return quizData.stream()
                     .map(QuizQuestionResponse::from)
                     .toList();
         }
 
         // 2. 이미 SQS 요청을 보낸 상태면 중복 발행 없이 대기 응답
-        if (interaction.isQuizRequested()) {
+        boolean quizRequested = isUserA
+                ? interaction.isQuizRequestedA()
+                : interaction.isQuizRequestedB();
+
+        if (quizRequested) {
             throw InteractionException.QUIZ_GENERATING.toException();
         }
 
         // 3. DB에 퀴즈가 없고 요청도 안 보낸 상태 → SQS를 통해 AI 생성 요청
-        UUID partnerId = match.getUserA().getId().equals(userId)
+        UUID partnerId = isUserA
                 ? match.getUserB().getId()
                 : match.getUserA().getId();
 
@@ -78,9 +88,13 @@ public class QuizServiceImpl implements QuizService {
 
         quizRequestPublisher.requestQuizGeneration(matchId, userId, partnerId, targetProfile);
 
-        interaction.setQuizRequested(true);
+        if (isUserA) {
+            interaction.setQuizRequestedA(true);
+        } else {
+            interaction.setQuizRequestedB(true);
+        }
         interactionRepository.save(interaction);
-        log.info("AI 퀴즈 생성 요청 완료: 매칭ID={}, 대상유저ID={}", matchId, partnerId);
+        log.info("AI 퀴즈 생성 요청 완료: 매칭ID={}, 요청유저ID={}, 대상유저ID={}", matchId, userId, partnerId);
 
         // 4. 퀴즈가 아직 준비되지 않음 (생성 중)
         throw InteractionException.QUIZ_GENERATING.toException();
@@ -104,7 +118,12 @@ public class QuizServiceImpl implements QuizService {
             throw InteractionException.ALREADY_TERMINATED.toException();
         }
 
-        List<QuizQuestionDto> questions = interaction.getQuizData();
+        boolean isUserA = match.getUserA().getId().equals(userId);
+
+        List<QuizQuestionDto> questions = isUserA
+                ? interaction.getQuizDataA()
+                : interaction.getQuizDataB();
+
         if (questions == null || questions.isEmpty()) {
             throw InteractionException.QUIZ_NOT_GENERATED.toException();
         }
@@ -125,7 +144,11 @@ public class QuizServiceImpl implements QuizService {
                         : q)
                 .toList();
 
-        interaction.setQuizData(updatedQuestions);
+        if (isUserA) {
+            interaction.setQuizDataA(updatedQuestions);
+        } else {
+            interaction.setQuizDataB(updatedQuestions);
+        }
 
         // 전체 정답 수 계산
         int totalCount = updatedQuestions.size();
