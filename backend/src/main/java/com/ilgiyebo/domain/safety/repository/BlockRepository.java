@@ -6,6 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface BlockRepository extends JpaRepository<BlockEntity, UUID> {
-    boolean existsByUserIdAndBlockedUserId(UUID userId, UUID blockedUserId);
-    List<BlockEntity> findByUserId(UUID userId);
+    boolean existsByUser_IdAndBlockedUser_Id(UUID userId, UUID blockedUserId);
+    List<BlockEntity> findByUser_Id(UUID userId);
 }

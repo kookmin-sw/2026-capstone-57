@@ -149,8 +149,8 @@ public class MatchingServiceImpl implements MatchingService {
     @Override
     @Transactional(readOnly = true)
     public boolean isBlocked(UUID userA, UUID userB) {
-        return blockRepository.existsByUserIdAndBlockedUserId(userA, userB)
-                || blockRepository.existsByUserIdAndBlockedUserId(userB, userA);
+        return blockRepository.existsByUser_IdAndBlockedUser_Id(userA, userB)
+                || blockRepository.existsByUser_IdAndBlockedUser_Id(userB, userA);
     }
 
     @Override
