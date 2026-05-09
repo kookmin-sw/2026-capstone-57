@@ -125,6 +125,13 @@ public class InteractionServiceImpl implements InteractionService {
         }
 
         boolean isUserA = match.getUserA().getId().equals(requesterId);
+        boolean isUserB = match.getUserB().getId().equals(requesterId);
+
+        if (!isUserA && !isUserB) {
+            log.warn("퀴즈 저장 거부: requesterId={}가 매칭ID={}의 참여자가 아님", requesterId, matchId);
+            return;
+        }
+
         if (isUserA) {
             interaction.setQuizDataA(quizData);
         } else {
