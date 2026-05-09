@@ -88,3 +88,218 @@ INSERT IGNORE INTO `user` (id, email, password_hash, nickname, name, university,
 INSERT IGNORE INTO slot (id, user_id, priority, current_match_id, is_quick_match, status, created_at, updated_at)
 SELECT UUID_TO_BIN(UUID()), id, 'HOBBY', NULL, FALSE, 'EMPTY', NOW(), NOW()
 FROM `user`;
+
+-- 시간표 (schedule) - 유저당 2~3개 수업
+-- user1: 수치해석(화/목), 머신러닝기초(화/목)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '수치해석', 'TUESDAY', '13:30:00', '15:00:00', '미래관2층31호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user1@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '수치해석' AND day_of_week = 'TUESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user1@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '수치해석', 'THURSDAY', '13:30:00', '15:00:00', '미래관2층31호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user1@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '수치해석' AND day_of_week = 'THURSDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user1@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '머신러닝기초', 'TUESDAY', '12:00:00', '13:30:00', '미래관4층45호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user1@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '머신러닝기초' AND day_of_week = 'TUESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user1@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '머신러닝기초', 'THURSDAY', '12:00:00', '13:30:00', '미래관4층45호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user1@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '머신러닝기초' AND day_of_week = 'THURSDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user1@kookmin.ac.kr'));
+
+-- user2: 경영학원론(월/수), 마케팅전략(화)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '경영학원론', 'MONDAY', '10:30:00', '12:00:00', '북악관3층15호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 3,
+       (SELECT id FROM `user` WHERE email = 'user2@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '경영학원론' AND day_of_week = 'MONDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user2@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '경영학원론', 'WEDNESDAY', '10:30:00', '12:00:00', '북악관3층15호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 3,
+       (SELECT id FROM `user` WHERE email = 'user2@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '경영학원론' AND day_of_week = 'WEDNESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user2@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '마케팅전략', 'TUESDAY', '15:00:00', '16:30:00', '북악관2층11호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user2@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '마케팅전략' AND day_of_week = 'TUESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user2@kookmin.ac.kr'));
+
+-- user3: 시각디자인론(월/수), 타이포그래피(금)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '시각디자인론', 'MONDAY', '13:30:00', '15:00:00', '미래관3층33호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 3,
+       (SELECT id FROM `user` WHERE email = 'user3@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '시각디자인론' AND day_of_week = 'MONDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user3@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '시각디자인론', 'WEDNESDAY', '13:30:00', '15:00:00', '미래관3층33호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 3,
+       (SELECT id FROM `user` WHERE email = 'user3@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '시각디자인론' AND day_of_week = 'WEDNESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user3@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '타이포그래피', 'FRIDAY', '10:30:00', '12:00:00', '미래관4층42호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user3@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '타이포그래피' AND day_of_week = 'FRIDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user3@kookmin.ac.kr'));
+
+-- user4: 회로이론(화/목), 임베디드시스템(월)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '회로이론', 'TUESDAY', '09:00:00', '10:30:00', '미래관2층21호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user4@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '회로이론' AND day_of_week = 'TUESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user4@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '회로이론', 'THURSDAY', '09:00:00', '10:30:00', '미래관2층21호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user4@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '회로이론' AND day_of_week = 'THURSDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user4@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '임베디드시스템', 'MONDAY', '15:00:00', '16:30:00', '미래관3층35호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 3,
+       (SELECT id FROM `user` WHERE email = 'user4@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '임베디드시스템' AND day_of_week = 'MONDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user4@kookmin.ac.kr'));
+
+-- user5: 영미문학개론(월/수), 영어회화(화/목)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '영미문학개론', 'MONDAY', '12:00:00', '13:30:00', '북악관4층22호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user5@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '영미문학개론' AND day_of_week = 'MONDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user5@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '영미문학개론', 'WEDNESDAY', '12:00:00', '13:30:00', '북악관4층22호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user5@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '영미문학개론' AND day_of_week = 'WEDNESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user5@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '영어회화', 'TUESDAY', '10:30:00', '12:00:00', '북악관2층13호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user5@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '영어회화' AND day_of_week = 'TUESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user5@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '영어회화', 'THURSDAY', '10:30:00', '12:00:00', '북악관2층13호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user5@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '영어회화' AND day_of_week = 'THURSDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user5@kookmin.ac.kr'));
+
+-- user6: 알고리즘(월/수), 운영체제(화/목)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '알고리즘', 'MONDAY', '09:00:00', '10:30:00', '미래관4층45호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user6@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '알고리즘' AND day_of_week = 'MONDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user6@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '알고리즘', 'WEDNESDAY', '09:00:00', '10:30:00', '미래관4층45호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user6@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '알고리즘' AND day_of_week = 'WEDNESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user6@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '운영체제', 'TUESDAY', '10:30:00', '12:00:00', '미래관2층32호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user6@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '운영체제' AND day_of_week = 'TUESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user6@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '운영체제', 'THURSDAY', '10:30:00', '12:00:00', '미래관2층32호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user6@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '운영체제' AND day_of_week = 'THURSDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user6@kookmin.ac.kr'));
+
+-- user7: 건축설계(월/수/금)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '건축설계', 'MONDAY', '13:30:00', '16:30:00', '북악관5층31호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 5,
+       (SELECT id FROM `user` WHERE email = 'user7@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '건축설계' AND day_of_week = 'MONDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user7@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '건축설계', 'WEDNESDAY', '13:30:00', '16:30:00', '북악관5층31호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 5,
+       (SELECT id FROM `user` WHERE email = 'user7@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '건축설계' AND day_of_week = 'WEDNESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user7@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '건축설계', 'FRIDAY', '13:30:00', '16:30:00', '북악관5층31호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 5,
+       (SELECT id FROM `user` WHERE email = 'user7@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '건축설계' AND day_of_week = 'FRIDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user7@kookmin.ac.kr'));
+
+-- user8: 거시경제학(화/목), 통계학(월/수)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '거시경제학', 'TUESDAY', '09:00:00', '10:30:00', '북악관3층17호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 3,
+       (SELECT id FROM `user` WHERE email = 'user8@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '거시경제학' AND day_of_week = 'TUESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user8@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '거시경제학', 'THURSDAY', '09:00:00', '10:30:00', '북악관3층17호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 3,
+       (SELECT id FROM `user` WHERE email = 'user8@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '거시경제학' AND day_of_week = 'THURSDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user8@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '통계학', 'MONDAY', '12:00:00', '13:30:00', '북악관2층12호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user8@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '통계학' AND day_of_week = 'MONDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user8@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '통계학', 'WEDNESDAY', '12:00:00', '13:30:00', '북악관2층12호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user8@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '통계학' AND day_of_week = 'WEDNESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user8@kookmin.ac.kr'));
+
+-- user9: 미디어콘텐츠제작(화/목), 영상편집(금)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '미디어콘텐츠제작', 'TUESDAY', '13:30:00', '15:00:00', '북악관4층25호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user9@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '미디어콘텐츠제작' AND day_of_week = 'TUESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user9@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '미디어콘텐츠제작', 'THURSDAY', '13:30:00', '15:00:00', '북악관4층25호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user9@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '미디어콘텐츠제작' AND day_of_week = 'THURSDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user9@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '영상편집', 'FRIDAY', '09:00:00', '12:00:00', '북악관4층26호실',
+       (SELECT id FROM campus_building WHERE name = '북악관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user9@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '영상편집' AND day_of_week = 'FRIDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user9@kookmin.ac.kr'));
+
+-- user10: 비주얼컴퓨팅최신기술(월/수), 캡스톤디자인(금)
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '비주얼컴퓨팅최신기술', 'MONDAY', '15:00:00', '16:30:00', '미래관2층32호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user10@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '비주얼컴퓨팅최신기술' AND day_of_week = 'MONDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user10@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '비주얼컴퓨팅최신기술', 'WEDNESDAY', '15:00:00', '16:30:00', '미래관2층32호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 2,
+       (SELECT id FROM `user` WHERE email = 'user10@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '비주얼컴퓨팅최신기술' AND day_of_week = 'WEDNESDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user10@kookmin.ac.kr'));
+
+INSERT INTO schedule (id, name, day_of_week, started_at, ended_at, place, campus_building_id, floor, user_id, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), '캡스톤디자인', 'FRIDAY', '12:00:00', '15:00:00', '미래관4층24호실',
+       (SELECT id FROM campus_building WHERE name = '미래관' LIMIT 1), 4,
+       (SELECT id FROM `user` WHERE email = 'user10@kookmin.ac.kr'), NOW(), NOW()
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM schedule WHERE name = '캡스톤디자인' AND day_of_week = 'FRIDAY' AND user_id = (SELECT id FROM `user` WHERE email = 'user10@kookmin.ac.kr'));
