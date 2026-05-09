@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "PLAN_ENTRY")
+@Table(name = "plan_entry")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

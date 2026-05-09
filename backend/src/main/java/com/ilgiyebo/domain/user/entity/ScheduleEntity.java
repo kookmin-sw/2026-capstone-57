@@ -13,7 +13,7 @@ import java.time.LocalTime;
 import java.util.function.Function;
 
 @Entity
-@Table(name = "`SCHEDULE`")
+@Table(name = "schedule")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

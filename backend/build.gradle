@@ -37,8 +37,6 @@ dependencies {
 
     // Database
     runtimeOnly 'com.mysql:mysql-connector-j'
-    implementation 'org.flywaydb:flyway-core'
-    implementation 'org.flywaydb:flyway-mysql'
 
     // AWS SDK v2 - Bedrock Runtime
     implementation 'software.amazon.awssdk:bedrockruntime'

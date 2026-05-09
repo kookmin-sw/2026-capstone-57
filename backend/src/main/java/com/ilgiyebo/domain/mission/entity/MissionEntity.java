@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Entity
-@Table(name = "MISSION")
+@Table(name = "mission")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

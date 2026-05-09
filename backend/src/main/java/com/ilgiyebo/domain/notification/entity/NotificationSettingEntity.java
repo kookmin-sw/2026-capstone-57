@@ -7,7 +7,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "NOTIFICATION_SETTING")
+@Table(name = "notification_setting")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

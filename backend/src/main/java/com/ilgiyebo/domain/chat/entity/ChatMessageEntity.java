@@ -7,7 +7,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "CHAT_MESSAGE")
+@Table(name = "chat_message")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

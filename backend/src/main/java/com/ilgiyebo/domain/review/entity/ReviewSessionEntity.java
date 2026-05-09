@@ -8,7 +8,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "REVIEW_SESSION")
+@Table(name = "review_session")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

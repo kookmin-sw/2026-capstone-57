@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.UUID;
 
 @Entity
-@Table(name = "SLOT")
+@Table(name = "slot")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 import java.time.Instant;
 
 @Entity
-@Table(name = "CHAT_SESSION")
+@Table(name = "chat_session")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

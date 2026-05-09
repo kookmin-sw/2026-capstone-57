@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "AI_REVIEW_QUESTION")
+@Table(name = "ai_review_question")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

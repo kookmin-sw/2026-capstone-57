@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Entity
-@Table(name = "INTERACTION")
+@Table(name = "interaction")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

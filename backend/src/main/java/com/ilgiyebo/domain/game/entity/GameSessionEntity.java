@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.Map;
 
 @Entity
-@Table(name = "GAME_SESSION")
+@Table(name = "game_session")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

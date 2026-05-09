@@ -6,7 +6,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "CAMPUS_VENUE")
+@Table(name = "campus_venue")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

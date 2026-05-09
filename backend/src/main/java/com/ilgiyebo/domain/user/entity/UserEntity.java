@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "`USER`")
+@Table(name = "`user`")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
