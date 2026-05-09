@@ -1,15 +1,15 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.chat.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
+import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
-import java.util.UUID;
 
 @Entity
-@Table(name = "CHAT_SESSION")
+@Table(name = "chat_session")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -18,8 +18,9 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class ChatSessionEntity extends BaseSchema {
 
-    @Column(name = "match_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID matchId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "match_id", nullable = false)
+    private MatchEntity match;
 
     @Column(name = "start_time", nullable = false)
     private Instant startTime;

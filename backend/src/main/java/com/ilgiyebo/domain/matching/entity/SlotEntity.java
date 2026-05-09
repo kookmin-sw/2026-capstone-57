@@ -1,6 +1,7 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.matching.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -8,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.UUID;
 
 @Entity
-@Table(name = "SLOT")
+@Table(name = "slot")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

@@ -1,7 +1,7 @@
-package com.ilgiyebo.controller;
+package com.ilgiyebo.domain.auth.controller;
 
-import com.ilgiyebo.dto.*;
-import com.ilgiyebo.service.AuthService;
+import com.ilgiyebo.domain.auth.dto.*;
+import com.ilgiyebo.domain.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

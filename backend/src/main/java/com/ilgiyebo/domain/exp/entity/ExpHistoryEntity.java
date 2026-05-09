@@ -1,14 +1,13 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.exp.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.util.UUID;
-
 @Entity
-@Table(name = "EXP_HISTORY")
+@Table(name = "exp_history")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -17,8 +16,9 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class ExpHistoryEntity extends BaseSchema {
 
-    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -1,6 +1,6 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.user.service;
 
-import com.ilgiyebo.dto.ParsedEmailInfo;
+import com.ilgiyebo.domain.user.dto.ParsedEmailInfo;
 
 import java.util.Optional;
 

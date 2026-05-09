@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.exp.entity;
 
 public enum ExpActivity {
     DIARY_WRITE, DIARY_STREAK_BONUS, PLANNER_WRITE, QUIZ_COMPLETE,

@@ -1,6 +1,6 @@
-package com.ilgiyebo.repository;
+package com.ilgiyebo.domain.chat.repository;
 
-import com.ilgiyebo.domain.ChatSessionEntity;
+import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;
