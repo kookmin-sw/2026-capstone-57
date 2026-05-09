@@ -1,4 +1,4 @@
-package com.ilgiyebo.common.config;
+package com.ilgiyebo.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;

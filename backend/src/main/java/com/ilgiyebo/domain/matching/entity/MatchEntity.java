@@ -1,7 +1,6 @@
-package com.ilgiyebo.domain.matching.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -9,7 +8,7 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "`match`")
+@Table(name = "`MATCH`")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

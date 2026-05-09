@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.notification.entity;
+package com.ilgiyebo.domain;
 
 public enum ReminderType {
     MISSION_DEADLINE, PLANNER_INACTIVE

@@ -1,7 +1,7 @@
-package com.ilgiyebo.domain.user.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.common.config.JsonStringListConverter;
+import com.ilgiyebo.config.JsonStringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "`user`")
+@Table(name = "`USER`")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

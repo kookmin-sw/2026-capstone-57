@@ -1,3 +1,3 @@
-package com.ilgiyebo.domain.auth.dto;
+package com.ilgiyebo.dto;
 
 public record VerificationResponse(String verificationId) {}

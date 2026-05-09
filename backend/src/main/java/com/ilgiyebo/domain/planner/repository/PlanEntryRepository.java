@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.planner.repository;
+package com.ilgiyebo.repository;
 
-import com.ilgiyebo.domain.planner.entity.PlanEntryEntity;
+import com.ilgiyebo.domain.PlanEntryEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.UUID;

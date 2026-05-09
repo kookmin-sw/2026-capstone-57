@@ -1,17 +1,17 @@
-package com.ilgiyebo.domain.mission.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.common.config.JsonStringListConverter;
-import com.ilgiyebo.domain.matching.entity.MatchEntity;
+import com.ilgiyebo.config.JsonStringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
-@Table(name = "mission")
+@Table(name = "MISSION")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -20,9 +20,8 @@ import java.util.List;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class MissionEntity extends BaseSchema {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_id", nullable = false)
-    private MatchEntity match;
+    @Column(name = "match_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID matchId;
 
     @Column(nullable = false)
     private String location;

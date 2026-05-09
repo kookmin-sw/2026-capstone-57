@@ -1,15 +1,15 @@
-package com.ilgiyebo.domain.planner.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Entity
-@Table(name = "plan_entry")
+@Table(name = "PLAN_ENTRY")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -18,9 +18,8 @@ import java.time.LocalTime;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class PlanEntryEntity extends BaseSchema {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private UserEntity user;
+    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID userId;
 
     @Column(name = "day_of_week", nullable = false)
     private int dayOfWeek;

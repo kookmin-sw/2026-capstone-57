@@ -1,35 +1,35 @@
-package com.ilgiyebo.domain.matching.service;
+package com.ilgiyebo.service;
 
 import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
+import com.ilgiyebo.domain.InteractionEntity;
+import com.ilgiyebo.domain.MatchEntity;
+import com.ilgiyebo.domain.MatchStatus;
+import com.ilgiyebo.domain.MissionEntity;
+import com.ilgiyebo.domain.MissionStatus;
+import com.ilgiyebo.domain.ScheduleEntity;
+import com.ilgiyebo.domain.SlotEntity;
+import com.ilgiyebo.domain.SlotPriority;
+import com.ilgiyebo.domain.SlotStatus;
+import com.ilgiyebo.domain.StageStatus;
+import com.ilgiyebo.domain.UserEntity;
 import com.ilgiyebo.domain.campus.entity.CampusBuildingPlaceEntity;
 import com.ilgiyebo.domain.campus.entity.CampusPathEntity;
+import com.ilgiyebo.domain.matching.exception.MatchingException;
+import com.ilgiyebo.dto.BatchMatchingResultDto;
+import com.ilgiyebo.dto.MatchedUserDto;
+import com.ilgiyebo.dto.OverlapLocationDto;
+import com.ilgiyebo.dto.RouteOverlapDto;
+import com.ilgiyebo.dto.SlotResponseDto;
+import com.ilgiyebo.repository.BlockRepository;
 import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
 import com.ilgiyebo.domain.campus.repository.CampusPathRepository;
 import com.ilgiyebo.domain.campus.repository.PlaceRepository;
-import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
-import com.ilgiyebo.domain.interaction.entity.StageStatus;
-import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
-import com.ilgiyebo.domain.matching.entity.MatchEntity;
-import com.ilgiyebo.domain.matching.entity.MatchStatus;
-import com.ilgiyebo.domain.mission.entity.MissionEntity;
-import com.ilgiyebo.domain.mission.entity.MissionStatus;
-import com.ilgiyebo.domain.user.entity.ScheduleEntity;
-import com.ilgiyebo.domain.matching.entity.SlotEntity;
-import com.ilgiyebo.domain.matching.entity.SlotPriority;
-import com.ilgiyebo.domain.matching.entity.SlotStatus;
-import com.ilgiyebo.domain.user.entity.UserEntity;
-import com.ilgiyebo.domain.matching.exception.MatchingException;
-import com.ilgiyebo.domain.matching.dto.BatchMatchingResultDto;
-import com.ilgiyebo.domain.matching.dto.MatchedUserDto;
-import com.ilgiyebo.domain.matching.dto.OverlapLocationDto;
-import com.ilgiyebo.domain.matching.dto.RouteOverlapDto;
-import com.ilgiyebo.domain.matching.dto.SlotResponseDto;
-import com.ilgiyebo.domain.safety.repository.BlockRepository;
-import com.ilgiyebo.domain.matching.repository.MatchRepository;
-import com.ilgiyebo.domain.mission.repository.MissionRepository;
-import com.ilgiyebo.domain.user.repository.ScheduleRepository;
-import com.ilgiyebo.domain.matching.repository.SlotRepository;
-import com.ilgiyebo.domain.user.repository.UserRepository;
+import com.ilgiyebo.repository.InteractionRepository;
+import com.ilgiyebo.repository.MatchRepository;
+import com.ilgiyebo.repository.MissionRepository;
+import com.ilgiyebo.repository.ScheduleRepository;
+import com.ilgiyebo.repository.SlotRepository;
+import com.ilgiyebo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -290,9 +290,8 @@ public class MatchingServiceImpl implements MatchingService {
      * 매칭에 대한 상호작용 엔티티를 생성한다.
      */
     private void createInteraction(UUID matchId) {
-        MatchEntity matchRef = matchRepository.getReferenceById(matchId);
         InteractionEntity interaction = InteractionEntity.builder()
-                .match(matchRef)
+                .matchId(matchId)
                 .currentStage(1)
                 .stageStatus(StageStatus.IN_PROGRESS)
                 .quizCompletedBy(List.of())
@@ -360,7 +359,7 @@ public class MatchingServiceImpl implements MatchingService {
                 .minusSeconds(1);
 
         MissionEntity mission = MissionEntity.builder()
-                .match(matchRepository.getReferenceById(matchId))
+                .matchId(matchId)
                 .location(location)
                 .activity(activity)
                 .description(description)

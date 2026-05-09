@@ -1,15 +1,14 @@
-package com.ilgiyebo.domain.auth.service;
+package com.ilgiyebo.service;
 
-import com.ilgiyebo.common.config.AuthProperties;
-import com.ilgiyebo.common.config.JwtTokenProvider;
-import com.ilgiyebo.domain.matching.entity.SlotEntity;
-import com.ilgiyebo.domain.matching.entity.SlotStatus;
-import com.ilgiyebo.domain.user.entity.UserEntity;
+import com.ilgiyebo.config.AuthProperties;
+import com.ilgiyebo.config.JwtTokenProvider;
+import com.ilgiyebo.domain.SlotEntity;
+import com.ilgiyebo.domain.SlotStatus;
+import com.ilgiyebo.domain.UserEntity;
 import com.ilgiyebo.domain.auth.exception.AuthException;
-import com.ilgiyebo.domain.auth.dto.*;
-import com.ilgiyebo.domain.auth.entity.VerificationEntry;
-import com.ilgiyebo.domain.matching.repository.SlotRepository;
-import com.ilgiyebo.domain.user.repository.UserRepository;
+import com.ilgiyebo.dto.*;
+import com.ilgiyebo.repository.SlotRepository;
+import com.ilgiyebo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

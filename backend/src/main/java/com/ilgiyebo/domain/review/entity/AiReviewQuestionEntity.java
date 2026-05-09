@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.review.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
 import jakarta.persistence.*;
@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ai_review_question")
+@Table(name = "AI_REVIEW_QUESTION")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

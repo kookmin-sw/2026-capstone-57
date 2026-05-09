@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.user.repository;
+package com.ilgiyebo.repository;
 
-import com.ilgiyebo.domain.user.entity.ScheduleEntity;
+import com.ilgiyebo.domain.ScheduleEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.DayOfWeek;

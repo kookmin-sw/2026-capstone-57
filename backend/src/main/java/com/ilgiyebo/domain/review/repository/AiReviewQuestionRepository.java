@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.review.repository;
+package com.ilgiyebo.repository;
 
-import com.ilgiyebo.domain.review.entity.AiReviewQuestionEntity;
+import com.ilgiyebo.domain.AiReviewQuestionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.auth.dto;
+package com.ilgiyebo.dto;
 
 import java.util.UUID;
 

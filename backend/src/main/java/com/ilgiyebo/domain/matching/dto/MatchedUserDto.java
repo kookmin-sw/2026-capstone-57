@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.matching.dto;
+package com.ilgiyebo.dto;
 
 import java.util.UUID;
 

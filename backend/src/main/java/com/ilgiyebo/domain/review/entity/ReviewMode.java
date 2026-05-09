@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.review.entity;
+package com.ilgiyebo.domain;
 
 public enum ReviewMode {
     AI_ASSISTED, DIRECT

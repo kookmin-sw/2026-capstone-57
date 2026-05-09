@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.user.entity;
+package com.ilgiyebo.domain;
 
 public enum Gender {
     MALE, FEMALE, OTHER

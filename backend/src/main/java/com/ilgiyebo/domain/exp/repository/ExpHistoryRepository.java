@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.exp.repository;
+package com.ilgiyebo.repository;
 
-import com.ilgiyebo.domain.exp.entity.ExpHistoryEntity;
+import com.ilgiyebo.domain.ExpHistoryEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

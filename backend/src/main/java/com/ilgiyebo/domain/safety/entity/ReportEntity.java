@@ -1,14 +1,14 @@
-package com.ilgiyebo.domain.safety.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.domain.matching.entity.MatchEntity;
-import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.util.UUID;
+
 @Entity
-@Table(name = "report")
+@Table(name = "REPORT")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -17,17 +17,14 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class ReportEntity extends BaseSchema {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reporter_id", nullable = false)
-    private UserEntity reporter;
+    @Column(name = "reporter_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID reporterId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "target_id", nullable = false)
-    private UserEntity target;
+    @Column(name = "target_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID targetId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_id", nullable = false)
-    private MatchEntity match;
+    @Column(name = "match_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID matchId;
 
     @Column(nullable = false)
     private String reason;

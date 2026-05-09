@@ -1,14 +1,14 @@
-package com.ilgiyebo.domain.review.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
-import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.util.UUID;
+
 @Entity
-@Table(name = "review_session")
+@Table(name = "REVIEW_SESSION")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -17,13 +17,11 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class ReviewSessionEntity extends BaseSchema {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "interaction_id", nullable = false)
-    private InteractionEntity interaction;
+    @Column(name = "interaction_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID interactionId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private UserEntity user;
+    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID userId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

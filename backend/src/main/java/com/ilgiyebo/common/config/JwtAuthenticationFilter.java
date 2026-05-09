@@ -1,4 +1,4 @@
-package com.ilgiyebo.common.config;
+package com.ilgiyebo.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

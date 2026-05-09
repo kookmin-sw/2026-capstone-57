@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.planner.dto;
+package com.ilgiyebo.dto;
 
 import java.time.LocalTime;
 

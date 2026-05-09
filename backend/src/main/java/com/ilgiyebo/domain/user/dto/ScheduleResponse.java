@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.user.dto;
+package com.ilgiyebo.dto;
 
-import com.ilgiyebo.domain.user.entity.ScheduleEntity;
+import com.ilgiyebo.domain.ScheduleEntity;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;

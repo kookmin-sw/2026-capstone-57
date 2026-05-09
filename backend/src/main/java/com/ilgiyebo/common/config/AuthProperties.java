@@ -1,4 +1,4 @@
-package com.ilgiyebo.common.config;
+package com.ilgiyebo.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

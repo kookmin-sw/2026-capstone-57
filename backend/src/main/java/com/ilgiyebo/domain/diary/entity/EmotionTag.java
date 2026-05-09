@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.diary.entity;
+package com.ilgiyebo.domain;
 
 public enum EmotionTag {
     HAPPY, SAD, ANGRY, ANXIOUS, CALM, EXCITED, TIRED

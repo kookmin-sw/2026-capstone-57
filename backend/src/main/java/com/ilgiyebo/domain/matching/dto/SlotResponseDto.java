@@ -1,8 +1,8 @@
-package com.ilgiyebo.domain.matching.dto;
+package com.ilgiyebo.dto;
 
-import com.ilgiyebo.domain.matching.entity.SlotEntity;
-import com.ilgiyebo.domain.matching.entity.SlotPriority;
-import com.ilgiyebo.domain.matching.entity.SlotStatus;
+import com.ilgiyebo.domain.SlotEntity;
+import com.ilgiyebo.domain.SlotPriority;
+import com.ilgiyebo.domain.SlotStatus;
 import jakarta.annotation.Nullable;
 
 import java.util.UUID;

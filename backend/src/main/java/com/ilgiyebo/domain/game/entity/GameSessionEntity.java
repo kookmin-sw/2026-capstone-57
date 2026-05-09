@@ -1,16 +1,16 @@
-package com.ilgiyebo.domain.game.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.common.config.JsonMapConverter;
-import com.ilgiyebo.domain.matching.entity.MatchEntity;
+import com.ilgiyebo.config.JsonMapConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
-@Table(name = "game_session")
+@Table(name = "GAME_SESSION")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -19,9 +19,8 @@ import java.util.Map;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class GameSessionEntity extends BaseSchema {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_id", nullable = false)
-    private MatchEntity match;
+    @Column(name = "match_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID matchId;
 
     @Column(name = "game_type", nullable = false, length = 100)
     private String gameType;

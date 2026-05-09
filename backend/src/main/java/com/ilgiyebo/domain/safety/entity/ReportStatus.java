@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.safety.entity;
+package com.ilgiyebo.domain;
 
 public enum ReportStatus {
     PENDING, REVIEWED, RESOLVED

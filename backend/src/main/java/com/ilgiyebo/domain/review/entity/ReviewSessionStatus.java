@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.review.entity;
+package com.ilgiyebo.domain;
 
 public enum ReviewSessionStatus {
     IN_PROGRESS, GENERATED, COMPLETED

@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.planner.entity;
+package com.ilgiyebo.domain;
 
 public enum PlanItemType {
     CLASS, FREE, ACTIVITY

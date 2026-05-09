@@ -1,7 +1,7 @@
-package com.ilgiyebo.domain.matching.repository;
+package com.ilgiyebo.repository;
 
-import com.ilgiyebo.domain.matching.entity.MatchEntity;
-import com.ilgiyebo.domain.matching.entity.MatchStatus;
+import com.ilgiyebo.domain.MatchEntity;
+import com.ilgiyebo.domain.MatchStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

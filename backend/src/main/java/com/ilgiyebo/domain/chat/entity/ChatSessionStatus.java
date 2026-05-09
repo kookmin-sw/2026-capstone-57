@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.chat.entity;
+package com.ilgiyebo.domain;
 
 public enum ChatSessionStatus {
     ACTIVE, ENDED

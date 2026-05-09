@@ -1,7 +1,7 @@
-package com.ilgiyebo.domain.interaction.repository;
+package com.ilgiyebo.repository;
 
-import com.ilgiyebo.domain.interaction.entity.HintQuestionEntity;
-import com.ilgiyebo.domain.interaction.entity.HintQuestionStatus;
+import com.ilgiyebo.domain.HintQuestionEntity;
+import com.ilgiyebo.domain.HintQuestionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.UUID;

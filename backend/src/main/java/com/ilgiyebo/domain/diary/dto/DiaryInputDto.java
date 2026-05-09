@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.diary.dto;
+package com.ilgiyebo.dto;
 
-import com.ilgiyebo.domain.diary.entity.EmotionTag;
+import com.ilgiyebo.domain.EmotionTag;
 import java.time.LocalDate;
 
 public record DiaryInputDto(

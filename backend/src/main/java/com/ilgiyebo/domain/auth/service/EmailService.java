@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.auth.service;
+package com.ilgiyebo.service;
 
 public interface EmailService {
     /** 인증 코드 이메일 발송 */

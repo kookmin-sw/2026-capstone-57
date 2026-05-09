@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.user.dto;
+package com.ilgiyebo.dto;
 
-import com.ilgiyebo.domain.user.entity.Gender;
+import com.ilgiyebo.domain.Gender;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;

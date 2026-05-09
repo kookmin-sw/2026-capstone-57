@@ -1,7 +1,7 @@
-package com.ilgiyebo.domain.matching.repository;
+package com.ilgiyebo.repository;
 
-import com.ilgiyebo.domain.matching.entity.SlotEntity;
-import com.ilgiyebo.domain.matching.entity.SlotStatus;
+import com.ilgiyebo.domain.SlotEntity;
+import com.ilgiyebo.domain.SlotStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

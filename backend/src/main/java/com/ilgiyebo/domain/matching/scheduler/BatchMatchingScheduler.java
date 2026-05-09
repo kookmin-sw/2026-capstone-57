@@ -1,7 +1,7 @@
 package com.ilgiyebo.domain.matching.scheduler;
 
-import com.ilgiyebo.domain.matching.dto.BatchMatchingResultDto;
-import com.ilgiyebo.domain.matching.service.MatchingService;
+import com.ilgiyebo.dto.BatchMatchingResultDto;
+import com.ilgiyebo.service.MatchingService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

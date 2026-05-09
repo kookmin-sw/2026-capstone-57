@@ -1,3 +1,3 @@
-package com.ilgiyebo.domain.diary.dto;
+package com.ilgiyebo.dto;
 
 public record StreakInfoDto(int currentStreak, int longestStreak) {}

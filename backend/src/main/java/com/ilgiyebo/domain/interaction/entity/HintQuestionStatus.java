@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.interaction.entity;
+package com.ilgiyebo.domain;
 
 public enum HintQuestionStatus {
     PENDING, ANSWERED

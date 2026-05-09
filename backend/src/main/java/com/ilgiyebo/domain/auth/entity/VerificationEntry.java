@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.auth.entity;
+package com.ilgiyebo.dto;
 
 import java.time.Instant;
 

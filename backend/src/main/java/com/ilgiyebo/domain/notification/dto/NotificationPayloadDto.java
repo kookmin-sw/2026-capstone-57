@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.notification.dto;
+package com.ilgiyebo.dto;
 
-import com.ilgiyebo.domain.notification.entity.NotificationType;
+import com.ilgiyebo.domain.NotificationType;
 import java.util.Map;
 
 public record NotificationPayloadDto(

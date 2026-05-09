@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.user.entity;
+package com.ilgiyebo.domain;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ilgiyebo.common.entity.BaseSchema;
@@ -10,10 +10,11 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Entity
-@Table(name = "schedule")
+@Table(name = "`SCHEDULE`")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -49,11 +50,10 @@ public class ScheduleEntity extends BaseSchema {
     @Column(name = "floor")
     private Integer floor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private UserEntity user;
+    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID userId;
 
-    public static ScheduleEntity fromEverytime(JsonNode name, JsonNode node, UserEntity user) {
+    public static ScheduleEntity fromEverytime(JsonNode name, JsonNode node, UUID userId) {
 
         Function<Integer, LocalTime> fromEverytimeTime = time -> {
             int minute = time * 5;
@@ -68,7 +68,7 @@ public class ScheduleEntity extends BaseSchema {
                 .startedAt(fromEverytimeTime.apply(Integer.parseInt(node.get("starttime").asText())))
                 .endedAt(fromEverytimeTime.apply(Integer.parseInt(node.get("endtime").asText())))
                 .place(node.get("place").asText())
-                .user(user)
+                .userId(userId)
                 .build();
     }
 }

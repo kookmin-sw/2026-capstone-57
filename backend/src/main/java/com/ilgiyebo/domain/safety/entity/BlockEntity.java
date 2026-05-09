@@ -1,13 +1,14 @@
-package com.ilgiyebo.domain.safety.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.domain.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.util.UUID;
+
 @Entity
-@Table(name = "block")
+@Table(name = "`BLOCK`")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -16,11 +17,9 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class BlockEntity extends BaseSchema {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private UserEntity user;
+    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "blocked_user_id", nullable = false)
-    private UserEntity blockedUser;
+    @Column(name = "blocked_user_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID blockedUserId;
 }

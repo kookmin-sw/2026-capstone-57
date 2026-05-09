@@ -1,9 +1,9 @@
-package com.ilgiyebo.domain.matching.dto;
+package com.ilgiyebo.dto;
 
-import com.ilgiyebo.domain.matching.entity.MatchEntity;
-import com.ilgiyebo.domain.matching.entity.MatchStatus;
-import com.ilgiyebo.domain.mission.entity.MissionEntity;
-import com.ilgiyebo.domain.mission.entity.MissionStatus;
+import com.ilgiyebo.domain.MatchEntity;
+import com.ilgiyebo.domain.MatchStatus;
+import com.ilgiyebo.domain.MissionEntity;
+import com.ilgiyebo.domain.MissionStatus;
 import jakarta.annotation.Nullable;
 
 import java.time.Instant;

@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.notification.dto;
+package com.ilgiyebo.dto;
 
 public record NotificationSettingsDto(
     boolean matchNotification,

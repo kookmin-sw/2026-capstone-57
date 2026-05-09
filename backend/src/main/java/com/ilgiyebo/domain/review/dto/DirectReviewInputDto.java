@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.review.dto;
+package com.ilgiyebo.dto;
 
 public record DirectReviewInputDto(
     int satisfaction,

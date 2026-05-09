@@ -1,6 +1,6 @@
-package com.ilgiyebo.domain.user.service;
+package com.ilgiyebo.service;
 
-import com.ilgiyebo.domain.user.dto.ParsedEmailInfo;
+import com.ilgiyebo.dto.ParsedEmailInfo;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.notification.entity;
+package com.ilgiyebo.domain;
 
 public enum NotificationType {
     MATCH_CREATED, STAGE_COMPLETED, MISSION_REMINDER, PLANNER_REMINDER,
