@@ -1,8 +1,6 @@
 spring:
   application:
     name: ilgi-yebo
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
 
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_DATABASE:ilgiyebo}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
@@ -12,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
@@ -24,11 +22,18 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     out-of-order: true
+    validate-on-migrate: false
 
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -46,11 +51,6 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-  cloud:
-    aws:
-      region:
-        static: ${AWS_REGION:us-east-1}
-
 server:
   port: 8080
 
@@ -61,9 +61,9 @@ logging:
 
 auth:
   jwt:
-    secret: ${JWT_SECRET}
-    access-token-validity-ms: ${JWT_ACCESS_TOKEN_VALIDITY}
-    refresh-token-validity-ms: ${JWT_REFRESH_TOKEN_VALIDITY}
+    secret: ${JWT_SECRET:ilgiyebo-default-secret-key-must-be-at-least-32-bytes-long}
+    access-token-validity-ms: ${JWT_ACCESS_TOKEN_VALIDITY:3600000}
+    refresh-token-validity-ms: ${JWT_REFRESH_TOKEN_VALIDITY:604800000}
   allowed-domains:
     - ac.kr
     - edu
@@ -85,17 +85,9 @@ chat:
   websocket:
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:*}
 
-cloud:
-  aws:
-    region: 
-      static: ${AWS_REGION}
-    sqs:
-      max-concurrent-messages: 5
-      quiz-request-queue: ${SQS_QUIZ_REQUEST_QUEUE}
-      quiz-response-queue: ${SQS_QUIZ_RESPONSE_QUEUE}
-      retro-request-queue: ${SQS_RETRO_REQUEST_QUEUE}
-      retro-response-queue: ${SQS_RETRO_RESPONSE_QUEUE}
-      diary-request-queue: ${SQS_DIARY_REQUEST_QUEUE}
-      diary-response-queue: ${SQS_DIARY_RESPONSE_QUEUE}
-    bedrock:
-      model-id: ${BEDROCK_MODEL_ID}
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  bedrock:
+    model-id: ${BEDROCK_MODEL_ID:anthropic.claude-3-sonnet-20240229-v1:0}
+    timeout-seconds: 30
+    max-tokens: 4096

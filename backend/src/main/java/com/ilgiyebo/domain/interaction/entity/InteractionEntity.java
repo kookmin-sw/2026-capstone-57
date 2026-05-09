@@ -1,9 +1,7 @@
-package com.ilgiyebo.domain.interaction.entity;
+package com.ilgiyebo.domain;
 
 import com.ilgiyebo.common.entity.BaseSchema;
 import com.ilgiyebo.config.JsonStringListConverter;
-import com.ilgiyebo.domain.MatchEntity;
-import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -22,9 +20,8 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class InteractionEntity extends BaseSchema {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_id", nullable = false)
-    private MatchEntity match;
+    @Column(name = "match_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID matchId;
 
     @Builder.Default
     @Column(name = "current_stage", nullable = false)
@@ -38,10 +35,6 @@ public class InteractionEntity extends BaseSchema {
     @Convert(converter = JsonStringListConverter.class)
     @Column(name = "quiz_completed_by", columnDefinition = "JSON")
     private List<String> quizCompletedBy;
-
-    @Convert(converter = JsonQuizDataConverter.class)
-    @Column(name = "quiz_data", columnDefinition = "JSON")
-    private List<QuizQuestionDto> quizData;
 
     @Column(name = "chat_start_time")
     private Instant chatStartTime;

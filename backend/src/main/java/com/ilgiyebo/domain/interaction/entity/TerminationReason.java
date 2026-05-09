@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.interaction.entity;
+package com.ilgiyebo.domain;
 
 public enum TerminationReason {
     USER_REJECTED, REPORTED, EXPIRED, BLOCKED
