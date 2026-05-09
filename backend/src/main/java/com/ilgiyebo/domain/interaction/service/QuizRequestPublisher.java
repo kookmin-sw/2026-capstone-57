@@ -27,14 +27,20 @@ public class QuizRequestPublisher {
         QuizGenerateRequestMessage message = QuizGenerateRequestMessage.of(
                 matchId, requesterId, targetUserId, targetProfile);
 
+        String json;
         try {
-            String json = objectMapper.writeValueAsString(message);
-            sqsTemplate.send(quizRequestQueue, json);
-            log.info("AI 퀴즈 생성 요청 SQS 발행 성공: 매칭ID={}, 대상유저ID={}", matchId, targetUserId);
+            json = objectMapper.writeValueAsString(message);
         } catch (JsonProcessingException e) {
             log.error("퀴즈 생성 요청 직렬화 실패: 매칭ID={}", matchId, e);
+            throw new RuntimeException("퀴즈 생성 요청 직렬화 실패", e);
+        }
+
+        try {
+            sqsTemplate.send(quizRequestQueue, json);
+            log.info("AI 퀴즈 생성 요청 SQS 발행 성공: 매칭ID={}, 대상유저ID={}", matchId, targetUserId);
         } catch (Exception e) {
             log.error("퀴즈 생성 요청 SQS 발행 실패: 매칭ID={}", matchId, e);
+            throw new RuntimeException("퀴즈 생성 요청 SQS 발행 실패", e);
         }
     }
 }
