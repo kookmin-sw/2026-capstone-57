@@ -15,6 +15,6 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class CampusVenueEntity extends BaseSchema {
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 }
