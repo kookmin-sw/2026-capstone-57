@@ -84,10 +84,11 @@ INSERT IGNORE INTO `user` (id, email, password_hash, nickname, name, university,
      '["HIKING", "CAMPING", "GAMING"]', '["TECHNOLOGY", "STARTUP"]', '["ENTJ"]', '["AMBITIOUS", "CONFIDENT"]',
      175, 2, FALSE, NOW(), NOW());
 
--- 슬롯 (slot) - 유저당 1개씩
-INSERT IGNORE INTO slot (id, user_id, priority, current_match_id, is_quick_match, status, created_at, updated_at)
-SELECT UUID_TO_BIN(UUID()), id, 'HOBBY', NULL, FALSE, 'EMPTY', NOW(), NOW()
-FROM `user`;
+-- 슬롯 (slot) - 유저당 2개 미만으로 생성
+INSERT INTO slot (id, user_id, priority, current_match_id, is_quick_match, status, created_at, updated_at)
+SELECT UUID_TO_BIN(UUID()), u.id, 'HOBBY', NULL, FALSE, 'EMPTY', NOW(), NOW()
+FROM `user` u
+WHERE (SELECT COUNT(*) FROM slot s WHERE s.user_id = u.id) < 2;
 
 -- 시간표 (schedule) - 유저당 2~3개 수업
 -- user1: 수치해석(화/목), 머신러닝기초(화/목)
