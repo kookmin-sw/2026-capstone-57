@@ -1,6 +1,6 @@
 package com.ilgiyebo.domain.chat.config;
 
-import com.ilgiyebo.config.JwtTokenProvider;
+import com.ilgiyebo.common.config.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;

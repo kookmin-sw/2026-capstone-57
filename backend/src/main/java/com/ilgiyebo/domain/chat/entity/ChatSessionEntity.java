@@ -7,6 +7,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "chat_session")
@@ -18,8 +19,11 @@ import java.time.Instant;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class ChatSessionEntity extends BaseSchema {
 
+    @Column(name = "match_id", nullable = false)
+    private UUID matchId;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_id", nullable = false)
+    @JoinColumn(name = "match_id", insertable = false, updatable = false)
     private MatchEntity match;
 
     @Column(name = "start_time", nullable = false)

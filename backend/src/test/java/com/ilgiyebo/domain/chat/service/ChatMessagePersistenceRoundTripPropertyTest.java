@@ -3,7 +3,7 @@ package com.ilgiyebo.domain.chat.service;
 import com.ilgiyebo.domain.chat.entity.ChatMessageEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionStatus;
-import com.ilgiyebo.repository.ChatMessageRepository;
+import com.ilgiyebo.domain.chat.repository.ChatMessageRepository;
 import net.jqwik.api.*;
 
 import java.time.Instant;

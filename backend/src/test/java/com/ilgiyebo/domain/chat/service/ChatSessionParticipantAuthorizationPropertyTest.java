@@ -1,11 +1,11 @@
 package com.ilgiyebo.domain.chat.service;
 
 import com.ilgiyebo.common.exception.BusinessException;
-import com.ilgiyebo.domain.MatchEntity;
-import com.ilgiyebo.domain.UserEntity;
-import com.ilgiyebo.repository.ChatSessionRepository;
+import com.ilgiyebo.domain.matching.entity.MatchEntity;
+import com.ilgiyebo.domain.user.entity.UserEntity;
+import com.ilgiyebo.domain.chat.repository.ChatSessionRepository;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
-import com.ilgiyebo.repository.MatchRepository;
+import com.ilgiyebo.domain.matching.repository.MatchRepository;
 import net.jqwik.api.*;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
