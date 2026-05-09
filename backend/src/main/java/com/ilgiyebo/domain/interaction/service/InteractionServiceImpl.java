@@ -7,9 +7,12 @@ import com.ilgiyebo.domain.interaction.exception.InteractionException;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import com.ilgiyebo.domain.matching.entity.MatchStatus;
+import com.ilgiyebo.domain.matching.entity.SlotEntity;
+import com.ilgiyebo.domain.matching.entity.SlotStatus;
 import com.ilgiyebo.domain.interaction.entity.TerminationReason;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.domain.matching.repository.MatchRepository;
+import com.ilgiyebo.domain.matching.repository.SlotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ public class InteractionServiceImpl implements InteractionService {
 
     private final InteractionRepository interactionRepository;
     private final MatchRepository matchRepository;
+    private final SlotRepository slotRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -52,6 +56,17 @@ public class InteractionServiceImpl implements InteractionService {
         interaction.setTerminationReason(reason.name());
         match.setStatus(MatchStatus.TERMINATED);
 
+        // 슬롯 초기화: 양쪽 유저의 슬롯을 EMPTY로 되돌리고 매치 참조 제거
+        SlotEntity slotA = match.getSlotA();
+        SlotEntity slotB = match.getSlotB();
+
+        slotA.setStatus(SlotStatus.EMPTY);
+        slotA.setCurrentMatch(null);
+        slotB.setStatus(SlotStatus.EMPTY);
+        slotB.setCurrentMatch(null);
+
+        slotRepository.save(slotA);
+        slotRepository.save(slotB);
         matchRepository.save(match);
         interactionRepository.save(interaction);
 
