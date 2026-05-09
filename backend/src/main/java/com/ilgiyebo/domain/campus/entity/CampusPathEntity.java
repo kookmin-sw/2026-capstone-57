@@ -8,7 +8,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.UUID;
 
 @Entity
-@Table(name = "CAMPUS_PATH")
+@Table(name = "campus_path")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

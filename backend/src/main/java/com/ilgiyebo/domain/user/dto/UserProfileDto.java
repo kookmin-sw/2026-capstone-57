@@ -1,7 +1,7 @@
-package com.ilgiyebo.dto;
+package com.ilgiyebo.domain.user.dto;
 
-import com.ilgiyebo.domain.Gender;
-import com.ilgiyebo.domain.UserEntity;
+import com.ilgiyebo.domain.user.entity.Gender;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 
 import java.time.LocalDate;
 import java.util.List;

@@ -1,15 +1,16 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.user.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.ilgiyebo.domain.ScheduleEntity;
+import com.ilgiyebo.domain.user.entity.ScheduleEntity;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
 import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
 import com.ilgiyebo.domain.user.exception.UserException;
-import com.ilgiyebo.dto.ScheduleResponse;
-import com.ilgiyebo.repository.ScheduleRepository;
-import com.ilgiyebo.repository.UserRepository;
+import com.ilgiyebo.domain.user.dto.ScheduleResponse;
+import com.ilgiyebo.domain.user.repository.ScheduleRepository;
+import com.ilgiyebo.domain.user.repository.UserRepository;
 import kong.unirest.core.ContentType;
 import kong.unirest.core.Unirest;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,8 @@ public class ScheduleService {
     @Transactional
     @SneakyThrows(IOException.class)
     public ScheduleResponse upsertMySchedule(UUID userId, String identifier) {
-        validateUserExists(userId);
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(UserException.USER_NOT_FOUND::toException);
         scheduleRepository.deleteByUserId(userId);
 
         // 건물 이름 목록 조회 (이름 길이 내림차순 정렬)
@@ -80,13 +82,13 @@ public class ScheduleService {
 
             if (data.getNodeType().equals(JsonNodeType.ARRAY)) {
                 for (JsonNode item : data) {
-                    ScheduleEntity entity = ScheduleEntity.fromEverytime(name, item, userId);
+                    ScheduleEntity entity = ScheduleEntity.fromEverytime(name, item, user);
                     parsePlaceAndSet(entity, buildings);
                     scheduleRepository.save(entity);
                     schedules.add(entity);
                 }
             } else {
-                ScheduleEntity entity = ScheduleEntity.fromEverytime(name, data, userId);
+                ScheduleEntity entity = ScheduleEntity.fromEverytime(name, data, user);
                 parsePlaceAndSet(entity, buildings);
                 scheduleRepository.save(entity);
                 schedules.add(entity);

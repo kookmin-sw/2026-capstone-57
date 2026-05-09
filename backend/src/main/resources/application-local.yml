@@ -1,0 +1,6 @@
+spring:
+  cloud:
+    aws:
+      sqs:
+        listener:
+          auto-startup: false

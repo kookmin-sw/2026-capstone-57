@@ -1,11 +1,11 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.user.service;
 
 import com.ilgiyebo.domain.user.entity.Hobby;
 import com.ilgiyebo.domain.user.entity.IdealType;
 import com.ilgiyebo.domain.user.entity.Interest;
 import com.ilgiyebo.domain.user.entity.PersonalityType;
-import com.ilgiyebo.dto.ProfileOptionDto;
-import com.ilgiyebo.dto.ProfileOptionsResponse;
+import com.ilgiyebo.domain.user.dto.ProfileOptionDto;
+import com.ilgiyebo.domain.user.dto.ProfileOptionsResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;

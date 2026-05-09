@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.matching.entity;
 
 /**
  * 슬롯의 매칭 우선순위.

@@ -1,4 +1,6 @@
-package com.ilgiyebo.dto;
+package com.ilgiyebo.domain.auth.dto;
+
+import com.ilgiyebo.domain.auth.entity.VerificationEntry;
 
 public record VerificationConfirmResponse(
     String verificationId,

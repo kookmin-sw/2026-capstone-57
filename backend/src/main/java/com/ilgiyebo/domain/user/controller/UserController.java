@@ -1,10 +1,10 @@
-package com.ilgiyebo.controller;
+package com.ilgiyebo.domain.user.controller;
 
-import com.ilgiyebo.dto.ProfileSetup;
-import com.ilgiyebo.dto.ProfileOptionsResponse;
-import com.ilgiyebo.dto.UserProfileDto;
-import com.ilgiyebo.service.ProfileOptionService;
-import com.ilgiyebo.service.UserService;
+import com.ilgiyebo.domain.user.dto.ProfileSetup;
+import com.ilgiyebo.domain.user.dto.ProfileOptionsResponse;
+import com.ilgiyebo.domain.user.dto.UserProfileDto;
+import com.ilgiyebo.domain.user.service.ProfileOptionService;
+import com.ilgiyebo.domain.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

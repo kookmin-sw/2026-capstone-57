@@ -1,4 +1,4 @@
-package com.ilgiyebo.dto;
+package com.ilgiyebo.domain.user.dto;
 
 import java.util.List;
 

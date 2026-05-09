@@ -1,7 +1,7 @@
-package com.ilgiyebo.controller;
+package com.ilgiyebo.domain.user.controller;
 
-import com.ilgiyebo.dto.ScheduleResponse;
-import com.ilgiyebo.service.ScheduleService;
+import com.ilgiyebo.domain.user.dto.ScheduleResponse;
+import com.ilgiyebo.domain.user.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

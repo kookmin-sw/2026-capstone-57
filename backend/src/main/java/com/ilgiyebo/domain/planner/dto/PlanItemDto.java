@@ -1,6 +1,6 @@
-package com.ilgiyebo.dto;
+package com.ilgiyebo.domain.planner.dto;
 
-import com.ilgiyebo.domain.PlanItemType;
+import com.ilgiyebo.domain.planner.entity.PlanItemType;
 import java.time.LocalTime;
 
 public record PlanItemDto(

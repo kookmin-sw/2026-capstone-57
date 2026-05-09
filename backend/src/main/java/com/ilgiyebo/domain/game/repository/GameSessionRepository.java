@@ -1,6 +1,6 @@
-package com.ilgiyebo.repository;
+package com.ilgiyebo.domain.game.repository;
 
-import com.ilgiyebo.domain.GameSessionEntity;
+import com.ilgiyebo.domain.game.entity.GameSessionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;

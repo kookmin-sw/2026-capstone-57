@@ -1,4 +1,4 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.auth.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

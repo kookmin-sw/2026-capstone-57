@@ -6,7 +6,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "CAMPUS_BUILDING")
+@Table(name = "campus_building")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -15,6 +15,6 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class CampusBuildingEntity extends BaseSchema {
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 }

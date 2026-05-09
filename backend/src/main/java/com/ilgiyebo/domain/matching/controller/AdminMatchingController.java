@@ -1,12 +1,12 @@
-package com.ilgiyebo.controller;
+package com.ilgiyebo.domain.matching.controller;
 
-import com.ilgiyebo.dto.AdminMatchDetailDto;
-import com.ilgiyebo.dto.BatchMatchingResultDto;
-import com.ilgiyebo.domain.MatchEntity;
-import com.ilgiyebo.domain.MissionEntity;
-import com.ilgiyebo.repository.MatchRepository;
-import com.ilgiyebo.repository.MissionRepository;
-import com.ilgiyebo.service.MatchingService;
+import com.ilgiyebo.domain.matching.dto.AdminMatchDetailDto;
+import com.ilgiyebo.domain.matching.dto.BatchMatchingResultDto;
+import com.ilgiyebo.domain.matching.entity.MatchEntity;
+import com.ilgiyebo.domain.mission.entity.MissionEntity;
+import com.ilgiyebo.domain.matching.repository.MatchRepository;
+import com.ilgiyebo.domain.mission.repository.MissionRepository;
+import com.ilgiyebo.domain.matching.service.MatchingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
