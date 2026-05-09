@@ -1,19 +1,23 @@
 package com.ilgiyebo.domain.interaction.dto;
 
-import java.util.List;
 import java.util.UUID;
 
 public record QuizResponseDto(
     UUID matchId,
-    List<QuizQuestionDto> questions,
-    boolean completed,
-    Integer correctCount,
-    Integer totalCount,
-    String partnerSummary
+    int quizIndex,
+    int correctAnswer,
+    Integer userAnswer,
+    boolean isCorrect,
+    int correctCount,
+    int totalCount,
+    boolean allCompleted
 ) {
-    // from 메서드 추가
-    public static QuizResponseDto from(UUID matchId, List<QuizQuestionDto> questions,
-                                       int correctCount, int totalCount, String summary) {
-        return new QuizResponseDto(matchId, questions, true, correctCount, totalCount, summary);
+    public static QuizResponseDto from(UUID matchId, int quizIndex, int correctAnswer,
+                                       int userAnswer, int correctCount, int totalCount,
+                                       boolean allCompleted) {
+        return new QuizResponseDto(
+                matchId, quizIndex, correctAnswer, userAnswer,
+                correctAnswer == userAnswer, correctCount, totalCount, allCompleted
+        );
     }
 }

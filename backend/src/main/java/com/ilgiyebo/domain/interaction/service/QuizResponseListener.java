@@ -39,7 +39,6 @@ public class QuizResponseListener {
                 return;
             }
 
-            // 💡 리뷰 반영(커밋 4): for문을 사용하여 quizIndex 부여, explanation 제거, quizAnswer는 null로 초기화
             List<AiQuizQuestion> aiQuestions = response.quiz().questions();
             List<QuizQuestionDto> quizData = new ArrayList<>();
 

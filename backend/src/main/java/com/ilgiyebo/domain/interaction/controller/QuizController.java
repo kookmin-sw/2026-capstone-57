@@ -24,7 +24,7 @@ public class QuizController {
     private final InteractionService interactionService;
     private final QuizService quizService;
 
-    @Operation(summary = "퀴즈 단계 완료 처리")
+    @Operation(summary = "퀴즈 단계 완료 처리 (양쪽 유저 모두 완료 시 다음 단계로 진행)")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{matchId}/quiz/complete")
     public ResponseEntity<InteractionStateDto> completeQuiz(

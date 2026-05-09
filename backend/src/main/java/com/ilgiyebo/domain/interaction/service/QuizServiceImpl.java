@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -105,53 +104,54 @@ public class QuizServiceImpl implements QuizService {
             throw InteractionException.ALREADY_TERMINATED.toException();
         }
 
-        List<QuizQuestionDto> originalQuestions = interaction.getQuizData();
-        if (originalQuestions == null || originalQuestions.isEmpty()) {
+        List<QuizQuestionDto> questions = interaction.getQuizData();
+        if (questions == null || questions.isEmpty()) {
             throw InteractionException.QUIZ_NOT_GENERATED.toException();
         }
 
-        List<Integer> userAnswers = request.answers();
-        int totalCount = originalQuestions.size();
+        int quizIndex = request.quizIndex();
+        int userAnswer = request.answer();
 
-        if (userAnswers.size() != totalCount) {
-            throw InteractionException.QUIZ_ANSWER_COUNT_MISMATCH.toException();
-        }
+        // 해당 인덱스의 퀴즈 찾기
+        QuizQuestionDto targetQuestion = questions.stream()
+                .filter(q -> q.quizIndex() == quizIndex)
+                .findFirst()
+                .orElseThrow(InteractionException.QUIZ_NOT_GENERATED::toException);
 
-        List<QuizQuestionDto> updatedQuestions = new ArrayList<>();
-        int correctCount = 0;
-
-        for (int i = 0; i < totalCount; i++) {
-            QuizQuestionDto oldQ = originalQuestions.get(i);
-            Integer userAnswer = userAnswers.get(i);
-
-            QuizQuestionDto updatedQ = new QuizQuestionDto(
-                    oldQ.quizIndex(),
-                    oldQ.question(),
-                    oldQ.options(),
-                    oldQ.correctAnswer(),
-                    userAnswer
-            );
-            updatedQuestions.add(updatedQ);
-
-            if (userAnswer != null && userAnswer.equals(oldQ.correctAnswer())) {
-                correctCount++;
-            }
-        }
+        // 해당 문항에 유저 답안 기록
+        List<QuizQuestionDto> updatedQuestions = questions.stream()
+                .map(q -> q.quizIndex() == quizIndex
+                        ? new QuizQuestionDto(q.quizIndex(), q.question(), q.options(), q.correctAnswer(), userAnswer)
+                        : q)
+                .toList();
 
         interaction.setQuizData(updatedQuestions);
+
+        // 전체 정답 수 계산
+        int totalCount = updatedQuestions.size();
+        int correctCount = (int) updatedQuestions.stream()
+                .filter(q -> q.quizAnswer() != null && q.quizAnswer().equals(q.correctAnswer()))
+                .count();
+
+        // 모든 문항을 풀었는지 확인
+        boolean allCompleted = updatedQuestions.stream()
+                .allMatch(q -> q.quizAnswer() != null);
+
         interactionRepository.save(interaction);
 
-        interactionService.completeQuiz(matchId, userId);
+        // 모든 문항 완료 시 퀴즈 단계 완료 처리
+        if (allCompleted) {
+            interactionService.completeQuiz(matchId, userId);
+        }
 
-        String partnerSummary = String.format("정답 개수: %d/%d", correctCount, totalCount);
-
-        // from 정적 팩토리 메서드 사용
         return QuizResponseDto.from(
                 matchId,
-                updatedQuestions,
+                quizIndex,
+                targetQuestion.correctAnswer(),
+                userAnswer,
                 correctCount,
                 totalCount,
-                partnerSummary
+                allCompleted
         );
     }
 
