@@ -5,19 +5,19 @@ import org.springframework.http.HttpStatus;
 
 public enum InteractionException {
 
-    INTERACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Interaction not found"),
-    MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "Match not found"),
-    USER_NOT_IN_MATCH(HttpStatus.FORBIDDEN, "User is not a participant of this match"),
-    ALREADY_TERMINATED(HttpStatus.BAD_REQUEST, "Match is already terminated"),
-    STAGE_NOT_ADVANCEABLE(HttpStatus.BAD_REQUEST, "Cannot advance from current stage"),
-    QUIZ_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "Quiz must be completed first"),
-    NOT_IN_QUIZ_STAGE(HttpStatus.BAD_REQUEST, "Hint questions can only be sent during quiz stage"),
-    HINT_QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Hint question not found"),
-    HINT_ALREADY_ANSWERED(HttpStatus.BAD_REQUEST, "Question is already answered"),
-    NOT_RESPONDER(HttpStatus.FORBIDDEN, "User is not the responder of this question"),
-    QUIZ_ANSWER_COUNT_MISMATCH(HttpStatus.BAD_REQUEST, "All questions must be answered"),
-    QUIZ_NOT_GENERATED(HttpStatus.BAD_REQUEST, "Quiz has not been generated yet"),
-    QUIZ_GENERATING(HttpStatus.ACCEPTED, "Quiz is being generated. Please try again shortly.");
+    INTERACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "상호작용 정보를 찾을 수 없습니다"),
+    MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "매칭 정보를 찾을 수 없습니다"),
+    USER_NOT_IN_MATCH(HttpStatus.FORBIDDEN, "해당 매칭의 참여자가 아닙니다"),
+    ALREADY_TERMINATED(HttpStatus.BAD_REQUEST, "이미 종료된 매칭입니다"),
+    STAGE_NOT_ADVANCEABLE(HttpStatus.BAD_REQUEST, "현재 단계에서 다음 단계로 진행할 수 없습니다"),
+    QUIZ_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "퀴즈를 먼저 완료해야 합니다"),
+    NOT_IN_QUIZ_STAGE(HttpStatus.BAD_REQUEST, "퀴즈 단계에서만 가능한 요청입니다"),
+    HINT_QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "힌트 질문을 찾을 수 없습니다"),
+    HINT_ALREADY_ANSWERED(HttpStatus.BAD_REQUEST, "이미 답변이 완료된 질문입니다"),
+    NOT_RESPONDER(HttpStatus.FORBIDDEN, "해당 질문의 답변자가 아닙니다"),
+    QUIZ_ANSWER_COUNT_MISMATCH(HttpStatus.BAD_REQUEST, "모든 문항에 답변해야 합니다"),
+    QUIZ_NOT_GENERATED(HttpStatus.BAD_REQUEST, "퀴즈가 아직 생성되지 않았습니다"),
+    QUIZ_GENERATING(HttpStatus.ACCEPTED, "퀴즈를 생성 중입니다. 잠시 후 다시 시도해주세요.");
 
     private final HttpStatus status;
     private final String message;
