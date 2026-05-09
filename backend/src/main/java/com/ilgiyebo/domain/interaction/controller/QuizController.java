@@ -33,10 +33,10 @@ public class QuizController {
         return ResponseEntity.ok(interactionService.completeQuiz(matchId, userId));
     }
 
-    @Operation(summary = "퀴즈 문항 조회 (AI 기반 생성)")
+    @Operation(summary = "퀴즈 문항 조회 (정답 미포함)")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{matchId}/quiz")
-    public ResponseEntity<List<QuizQuestionDto>> getQuiz(
+    public ResponseEntity<List<QuizQuestionResponse>> getQuiz(
             @AuthenticationPrincipal UUID userId,
             @PathVariable UUID matchId) {
         return ResponseEntity.ok(quizService.getQuiz(matchId, userId));

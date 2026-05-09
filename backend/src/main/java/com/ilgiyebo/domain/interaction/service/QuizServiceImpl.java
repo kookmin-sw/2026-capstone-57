@@ -5,6 +5,7 @@ import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.interaction.dto.QuizGenerateRequestMessage.TargetProfile;
 import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
+import com.ilgiyebo.domain.interaction.dto.QuizQuestionResponse;
 import com.ilgiyebo.domain.interaction.dto.QuizResponseDto;
 import com.ilgiyebo.domain.interaction.dto.QuizSubmitRequest;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
@@ -34,7 +35,7 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     @Transactional
-    public List<QuizQuestionDto> getQuiz(UUID matchId, UUID userId) {
+    public List<QuizQuestionResponse> getQuiz(UUID matchId, UUID userId) {
         MatchEntity match = matchRepository.findById(matchId)
                 .orElseThrow(InteractionException.MATCH_NOT_FOUND::toException);
         validateUserInMatch(match, userId);
@@ -46,9 +47,11 @@ public class QuizServiceImpl implements QuizService {
             throw InteractionException.NOT_IN_QUIZ_STAGE.toException();
         }
 
-        // 1. DB에 퀴즈가 이미 존재하면 즉시 반환
+        // 1. DB에 퀴즈가 이미 존재하면 정답 제외하고 반환
         if (interaction.getQuizData() != null && !interaction.getQuizData().isEmpty()) {
-            return interaction.getQuizData();
+            return interaction.getQuizData().stream()
+                    .map(QuizQuestionResponse::from)
+                    .toList();
         }
 
         // 2. DB에 퀴즈가 없으면 SQS를 통해 AI 생성 요청
