@@ -360,7 +360,7 @@ public class MatchingServiceImpl implements MatchingService {
                 .minusSeconds(1);
 
         MissionEntity mission = MissionEntity.builder()
-                .matchId(matchId)
+                .match(matchRepository.getReferenceById(matchId))
                 .location(location)
                 .activity(activity)
                 .description(description)
