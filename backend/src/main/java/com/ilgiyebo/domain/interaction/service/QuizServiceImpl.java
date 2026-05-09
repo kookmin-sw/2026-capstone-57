@@ -135,7 +135,7 @@ public class QuizServiceImpl implements QuizService {
         QuizQuestionDto targetQuestion = questions.stream()
                 .filter(q -> q.quizIndex() == quizIndex)
                 .findFirst()
-                .orElseThrow(InteractionException.QUIZ_NOT_GENERATED::toException);
+                .orElseThrow(InteractionException.INVALID_QUIZ_INDEX::toException);
 
         // 해당 문항에 유저 답안 기록
         List<QuizQuestionDto> updatedQuestions = questions.stream()

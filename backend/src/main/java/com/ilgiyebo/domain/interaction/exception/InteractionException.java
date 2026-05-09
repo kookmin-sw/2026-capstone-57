@@ -17,6 +17,7 @@ public enum InteractionException {
     NOT_RESPONDER(HttpStatus.FORBIDDEN, "해당 질문의 답변자가 아닙니다"),
     QUIZ_ANSWER_COUNT_MISMATCH(HttpStatus.BAD_REQUEST, "모든 문항에 답변해야 합니다"),
     QUIZ_NOT_GENERATED(HttpStatus.BAD_REQUEST, "퀴즈가 아직 생성되지 않았습니다"),
+    INVALID_QUIZ_INDEX(HttpStatus.BAD_REQUEST, "유효하지 않은 퀴즈 문항 번호입니다"),
     QUIZ_GENERATING(HttpStatus.ACCEPTED, "퀴즈를 생성 중입니다. 잠시 후 다시 시도해주세요.");
 
     private final HttpStatus status;
