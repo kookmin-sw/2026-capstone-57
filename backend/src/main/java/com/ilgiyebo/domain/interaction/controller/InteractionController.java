@@ -37,7 +37,7 @@ public class InteractionController {
             @AuthenticationPrincipal UUID userId,
             @PathVariable UUID matchId,
             @Valid @RequestBody TerminateMatchRequest request) {
-        interactionService.terminateMatch(matchId, request.reason());
+        interactionService.terminateMatch(matchId, userId, request.reason());
         return ResponseEntity.noContent().build();
     }
 }

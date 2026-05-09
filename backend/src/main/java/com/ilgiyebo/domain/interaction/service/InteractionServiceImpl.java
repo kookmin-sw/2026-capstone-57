@@ -44,8 +44,9 @@ public class InteractionServiceImpl implements InteractionService {
 
     @Override
     @Transactional
-    public void terminateMatch(UUID matchId, TerminationReason reason) {
+    public void terminateMatch(UUID matchId, UUID userId, TerminationReason reason) {
         MatchEntity match = findMatch(matchId);
+        validateUserInMatch(match, userId);
         InteractionEntity interaction = findInteraction(matchId);
 
         if (interaction.getStageStatus() == StageStatus.TERMINATED) {

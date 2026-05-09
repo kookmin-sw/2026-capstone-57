@@ -13,7 +13,7 @@ public interface InteractionService {
     InteractionStateDto getInteractionState(UUID matchId, UUID userId);
 
     /** 매칭 종료 (거절, 기한 만료, 신고 등) */
-    void terminateMatch(UUID matchId, TerminationReason reason);
+    void terminateMatch(UUID matchId, UUID userId, TerminationReason reason);
 
     /** 퀴즈 완료 처리 (AIService에서 호출) */
     InteractionStateDto completeQuiz(UUID matchId, UUID userId);
