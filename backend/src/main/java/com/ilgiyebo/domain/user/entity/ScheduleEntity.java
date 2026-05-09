@@ -10,7 +10,6 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
-import java.util.UUID;
 import java.util.function.Function;
 
 @Entity
@@ -50,10 +49,11 @@ public class ScheduleEntity extends BaseSchema {
     @Column(name = "floor")
     private Integer floor;
 
-    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity user;
 
-    public static ScheduleEntity fromEverytime(JsonNode name, JsonNode node, UUID userId) {
+    public static ScheduleEntity fromEverytime(JsonNode name, JsonNode node, UserEntity user) {
 
         Function<Integer, LocalTime> fromEverytimeTime = time -> {
             int minute = time * 5;
@@ -68,7 +68,7 @@ public class ScheduleEntity extends BaseSchema {
                 .startedAt(fromEverytimeTime.apply(Integer.parseInt(node.get("starttime").asText())))
                 .endedAt(fromEverytimeTime.apply(Integer.parseInt(node.get("endtime").asText())))
                 .place(node.get("place").asText())
-                .userId(userId)
+                .user(user)
                 .build();
     }
 }
