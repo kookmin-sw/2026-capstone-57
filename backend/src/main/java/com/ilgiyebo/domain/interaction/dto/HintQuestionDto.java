@@ -3,7 +3,6 @@ package com.ilgiyebo.domain.interaction.dto;
 import com.ilgiyebo.domain.interaction.entity.HintQuestionEntity;
 import com.ilgiyebo.domain.interaction.entity.HintQuestionStatus;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
