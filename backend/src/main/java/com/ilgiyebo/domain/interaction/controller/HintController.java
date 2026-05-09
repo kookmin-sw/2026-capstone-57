@@ -42,7 +42,7 @@ public class HintController {
             @PathVariable UUID questionId,
             @Valid @RequestBody AnswerHintQuestionRequest request) {
         return ResponseEntity.ok(
-                hintQuestionService.answerHintQuestion(questionId, userId, request.answer()));
+                hintQuestionService.answerHintQuestion(matchId, questionId, userId, request.answer()));
     }
 
     @Operation(summary = "힌트 질문 및 답변 목록 전체 조회")

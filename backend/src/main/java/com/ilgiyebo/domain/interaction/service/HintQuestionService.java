@@ -11,7 +11,7 @@ public interface HintQuestionService {
     HintQuestionDto sendHintQuestion(UUID matchId, UUID senderId, String question);
 
     /** 힌트 질문 답변 처리 */
-    HintQuestionDto answerHintQuestion(UUID questionId, UUID responderId, String answer);
+    HintQuestionDto answerHintQuestion(UUID matchId, UUID questionId, UUID responderId, String answer);
 
     /** 힌트 질문/답변 목록 조회 */
     List<HintQuestionDto> getHintQuestions(UUID matchId, UUID userId);

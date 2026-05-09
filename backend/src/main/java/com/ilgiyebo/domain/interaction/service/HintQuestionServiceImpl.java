@@ -61,15 +61,27 @@ public class HintQuestionServiceImpl implements HintQuestionService {
 
         log.info("힌트 질문 전송 완료: 매칭ID={}, 발신자ID={}, 질문ID={}", matchId, senderId, entity.getId());
 
-        // DTO의 from 메서드 사용
         return HintQuestionDto.from(entity);
     }
 
     @Override
     @Transactional
-    public HintQuestionDto answerHintQuestion(UUID questionId, UUID responderId, String answer) {
+    public HintQuestionDto answerHintQuestion(UUID matchId, UUID questionId, UUID responderId, String answer) {
         HintQuestionEntity entity = hintQuestionRepository.findById(questionId)
                 .orElseThrow(InteractionException.HINT_QUESTION_NOT_FOUND::toException);
+
+        // 해당 힌트 질문이 요청된 matchId에 속하는지 검증
+        if (!entity.getMatch().getId().equals(matchId)) {
+            throw InteractionException.HINT_QUESTION_NOT_FOUND.toException();
+        }
+
+        // 매칭 상태 검증 (종료된 매칭에서는 답변 불가)
+        InteractionEntity interaction = interactionRepository.findByMatchId(matchId)
+                .orElseThrow(InteractionException.INTERACTION_NOT_FOUND::toException);
+
+        if (interaction.getStageStatus() == StageStatus.TERMINATED) {
+            throw InteractionException.ALREADY_TERMINATED.toException();
+        }
 
         if (!entity.getResponder().getId().equals(responderId)) {
             throw InteractionException.NOT_RESPONDER.toException();
@@ -85,7 +97,6 @@ public class HintQuestionServiceImpl implements HintQuestionService {
 
         log.info("힌트 질문 답변 완료: 질문ID={}, 응답자ID={}", questionId, responderId);
 
-        // DTO의 from 메서드 사용
         return HintQuestionDto.from(entity);
     }
 
@@ -107,5 +118,4 @@ public class HintQuestionServiceImpl implements HintQuestionService {
             throw InteractionException.USER_NOT_IN_MATCH.toException();
         }
     }
-    // ❌ toDto 삭제됨
 }
