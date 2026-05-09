@@ -3,6 +3,7 @@ package com.ilgiyebo.domain.interaction.entity;
 import com.ilgiyebo.common.entity.BaseSchema;
 import com.ilgiyebo.common.config.JsonStringListConverter;
 import com.ilgiyebo.domain.matching.entity.MatchEntity;
+import com.ilgiyebo.domain.mission.entity.MissionEntity;
 import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,7 +11,6 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "INTERACTION")
@@ -56,8 +56,9 @@ public class InteractionEntity extends BaseSchema {
     @Column(name = "game_completed", nullable = false)
     private boolean gameCompleted = false;
 
-    @Column(name = "mission_id", columnDefinition = "BINARY(16)")
-    private UUID missionId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mission_id")
+    private MissionEntity mission;
 
     @Convert(converter = JsonStringListConverter.class)
     @Column(name = "mission_confirmed_by", columnDefinition = "JSON")

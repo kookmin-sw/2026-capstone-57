@@ -37,7 +37,7 @@ public record InteractionStateDto(
             case 1 -> new QuizData(interaction.getQuizCompletedBy() != null ? interaction.getQuizCompletedBy() : List.of());
             case 2 -> new ChatData(interaction.getChatStartTime(), interaction.getChatEndTime());
             case 3 -> new GameData(interaction.getGameType(), interaction.isGameCompleted());
-            case 4 -> new MissionData(interaction.getMissionId(),
+            case 4 -> new MissionData(interaction.getMission() != null ? interaction.getMission().getId() : null,
                     interaction.getMissionConfirmedBy() != null ? interaction.getMissionConfirmedBy() : List.of(),
                     interaction.isMissionExtended());
             case 5 -> new ReviewData(interaction.getReviewCompletedBy() != null ? interaction.getReviewCompletedBy() : List.of());
