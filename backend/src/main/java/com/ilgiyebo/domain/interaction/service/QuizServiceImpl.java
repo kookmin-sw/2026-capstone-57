@@ -54,7 +54,12 @@ public class QuizServiceImpl implements QuizService {
                     .toList();
         }
 
-        // 2. DB에 퀴즈가 없으면 SQS를 통해 AI 생성 요청
+        // 2. 이미 SQS 요청을 보낸 상태면 중복 발행 없이 대기 응답
+        if (interaction.isQuizRequested()) {
+            throw InteractionException.QUIZ_GENERATING.toException();
+        }
+
+        // 3. DB에 퀴즈가 없고 요청도 안 보낸 상태 → SQS를 통해 AI 생성 요청
         UUID partnerId = match.getUserA().getId().equals(userId)
                 ? match.getUserB().getId()
                 : match.getUserA().getId();
@@ -62,7 +67,6 @@ public class QuizServiceImpl implements QuizService {
         UserEntity partner = userRepository.findById(partnerId)
                 .orElseThrow(InteractionException.MATCH_NOT_FOUND::toException);
 
-        // 파라미터가 많은 객체 생성을 빌더 패턴으로 가독성 있게 수정
         TargetProfile targetProfile = TargetProfile.builder()
                 .name(partner.getName())
                 .nickname(partner.getNickname())
@@ -74,9 +78,12 @@ public class QuizServiceImpl implements QuizService {
                 .build();
 
         quizRequestPublisher.requestQuizGeneration(matchId, userId, partnerId, targetProfile);
+
+        interaction.setQuizRequested(true);
+        interactionRepository.save(interaction);
         log.info("AI 퀴즈 생성 요청 완료: 매칭ID={}, 대상유저ID={}", matchId, partnerId);
 
-        // 3. 퀴즈가 아직 준비되지 않음 (생성 중 예외 발생)
+        // 4. 퀴즈가 아직 준비되지 않음 (생성 중)
         throw InteractionException.QUIZ_GENERATING.toException();
     }
 

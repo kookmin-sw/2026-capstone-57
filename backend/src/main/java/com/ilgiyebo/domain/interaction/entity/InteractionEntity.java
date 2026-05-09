@@ -39,6 +39,10 @@ public class InteractionEntity extends BaseSchema {
     @Column(name = "quiz_completed_by", columnDefinition = "JSON")
     private List<String> quizCompletedBy;
 
+    @Builder.Default
+    @Column(name = "quiz_requested", nullable = false)
+    private boolean quizRequested = false;
+
     @Convert(converter = JsonQuizDataConverter.class)
     @Column(name = "quiz_data", columnDefinition = "JSON")
     private List<QuizQuestionDto> quizData;
