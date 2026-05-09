@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>채팅 WebSocket 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        #messages { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin: 10px 0; }
+        .msg { margin: 4px 0; }
+        .system { color: gray; }
+        .sent { color: blue; }
+        .received { color: green; }
+        input, button { padding: 6px; margin: 2px; }
+        #status { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>채팅 WebSocket 테스트</h2>
+
+    <div>
+        <label>JWT Token:</label><br>
+        <input id="token" style="width:600px" placeholder="Bearer 토큰 (eyJ... 부분만)"><br><br>
+        <label>Session ID:</label>
+        <input id="sessionId" value="eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"><br><br>
+        <button onclick="connect()">연결</button>
+        <button onclick="disconnect()">연결 해제</button>
+        <span id="status">미연결</span>
+    </div>
+
+    <div id="messages"></div>
+
+    <div>
+        <input id="messageInput" placeholder="메시지 입력..." style="width:400px" onkeypress="if(event.key==='Enter')sendMsg()">
+        <button onclick="sendMsg()">전송</button>
+    </div>
+
+    <script>
+        let stompClient = null;
+
+        function connect() {
+            const token = document.getElementById('token').value.trim();
+            const sessionId = document.getElementById('sessionId').value.trim();
+
+            if (!token || !sessionId) {
+                alert('토큰과 세션ID를 입력하세요');
+                return;
+            }
+
+            const socket = new SockJS('/ws/chat');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect(
+                { 'Authorization': 'Bearer ' + token },
+                function(frame) {
+                    document.getElementById('status').textContent = '연결됨 ✅';
+                    addMessage('시스템: WebSocket 연결 성공', 'system');
+
+                    // 채팅 메시지 구독
+                    stompClient.subscribe('/topic/chat/' + sessionId, function(msg) {
+                        const data = JSON.parse(msg.body);
+                        addMessage('수신: ' + JSON.stringify(data), 'received');
+                    });
+
+                    // 에러 구독
+                    stompClient.subscribe('/user/queue/errors', function(msg) {
+                        addMessage('에러: ' + msg.body, 'system');
+                    });
+
+                    addMessage('시스템: /topic/chat/' + sessionId + ' 구독 완료', 'system');
+                },
+                function(error) {
+                    document.getElementById('status').textContent = '연결 실패 ❌';
+                    addMessage('시스템: 연결 실패 - ' + error, 'system');
+                }
+            );
+        }
+
+        function disconnect() {
+            if (stompClient) {
+                stompClient.disconnect();
+                document.getElementById('status').textContent = '연결 해제됨';
+                addMessage('시스템: 연결 해제', 'system');
+            }
+        }
+
+        function sendMsg() {
+            const sessionId = document.getElementById('sessionId').value.trim();
+            const content = document.getElementById('messageInput').value.trim();
+
+            if (!stompClient || !content) return;
+
+            const message = { content: content };
+            stompClient.send('/app/chat/' + sessionId + '/send', {}, JSON.stringify(message));
+            addMessage('전송: ' + content, 'sent');
+            document.getElementById('messageInput').value = '';
+        }
+
+        function addMessage(text, cls) {
+            const div = document.getElementById('messages');
+            const p = document.createElement('div');
+            p.className = 'msg ' + cls;
+            p.textContent = '[' + new Date().toLocaleTimeString() + '] ' + text;
+            div.appendChild(p);
+            div.scrollTop = div.scrollHeight;
+        }
+    </script>
+</body>
+</html>

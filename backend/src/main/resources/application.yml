@@ -81,6 +81,10 @@ auth:
     sogang.ac.kr: 서강대학교
     cau.ac.kr: 중앙대학교
 
+chat:
+  websocket:
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:*}
+
 aws:
   region: ${AWS_REGION:ap-northeast-2}
   bedrock:
