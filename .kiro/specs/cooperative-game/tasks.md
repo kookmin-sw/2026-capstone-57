@@ -60,8 +60,8 @@
     - Package: `com.ilgiyebo.domain.game.dto.event`
     - _Requirements: 5.4, 5.5_
 
-- [ ] 3. Engine layer (runtime objects)
-  - [ ] 3.1 Create MapData and supporting geometry classes
+- [x] 3. Engine layer (runtime objects)
+  - [x] 3.1 Create MapData and supporting geometry classes
     - `MapData` class: width, height, platforms (List<Platform>), switches (List<SwitchArea>), doors (List<DoorArea>), goal (GoalArea), spawnA (Position), spawnB (Position), timeLimitMs (double)
     - `Platform` record: x, y, width, height
     - `SwitchArea` class: id (String), x, y, width, height, assignedTo (UUID nullable)
@@ -71,19 +71,19 @@
     - Package: `com.ilgiyebo.domain.game.engine`
     - _Requirements: 4.4_
 
-  - [ ] 3.2 Create PlayerState class
+  - [x] 3.2 Create PlayerState class
     - Mutable class: x, y, velocityX, velocityY, onGround (boolean), atGoal (boolean)
     - `toDto()` method returning `PlayerStateDto`
     - Package: `com.ilgiyebo.domain.game.engine`
     - _Requirements: 4.2, 4.3_
 
-  - [ ] 3.3 Create GameState class
+  - [x] 3.3 Create GameState class
     - Fields: players (Map<UUID, PlayerState>), switches (Map<String, Boolean>), doorOpen (boolean), remainingTimeMs (double), elapsedTimeMs (long), cooperationCount (int), score (int)
     - `toSnapshot()` method creating immutable `GameStateSnapshot` for broadcast
     - Package: `com.ilgiyebo.domain.game.engine`
     - _Requirements: 4.1, 4.5, 8.2_
 
-  - [ ] 3.4 Create GameRoomStatus enum and GameRoom class
+  - [x] 3.4 Create GameRoomStatus enum and GameRoom class
     - `GameRoomStatus` enum: WAITING, PLAYING, PAUSED, FINISHED
     - `GameRoom` class with concurrency-safe fields:
       - `sessionId`, `matchId`, `userAId`, `userBId` (final)
@@ -100,7 +100,7 @@
     - Package: `com.ilgiyebo.domain.game.engine`
     - _Requirements: 2.2, 2.3, 12.1, 8.5_
 
-  - [ ] 3.5 Create PhysicsEngine
+  - [x] 3.5 Create PhysicsEngine
     - `applyInput(PlayerState, PlayerInputData, double deltaMs)`: set velocityX based on left/right, handle jump if onGround
     - `applyGravity(PlayerState, double deltaMs)`: apply gravity to velocityY
     - `applyMovement(PlayerState, double deltaMs)`: update x/y from velocity
@@ -108,7 +108,7 @@
     - Package: `com.ilgiyebo.domain.game.engine`
     - _Requirements: 4.2, 4.3_
 
-  - [ ] 3.6 Create CollisionEngine
+  - [x] 3.6 Create CollisionEngine
     - `resolveFloorCollision(PlayerState, List<Platform>)`: clamp player to platform top, set onGround
     - `checkSwitches(GameState, List<SwitchArea>)`: update switches map based on player positions
     - `checkDoor(GameState, List<DoorArea>)`: set doorOpen when all switches pressed
@@ -116,7 +116,7 @@
     - Package: `com.ilgiyebo.domain.game.engine`
     - _Requirements: 4.4, 4.6_
 
-  - [ ] 3.7 Create ScoreEngine
+  - [x] 3.7 Create ScoreEngine
     - `updateScore(GameState)`: calculate score based on cooperationCount, remaining time
     - `calculateFinalScore(GameState)`: final score on game clear
     - `calculatePartialScore(GameState)`: partial score on timeout
