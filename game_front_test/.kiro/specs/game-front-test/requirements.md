@@ -114,11 +114,13 @@ interface GameOverMessage {
 
 interface PlayerDisconnectedMessage {
   type: "PLAYER_DISCONNECTED";
+  gameSessionId: string;
   userId: string;
 }
 
 interface GameErrorMessage {
   type: "GAME_ERROR";
+  gameSessionId: string;
   code: string;
   message: string;
 }
@@ -254,6 +256,7 @@ interface RestartRequestMessage {
 4. WHEN 매핑된 키가 눌리면, THE InputSystem SHALL 해당 InputState 필드를 true로 설정한다
 5. WHEN 매핑된 키가 해제되면, THE InputSystem SHALL 해당 InputState 필드를 false로 설정한다
 6. WHEN InputState가 이전 값에서 변경되면, THE InputSystem SHALL PLAYER_INPUT 발행을 트리거한다
+7. THE InputSystem SHALL 동일한 InputState를 연속으로 발행하지 않는다
 
 ### 요구사항 9: 모바일 터치 입력 처리
 
@@ -305,6 +308,7 @@ interface RestartRequestMessage {
 6. THE CoopScene SHALL 게임 플레이 중 키보드 및 터치 입력을 수용한다
 7. THE CoopScene SHALL 클라이언트 렌더링을 60fps로 수행하되, 서버 스냅샷 간 보간으로 부드러운 움직임을 제공한다
 8. THE CoopScene SHALL 최신 serverTimestamp보다 100ms 지연된 시점을 기준으로 보간 렌더링을 수행한다
+9. THE CoopScene SHALL COOP_SWITCH 기본 mapId를 사용하여 고정 맵을 렌더링한다
 
 
 ### 요구사항 13: ResultScene 구현

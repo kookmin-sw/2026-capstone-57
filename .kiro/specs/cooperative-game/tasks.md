@@ -29,33 +29,33 @@
     - Package: `com.ilgiyebo.domain.game.repository`
     - _Requirements: 1.4, 9.3_
 
-- [ ] 2. Exception and DTO definitions
-  - [ ] 2.1 Create GameException enum
+- [x] 2. Exception and DTO definitions
+  - [x] 2.1 Create GameException enum
     - Define enum-based exception following existing `InteractionException` pattern with `toException()` method
     - Error codes: GAME_SESSION_NOT_FOUND, NOT_GAME_PARTICIPANT, GAME_SESSION_NOT_ACTIVE, MATCH_NOT_FOUND, MATCH_NOT_ACTIVE, GAME_ROOM_NOT_FOUND, INVALID_GAME_ACTION
     - Package: `com.ilgiyebo.domain.game.exception`
     - _Requirements: 15.1, 15.2, 15.3, 15.4_
 
-  - [ ] 2.2 Create request DTOs
+  - [x] 2.2 Create request DTOs
     - `GameActionMessage` record: type (String, @NotNull), input (PlayerInputData, nullable)
     - `PlayerInputData` record: left (boolean), right (boolean), jump (boolean)
     - Package: `com.ilgiyebo.domain.game.dto.request`
     - _Requirements: 3.1, 3.3, 10.3_
 
-  - [ ] 2.3 Create response DTOs (GameEvent sealed interface and implementations)
+  - [x] 2.3 Create response DTOs (GameEvent sealed interface and implementations)
     - `GameEvent` sealed interface with `String type()` method
     - Implementations: `RoomStateEvent`, `GameStartedEvent`, `StateUpdateEvent`, `GameClearedEvent`, `GameOverEvent`, `PlayerDisconnectedEvent`, `PlayerReconnectedEvent`, `RestartRequestedEvent`, `GameErrorEvent`
     - Supporting records: `GameResultDto`, `GameOverResultDto`, `GameStateSnapshot`, `PlayerStateDto`
     - Package: `com.ilgiyebo.domain.game.dto.response`
     - _Requirements: 10.4, 10.6, 5.1, 6.1_
 
-  - [ ] 2.4 Create GameSessionResponse DTO
+  - [x] 2.4 Create GameSessionResponse DTO
     - Record with fields: id, matchId, gameType, status, failReason, score, clearTimeMs, intimacyPoints, startedAt, completedAt, createdAt
     - Static factory method `from(GameSessionEntity)` for conversion
     - Package: `com.ilgiyebo.domain.game.dto.response`
     - _Requirements: 1.1, 11.1, 11.3_
 
-  - [ ] 2.5 Create GameCompletedEvent (Spring ApplicationEvent)
+  - [x] 2.5 Create GameCompletedEvent (Spring ApplicationEvent)
     - Record: matchId, gameSessionId, gameType, score, intimacyPoints, clearTimeMs, cleared (boolean)
     - Package: `com.ilgiyebo.domain.game.dto.event`
     - _Requirements: 5.4, 5.5_
