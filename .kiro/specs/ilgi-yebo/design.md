@@ -269,25 +269,24 @@ public record UserProfile(
 
 ```java
 public interface PlannerService {
-    /** 일일 플래너 작성 */
-    PlanEntry createDailyPlan(String userId, DailyPlan plan);
+    /** 일정 생성 (수동 입력) */
+    PlanEntry createPlanEntry(String userId, PlanEntryInput input);
 
-    /** 시간표 일괄 등록 */
-    void registerTimetable(String userId, List<TimetableEntry> timetable);
+    /** 일정 수정 */
+    PlanEntry updatePlanEntry(String userId, String entryId, PlanEntryInput input);
 
-    /** 특정 날짜 플래너 조회 */
-    Optional<PlanEntry> getDailyPlan(String userId, LocalDate date);
+    /** 일정 삭제 */
+    void deletePlanEntry(String userId, String entryId);
 
-    /** 동선 정보 추출 (매칭 서비스에서 호출) */
+    /** 특정 날짜 일정 목록 조회 (본인만) */
+    List<PlanEntry> getPlanEntries(String userId, LocalDate date);
+
+    /** 동선 정보 추출 (매칭 서비스에서 호출, SCHEDULE 기반) */
     RouteInfo extractRouteInfo(String userId, LocalDate date);
 }
 
-public record DailyPlan(
+public record PlanEntryInput(
     LocalDate date,
-    List<PlanItem> entries
-) {}
-
-public record PlanItem(
     LocalTime startTime,
     LocalTime endTime,
     String location,
@@ -295,15 +294,22 @@ public record PlanItem(
     PlanItemType type
 ) {}
 
-public enum PlanItemType { CLASS, FREE, ACTIVITY }
-
-public record TimetableEntry(
-    DayOfWeek dayOfWeek,
+public record PlanEntry(
+    String id,
+    String userId,
+    LocalDate date,
     LocalTime startTime,
     LocalTime endTime,
     String location,
-    String courseName
+    String activity,
+    PlanItemType type,
+    PlanSource source,
+    @Nullable String sourceScheduleId
 ) {}
+
+public enum PlanItemType { CLASS, FREE, ACTIVITY }
+
+public enum PlanSource { MANUAL, SCHEDULE_AUTO }
 
 public record RouteInfo(
     String userId,
@@ -313,6 +319,8 @@ public record RouteInfo(
 
 public record LocationTime(LocalTime time, String place) {}
 ```
+
+> **참고:** 시간표 등록 및 재등록은 `ScheduleService.upsertMySchedule()`에서 처리한다. 시간표 등록 시 학기 범위에 맞춰 PLAN_ENTRY(source=SCHEDULE_AUTO)를 자동 생성하는 로직도 ScheduleService에 포함된다.
 
 #### 4. 일기 서비스 (DiaryService)
 
@@ -1039,7 +1047,8 @@ erDiagram
     USER ||--o{ SLOT : "보유"
     USER ||--o{ DIARY_ENTRY : "작성"
     USER ||--o{ PLAN_ENTRY : "작성"
-    USER ||--o{ TIMETABLE_ENTRY : "등록"
+    USER ||--o{ SCHEDULE : "등록"
+    SCHEDULE ||--o{ PLAN_ENTRY : "자동 생성"
     USER ||--o{ EXP_HISTORY : "획득"
     USER ||--o{ REPORT : "신고"
     USER ||--o{ BLOCK : "차단"
@@ -1140,18 +1149,29 @@ erDiagram
         binary_16 id PK "BINARY(16) UUID"
         binary_16 user_id FK
         date entry_date
-        json entries "JSON - PlanItem[]"
-        timestamp created_at
-    }
-
-    TIMETABLE_ENTRY {
-        binary_16 id PK "BINARY(16) UUID"
-        binary_16 user_id FK
-        int day_of_week "0-6"
         time start_time
         time end_time
         string location
-        string course_name
+        string activity
+        enum type "class|free|activity"
+        enum source "MANUAL|SCHEDULE_AUTO"
+        binary_16 source_schedule_id FK "nullable - 자동 생성 시 원본 SCHEDULE 참조"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SCHEDULE {
+        binary_16 id PK "BINARY(16) UUID"
+        binary_16 user_id FK
+        string name "수업명"
+        enum day_of_week "MONDAY~SUNDAY"
+        time started_at
+        time ended_at
+        string place
+        binary_16 campus_building_id FK "nullable"
+        int floor "nullable"
+        timestamp created_at
+        timestamp updated_at
     }
 
     CHAT_SESSION {
@@ -1320,7 +1340,9 @@ erDiagram
 | BLOCK | (user_id, blocked_user_id) UNIQUE | 차단 관계 중복 방지 및 빠른 조회 |
 | REPORT | (target_id, status) | 신고 횟수 집계 |
 | DIARY_ENTRY | (user_id, entry_date) UNIQUE | 일일 1건 제약 및 조회 |
-| PLAN_ENTRY | (user_id, entry_date) UNIQUE | 일일 1건 제약 및 조회 |
+| PLAN_ENTRY | (user_id, entry_date, start_time) | 날짜별 일정 조회 및 충돌 검사 |
+| PLAN_ENTRY | (user_id, source, created_at) | 직접 입력 플래너 존재 여부 확인 (알림용) |
+| SCHEDULE | (user_id, day_of_week) | 사용자별 요일 시간표 조회 |
 | EXP_HISTORY | (user_id, created_at) | 경험치 내역 시간순 조회 |
 | HINT_QUESTION | (match_id, status) | 매칭별 미답변 질문 조회 |
 | HINT_QUESTION | (responder_id, status) | 답변 대기 질문 조회 |
