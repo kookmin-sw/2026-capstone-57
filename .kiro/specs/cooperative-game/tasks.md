@@ -129,15 +129,15 @@
     - **Property P1: 동시성 안전성** - concurrent inputBuffer writes don't lose data
     - **Validates: Requirements 4.2, 4.3, 4.4, 12.2**
 
-- [ ] 4. Service layer
-  - [ ] 4.1 Create GameRoomStore interface and InMemoryGameRoomStore implementation
+- [x] 4. Service layer
+  - [x] 4.1 Create GameRoomStore interface and InMemoryGameRoomStore implementation
     - Interface methods: `put(UUID, GameRoom)`, `get(UUID)`, `remove(UUID)`, `getActiveRooms()`
     - `InMemoryGameRoomStore`: backed by ConcurrentHashMap<UUID, GameRoom>
     - `getActiveRooms()`: returns rooms where status is PLAYING or PAUSED
     - Package: `com.ilgiyebo.domain.game.service`
     - _Requirements: 8.5, 12.1_
 
-  - [ ] 4.2 Create GameSessionService interface and implementation
+  - [x] 4.2 Create GameSessionService interface and implementation
     - Interface: `createSession(UUID matchId, UUID requesterId)`, `getSession(UUID gameSessionId, UUID requesterId)`, `startGame(UUID gameSessionId)`, `completeGame(UUID gameSessionId, int score, long clearTimeMs, String finalStateJson)`, `failGame(UUID gameSessionId, GameFailReason reason, int partialScore, String finalStateJson)`, `expireSession(UUID gameSessionId)`
     - `createSession`: validate Match exists + ACTIVE status + requester is participant + idempotent (return existing WAITING/PLAYING session)
     - `completeGame`: set COMPLETED, calculate intimacyPoints, save finalState, publish GameCompletedEvent
@@ -146,7 +146,7 @@
     - Package: `com.ilgiyebo.domain.game.service`
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 5.3, 5.4, 6.2, 8.3, 8.4, 11.1, 11.2, 11.3_
 
-  - [ ] 4.3 Create GameRoomService interface and implementation
+  - [x] 4.3 Create GameRoomService interface and implementation
     - Interface: `registerParticipant(UUID sessionId, UUID userId)`, `setReady(UUID sessionId, UUID userId)`, `bufferInput(UUID sessionId, UUID userId, PlayerInputData input)`, `handleDisconnect(UUID sessionId, UUID userId)`, `handleReconnect(UUID sessionId, UUID userId)`, `requestRestart(UUID sessionId, UUID userId)`
     - `registerParticipant`: validate userId is userA/userB from Match, create GameRoom if not exists, add to readyState
     - `setReady`: set readyState true, if both ready → start game (activate room in GameLoopService, update session status to PLAYING, broadcast GAME_STARTED)

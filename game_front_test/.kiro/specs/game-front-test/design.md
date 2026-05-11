@@ -284,7 +284,8 @@ class Player extends Phaser.GameObjects.Rectangle {
 ```
 
 - 서버 스냅샷 간 선형 보간으로 위치 업데이트
-- userId 해시 기반 고유 색상 할당
+- userId 해시 기반 결정적 색상 할당 (전역 고유성은 보장하지 않음)
+- 색상 충돌 시 라벨/outline/name tag로 구분
 - velocityX/velocityY는 보간 방향 힌트로 활용 가능
 
 #### Switch
@@ -355,7 +356,7 @@ class InterpolationBuffer {
 interface GameStatePayload {
   type: "STATE_UPDATE";
   gameSessionId: string;
-  mapId: string;
+  mapId?: string;              // MVP에서는 optional. 백엔드가 보내지 않아도 클라이언트는 기본 맵으로 정상 동작해야 한다.
   serverTimeMs: number;       // epoch milliseconds
   state: {
     players: Record<string, PlayerStateDto>;
@@ -402,7 +403,7 @@ interface ReconnectionState {
 interface GameParams {
   token: string;             // JWT (필수)
   gameSessionId: string;     // 게임 세션 ID (필수)
-  userId?: string;           // 표시용 (선택)
+  userId?: string;           // 표시용 (선택). 서버 인증에 사용되지 않으며, JWT의 실제 사용자와 다를 수 있다. 디버깅 시 token의 사용자와 동일한 값을 넣는 것을 권장한다.
 }
 ```
 
@@ -587,7 +588,7 @@ flowchart TD
 2. **Property 2** (Diff publishing): `fc.array(fc.record({left: fc.boolean(), right: fc.boolean(), jump: fc.boolean()}))` 시퀀스 생성, 발행 횟수 검증
 3. **Property 3** (Input mapping): `fc.constantFrom(...mappedKeys)` 키 생성, press/release 상태 검증
 4. **Property 4** (Backoff): `fc.integer({min: 0, max: 4})` attempt 생성, delay 공식 검증
-5. **Property 5** (Color): `fc.string()` userId 생성, 결정성 및 고유성 검증
+5. **Property 5** (Color): `fc.string()` userId 생성, 동일 userId에 대해 항상 동일 색상이 나오는지 결정성 검증. 서로 다른 userId의 전역 고유성은 검증하지 않는다. 같은 세션 내 색상 충돌 시 label/outline/name tag fallback은 unit test로 검증한다.
 6. **Property 6** (Message format): `fc.record({left: fc.boolean(), right: fc.boolean(), jump: fc.boolean()})` InputState 생성, 메시지 구조 검증
 7. **Property 7** (Unknown message): `fc.string().filter(s => !knownTypes.includes(s))` 타입 생성, 예외 미발생 검증
 8. **Property 8** (READY idempotence): `fc.integer({min: 1, max: 100})` 횟수 생성, 발행 1회 검증
