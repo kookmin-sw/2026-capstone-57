@@ -195,22 +195,22 @@
     - **Property P5: 독립성** - exception in one room does not affect other rooms' tick processing
     - **Validates: Requirements 4.6, 6.1, 12.2**
 
-- [ ] 7. WebSocket configuration
-  - [ ] 7.1 Add /ws/game endpoint to existing WebSocketConfig
+- [x] 7. WebSocket configuration
+  - [x] 7.1 Add /ws/game endpoint to existing WebSocketConfig
     - Modify `backend/src/main/java/com/ilgiyebo/domain/chat/config/WebSocketConfig.java`
     - Add `registry.addEndpoint("/ws/game").setAllowedOriginPatterns(...).withSockJS()` in `registerStompEndpoints`
     - Existing StompChannelInterceptor, /topic, /app, /queue/errors prefixes are shared automatically
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
 
-- [ ] 8. Controllers (REST + STOMP)
-  - [ ] 8.1 Create GameSessionController (REST)
+- [x] 8. Controllers (REST + STOMP)
+  - [x] 8.1 Create GameSessionController (REST)
     - `@RestController`, `@RequestMapping("/api/v1")`
     - `POST /matches/{matchId}/game-sessions`: extract userId from SecurityContext, call gameSessionService.createSession()
     - `GET /game-sessions/{gameSessionId}`: extract userId, call gameSessionService.getSession()
     - Package: `com.ilgiyebo.domain.game.controller`
     - _Requirements: 1.1, 11.1, 11.2, 11.3_
 
-  - [ ] 8.2 Create GameController (STOMP @MessageMapping)
+  - [x] 8.2 Create GameController (STOMP @MessageMapping)
     - `@Controller`
     - `@MessageMapping("/game/{sessionId}/action")`: receive GameActionMessage, extract userId from Principal
     - Route by message type:
@@ -222,8 +222,8 @@
     - Package: `com.ilgiyebo.domain.game.controller`
     - _Requirements: 2.2, 3.1, 3.2, 3.3, 3.4, 6.4, 10.1, 10.3, 15.5_
 
-- [ ] 9. Event listener for WebSocket connection tracking
-  - [ ] 9.1 Create GameEventListener
+- [x] 9. Event listener for WebSocket connection tracking
+  - [x] 9.1 Create GameEventListener
     - Listen for `SessionSubscribeEvent` and `SessionDisconnectEvent`
     - On SUBSCRIBE to `/topic/game/{sessionId}`: track connection in GameRoom's connectedUsers, broadcast ROOM_STATE (JOIN notification)
     - On DISCONNECT: detect which sessionId the user was in, call gameRoomService.handleDisconnect(), broadcast LEAVE notification
@@ -231,7 +231,7 @@
     - Package: `com.ilgiyebo.domain.game.controller` (or dedicated listener package)
     - _Requirements: 2.1, 2.6, 7.1, 7.2_
 
-- [ ] 10. Checkpoint - Ensure all tests pass
+- [x] 10. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 11. Scheduler for expired session cleanup
