@@ -1,4 +1,4 @@
-package com.ilgiyebo.domain.game.dto.event;
+package com.ilgiyebo.domain.game.event;
 
 import java.util.UUID;
 

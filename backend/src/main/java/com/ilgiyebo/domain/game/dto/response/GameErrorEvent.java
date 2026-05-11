@@ -4,4 +4,4 @@ public record GameErrorEvent(
         String type,
         String code,
         String message
-) implements GameEvent {}
+) implements GameSocketEvent {}
