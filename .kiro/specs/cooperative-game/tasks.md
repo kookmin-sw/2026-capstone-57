@@ -162,11 +162,11 @@
     - **Property P4: 데이터 저장 정책** - completeGame/failGame always persists finalState exactly once
     - **Validates: Requirements 1.3, 2.5, 8.3, 8.4**
 
-- [ ] 5. Checkpoint - Ensure all tests pass
+- [x] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. GameLoopService implementation
-  - [ ] 6.1 Create GameLoopService with @Scheduled tick
+- [x] 6. GameLoopService implementation
+  - [x] 6.1 Create GameLoopService with @Scheduled tick
     - `@Scheduled(fixedRate = 50)` for 20Hz tick rate
     - `tick()`: get current time, iterate `roomStore.getActiveRooms()`, process rooms with status PLAYING
     - Calculate real deltaMs per room (now - room.lastTickTime), clamp to MAX_DELTA_MS (100ms)
@@ -174,7 +174,7 @@
     - Package: `com.ilgiyebo.domain.game.service`
     - _Requirements: 4.1, 12.2, 12.3_
 
-  - [ ] 6.2 Implement processRoom logic
+  - [x] 6.2 Implement processRoom logic
     - Step 1: Read inputBuffer (ConcurrentHashMap forEach), apply input via PhysicsEngine
     - Step 2: Apply gravity + movement via PhysicsEngine
     - Step 3: Resolve collisions via CollisionEngine (floor, switches, door, goal)
@@ -184,7 +184,7 @@
     - Step 7: Broadcast StateUpdateEvent snapshot via SimpMessagingTemplate
     - _Requirements: 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 5.1, 6.1_
 
-  - [ ] 6.3 Implement handleGameCleared and handleGameOver
+  - [x] 6.3 Implement handleGameCleared and handleGameOver
     - `handleGameCleared`: call gameSessionService.completeGame(), broadcast GameClearedEvent with GameResultDto, remove room from store
     - `handleGameOver`: call gameSessionService.failGame(TIMEOUT), broadcast GameOverEvent with GameOverResultDto, remove room from store
     - Use CAS to prevent duplicate completion
