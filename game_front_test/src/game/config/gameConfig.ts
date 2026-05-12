@@ -1,4 +1,8 @@
 import Phaser from 'phaser';
+import { BootScene } from '../scenes/BootScene';
+import { LobbyScene } from '../scenes/LobbyScene';
+import { CoopScene } from '../scenes/CoopScene';
+import { ResultScene } from '../scenes/ResultScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -15,5 +19,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       gravity: { x: 0, y: 0 },
     },
   },
-  scene: [],
+  scene: [BootScene, LobbyScene, CoopScene, ResultScene],
 };

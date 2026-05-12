@@ -29,7 +29,7 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Define PALETTE color constants
     - _Requirements: 16.2, 6.2, 6.3, 6.4_
 
-- [-] 3. Core systems implementation
+- [x] 3. Core systems implementation
   - [x] 3.1 Implement StompClient wrapper
     - Create `src/socket/stompClient.ts` with @stomp/stompjs Client configuration
     - Implement SockJS webSocketFactory for `/ws/game` endpoint
@@ -55,7 +55,7 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Publish PLAYER_INPUT via NetworkSystem only when InputState changes
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6_
 
-  - [ ] 3.4 Implement OrientationSystem
+  - [x] 3.4 Implement OrientationSystem
     - Create `src/game/systems/OrientationSystem.ts` with portrait/landscape detection
     - Implement full-screen HTML overlay with Korean rotation message for portrait mode
     - Implement overlay removal on landscape return
@@ -65,15 +65,15 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
 - [ ] 4. Checkpoint - Verify core systems compile and structure is correct
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Scene implementations
-  - [ ] 5.1 Implement BootScene
+- [x] 5. Scene implementations
+  - [x] 5.1 Implement BootScene
     - Create `src/game/scenes/BootScene.ts` with shape-based graphics resource initialization
     - Generate rectangle textures for Player, Switch, Door using Phaser Graphics
     - Display loading indicator during initialization
     - Auto-transition to LobbyScene on completion
     - _Requirements: 10.1, 10.2, 10.3_
 
-  - [ ] 5.2 Implement LobbyScene
+  - [x] 5.2 Implement LobbyScene
     - Create `src/game/scenes/LobbyScene.ts` with STOMP connection status display (Korean: 연결 중, 연결됨, 연결 해제, 에러)
     - Implement READY button (enabled only when connected, disabled after press to prevent duplicate)
     - Display waiting state after READY sent ("다른 플레이어를 기다리는 중...")
@@ -82,7 +82,7 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Display auth error if token missing/invalid
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 4.3, 4.4, 17.3_
 
-  - [ ] 5.3 Implement CoopScene with interpolation buffer
+  - [x] 5.3 Implement CoopScene with interpolation buffer
     - Create `src/game/scenes/CoopScene.ts` with InterpolationBuffer (100ms delay, max 10 snapshots)
     - Implement snapshot push on STATE_UPDATE (use serverTimeMs, fallback to Date.now())
     - Implement lerp-based interpolation in update loop (renderTime = now - 100ms)
@@ -96,7 +96,7 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Render fixed map for COOP_SWITCH (default mapId)
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8, 12.9, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-  - [ ] 5.4 Implement ResultScene
+  - [x] 5.4 Implement ResultScene
     - Create `src/game/scenes/ResultScene.ts` with score, time, intimacy display
     - Implement restart button (sends RESTART_REQUEST, disables after press, shows "상대방의 재시작을 기다리는 중")
     - Implement exit button (disconnect STOMP, return to LobbyScene)
