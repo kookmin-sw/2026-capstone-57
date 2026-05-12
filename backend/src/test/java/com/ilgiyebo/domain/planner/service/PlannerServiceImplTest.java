@@ -478,7 +478,8 @@ class PlannerServiceImplTest {
             when(semesterRepository.findCurrentByDate(any(LocalDate.class)))
                     .thenReturn(Optional.of(semester));
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-            when(scheduleRepository.findAllByUserId(userId)).thenReturn(List.of(schedule));
+            when(scheduleRepository.findAllByUserIdAndSemesterId(eq(userId), any(UUID.class)))
+                    .thenReturn(List.of(schedule));
             when(planEntryRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
             plannerService.regenerateScheduleAutoEntries(userId);
@@ -523,7 +524,8 @@ class PlannerServiceImplTest {
             when(semesterRepository.findCurrentByDate(any(LocalDate.class)))
                     .thenReturn(Optional.of(semester));
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-            when(scheduleRepository.findAllByUserId(userId)).thenReturn(List.of());
+            when(scheduleRepository.findAllByUserIdAndSemesterId(eq(userId), any(UUID.class)))
+                    .thenReturn(List.of());
 
             plannerService.regenerateScheduleAutoEntries(userId);
 

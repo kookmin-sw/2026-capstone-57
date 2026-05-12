@@ -118,7 +118,7 @@ public class PlannerServiceImpl implements PlannerService {
      * MANUAL/SCHEDULE_OVERRIDE와 충돌하는 일정은 생성하지 않고 skip한다.
      */
     @Transactional
-    private ScheduleAutoGenerateResult generatePlanEntriesFromSchedule(UUID userId, LocalDate semesterStart, LocalDate semesterEnd) {
+    private ScheduleAutoGenerateResult generatePlanEntriesFromSchedule(UUID userId, UUID semesterId, LocalDate semesterStart, LocalDate semesterEnd) {
         UserEntity user = findUserOrThrow(userId);
 
         // 1. 기존 SCHEDULE_AUTO 미래 일정 삭제
@@ -128,8 +128,8 @@ public class PlannerServiceImpl implements PlannerService {
                 userId, PlanSource.SCHEDULE_AUTO, deleteFrom);
         log.info("기존 SCHEDULE_AUTO 일정 삭제: userId={}, deleted={}", userId, deleted);
 
-        // 2. 사용자의 시간표 조회
-        List<ScheduleEntity> schedules = scheduleRepository.findAllByUserId(userId);
+        // 2. 현재 학기의 시간표만 조회
+        List<ScheduleEntity> schedules = scheduleRepository.findAllByUserIdAndSemesterId(userId, semesterId);
         if (schedules.isEmpty()) {
             log.info("시간표가 없어 PLAN_ENTRY 자동 생성을 건너뜁니다: userId={}", userId);
             return ScheduleAutoGenerateResult.success(0);
@@ -193,17 +193,17 @@ public class PlannerServiceImpl implements PlannerService {
         SemesterEntity semester = semesterRepository.findCurrentByDate(today)
                 .orElseThrow(() -> PlannerException.SEMESTER_NOT_FOUND.toException());
 
-        return generatePlanEntriesFromSchedule(userId, semester.getStartedAt(), semester.getEndedAt());
+        return generatePlanEntriesFromSchedule(userId, semester.getId(), semester.getStartedAt(), semester.getEndedAt());
     }
 
     @Override
     @Transactional
-    public void deleteScheduleLinkedEntries(UUID userId) {
+    public void deleteScheduleLinkedEntries(UUID userId, UUID semesterId) {
         // SCHEDULE_OVERRIDE의 FK를 null로 설정 (일정 자체는 보존)
-        int detached = planEntryRepository.detachSourceScheduleForOverrides(userId);
+        int detached = planEntryRepository.detachSourceScheduleForOverrides(userId, semesterId);
         // SCHEDULE_AUTO만 삭제
-        int deleted = planEntryRepository.deleteByUserIdAndSourceScheduleNotNull(userId);
-        log.info("시간표 연결 해제: userId={}, deleted={}, detached={}", userId, deleted, detached);
+        int deleted = planEntryRepository.deleteByUserIdAndSourceScheduleNotNull(userId, semesterId);
+        log.info("시간표 연결 해제: userId={}, semesterId={}, deleted={}, detached={}", userId, semesterId, deleted, detached);
     }
 
     @Override

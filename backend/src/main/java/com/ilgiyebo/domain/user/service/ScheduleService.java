@@ -63,8 +63,8 @@ public class ScheduleService {
         // 현재 활성 학기 조회
         SemesterEntity currentSemester = getCurrentSemester();
 
-        // 연관된 plan_entry 먼저 삭제 (FK 제약 해소)
-        plannerService.deleteScheduleLinkedEntries(userId);
+        // 해당 학기의 연관된 plan_entry 먼저 정리 (FK 제약 해소)
+        plannerService.deleteScheduleLinkedEntries(userId, currentSemester.getId());
 
         // 해당 user + semester 기존 시간표 전체 삭제
         scheduleRepository.deleteByUserIdAndSemesterId(userId, currentSemester.getId());
