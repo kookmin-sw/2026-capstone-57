@@ -126,8 +126,8 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Implement starlight particle effect on door open (ParticleEmitter)
     - _Requirements: 14.4, 14.5, 12.4_
 
-- [ ] 7. Visual styling and UI polish
-  - [ ] 7.1 Apply campus night sky theme and pastel palette
+- [x] 7. Visual styling and UI polish
+  - [x] 7.1 Apply campus night sky theme and pastel palette
     - Apply PALETTE constants across all scenes (navy background, starlight yellow accents, lavender UI)
     - Render campus night sky background with stars in CoopScene
     - Style all buttons as rounded, pastel-colored, touch-friendly (48x48px minimum)
@@ -137,27 +137,27 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
 - [ ] 8. Checkpoint - Full integration verification
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. MVP tests (priority 1)
-  - [ ] 9.1 Write unit tests for URL parameter parsing
+- [x] 9. MVP tests (priority 1)
+  - [x] 9.1 Write unit tests for URL parameter parsing
     - Test token extraction (present, missing, empty)
     - Test gameSessionId extraction (present, missing, empty)
     - Test userId extraction (present, missing - optional)
     - Test combined parameter scenarios
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [ ]* 9.2 Write property test for PLAYER_INPUT message format (Property 6)
+  - [x]* 9.2 Write property test for PLAYER_INPUT message format (Property 6)
     - **Property 6: PLAYER_INPUT message format correctness**
     - Generate arbitrary InputState with `fc.record({left: fc.boolean(), right: fc.boolean(), jump: fc.boolean()})`
     - Verify published message has exact structure `{ "type": "PLAYER_INPUT", "input": { left, right, jump } }` with no userId field
     - **Validates: Requirements 6.3**
 
-  - [ ]* 9.3 Write property test for InputState diff publishing (Property 2)
+  - [x]* 9.3 Write property test for InputState diff publishing (Property 2)
     - **Property 2: InputState diff-based publishing**
     - Generate sequence of InputState values with `fc.array(fc.record({left: fc.boolean(), right: fc.boolean(), jump: fc.boolean()}))`
     - Verify publish count equals number of state transitions (consecutive identical states produce no publish)
     - **Validates: Requirements 8.6, 8.7, 9.6**
 
-  - [ ] 9.4 Write unit test for unknown message type handling
+  - [x] 9.4 Write unit test for unknown message type handling
     - Test that unknown type messages log console.warn
     - Test that unknown type messages do not throw exceptions
     - Test that known type messages are routed correctly

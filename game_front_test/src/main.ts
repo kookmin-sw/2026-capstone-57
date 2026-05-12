@@ -1,29 +1,9 @@
 import { PhaserGame } from './game/PhaserGame';
+import { parseGameParams } from './utils/parseGameParams';
 
-export interface GameParams {
-  token: string;
-  gameSessionId: string;
-  userId?: string;
-}
-
-export function parseGameParams(): GameParams | null {
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
-  const gameSessionId = params.get('gameSessionId');
-  const userId = params.get('userId') ?? undefined;
-
-  if (!token) {
-    showError('인증 토큰이 없습니다. 올바른 링크로 접속해주세요.');
-    return null;
-  }
-
-  if (!gameSessionId) {
-    showError('게임 세션 정보가 없습니다. 올바른 링크로 접속해주세요.');
-    return null;
-  }
-
-  return { token, gameSessionId, userId };
-}
+export { parseGameParams } from './utils/parseGameParams';
+export type { ParseResult } from './utils/parseGameParams';
+export type { GameParams } from './game/types/gameTypes';
 
 export function showError(message: string): void {
   const container = document.getElementById('game-container');
@@ -49,15 +29,16 @@ export function showError(message: string): void {
 }
 
 function boot(): void {
-  const gameParams = parseGameParams();
-  if (!gameParams) {
+  const result = parseGameParams();
+  if (!result.params) {
+    showError(result.error!);
     return;
   }
 
   const game = new PhaserGame();
 
   // Store game params on the game registry for later use by scenes/systems
-  game.registry.set('gameParams', gameParams);
+  game.registry.set('gameParams', result.params);
 }
 
 boot();
