@@ -542,7 +542,7 @@ class PlannerServiceImplTest {
         @Test
         @DisplayName("3일 이상 MANUAL 일정 미작성 시 true를 반환한다")
         void shouldReturnTrueWhenInactive() {
-            when(planEntryRepository.existsManualEntryBetween(eq(userId), any(), any()))
+            when(planEntryRepository.existsEntryBySourceBetween(eq(userId), eq(PlanSource.MANUAL), any(), any()))
                     .thenReturn(false);
 
             assertThat(plannerService.shouldSendInactivityReminder(userId)).isTrue();
@@ -551,7 +551,7 @@ class PlannerServiceImplTest {
         @Test
         @DisplayName("최근 3일 내 MANUAL 일정이 있으면 false를 반환한다")
         void shouldReturnFalseWhenActive() {
-            when(planEntryRepository.existsManualEntryBetween(eq(userId), any(), any()))
+            when(planEntryRepository.existsEntryBySourceBetween(eq(userId), eq(PlanSource.MANUAL), any(), any()))
                     .thenReturn(true);
 
             assertThat(plannerService.shouldSendInactivityReminder(userId)).isFalse();

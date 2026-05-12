@@ -55,30 +55,34 @@ public interface PlanEntryRepository extends JpaRepository<PlanEntryEntity, UUID
             @Param("fromDate") LocalDate fromDate);
 
     /**
-     * 특정 사용자가 특정 날짜 범위 내에 source=MANUAL 일정을 작성했는지 확인한다.
+     * 특정 사용자가 특정 날짜 범위 내에 특정 source 일정을 작성했는지 확인한다.
      */
     @Query("""
         SELECT COUNT(e) > 0 FROM PlanEntryEntity e
         WHERE e.user.id = :userId
-          AND e.source = 'MANUAL'
+          AND e.source = :source
           AND e.date >= :fromDate
           AND e.date <= :toDate
     """)
-    boolean existsManualEntryBetween(
+    boolean existsEntryBySourceBetween(
             @Param("userId") UUID userId,
+            @Param("source") PlanSource source,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
 
     /**
-     * 특정 사용자가 특정 날짜에 source=MANUAL 일정을 작성했는지 확인한다 (경험치 중복 지급 방지).
+     * 특정 사용자가 특정 날짜에 특정 source 일정 수를 조회한다 (경험치 중복 지급 방지).
      */
     @Query("""
         SELECT COUNT(e) FROM PlanEntryEntity e
         WHERE e.user.id = :userId
-          AND e.source = 'MANUAL'
+          AND e.source = :source
           AND e.date = :date
     """)
-    long countManualEntriesByDate(@Param("userId") UUID userId, @Param("date") LocalDate date);
+    long countEntriesBySourceAndDate(
+            @Param("userId") UUID userId,
+            @Param("source") PlanSource source,
+            @Param("date") LocalDate date);
 
     /**
      * 특정 사용자의 특정 학기 SCHEDULE_AUTO 일정 중 sourceSchedule이 연결된 것만 삭제한다.
@@ -89,11 +93,12 @@ public interface PlanEntryRepository extends JpaRepository<PlanEntryEntity, UUID
         DELETE FROM PlanEntryEntity e
         WHERE e.user.id = :userId
           AND e.sourceSchedule IS NOT NULL
-          AND e.source = 'SCHEDULE_AUTO'
+          AND e.source = :source
           AND e.sourceSchedule.semester.id = :semesterId
     """)
     int deleteByUserIdAndSourceScheduleNotNull(
             @Param("userId") UUID userId,
+            @Param("source") PlanSource source,
             @Param("semesterId") UUID semesterId);
 
     /**
@@ -105,12 +110,13 @@ public interface PlanEntryRepository extends JpaRepository<PlanEntryEntity, UUID
         UPDATE PlanEntryEntity e
         SET e.sourceSchedule = NULL
         WHERE e.user.id = :userId
-          AND e.source = 'SCHEDULE_OVERRIDE'
+          AND e.source = :source
           AND e.sourceSchedule IS NOT NULL
           AND e.sourceSchedule.semester.id = :semesterId
     """)
     int detachSourceScheduleForOverrides(
             @Param("userId") UUID userId,
+            @Param("source") PlanSource source,
             @Param("semesterId") UUID semesterId);
 
     /**
@@ -122,13 +128,14 @@ public interface PlanEntryRepository extends JpaRepository<PlanEntryEntity, UUID
         SELECT COUNT(e) > 0 FROM PlanEntryEntity e
         WHERE e.user.id = :userId
           AND e.date = :date
-          AND e.source IN ('MANUAL', 'SCHEDULE_OVERRIDE')
+          AND e.source IN :sources
           AND e.startTime < :endTime
           AND e.endTime > :startTime
     """)
     boolean existsConflictingUserEntry(
             @Param("userId") UUID userId,
             @Param("date") LocalDate date,
+            @Param("sources") List<PlanSource> sources,
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime);
 }

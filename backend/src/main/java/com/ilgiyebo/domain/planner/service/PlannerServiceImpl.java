@@ -147,7 +147,9 @@ public class PlannerServiceImpl implements PlannerService {
                 if (schedule.getDayOfWeek() == dayOfWeek) {
                     // 충돌 검사: MANUAL/SCHEDULE_OVERRIDE와 겹치는지 확인
                     boolean hasConflict = planEntryRepository.existsConflictingUserEntry(
-                            userId, current, schedule.getStartedAt(), schedule.getEndedAt());
+                            userId, current,
+                            List.of(PlanSource.MANUAL, PlanSource.SCHEDULE_OVERRIDE),
+                            schedule.getStartedAt(), schedule.getEndedAt());
 
                     if (hasConflict) {
                         skipped.add(new ScheduleAutoGenerateResult.SkippedSchedule(
@@ -200,9 +202,9 @@ public class PlannerServiceImpl implements PlannerService {
     @Transactional
     public void deleteScheduleLinkedEntries(UUID userId, UUID semesterId) {
         // SCHEDULE_OVERRIDE의 FK를 null로 설정 (일정 자체는 보존)
-        int detached = planEntryRepository.detachSourceScheduleForOverrides(userId, semesterId);
+        int detached = planEntryRepository.detachSourceScheduleForOverrides(userId, PlanSource.SCHEDULE_OVERRIDE, semesterId);
         // SCHEDULE_AUTO만 삭제
-        int deleted = planEntryRepository.deleteByUserIdAndSourceScheduleNotNull(userId, semesterId);
+        int deleted = planEntryRepository.deleteByUserIdAndSourceScheduleNotNull(userId, PlanSource.SCHEDULE_AUTO, semesterId);
         log.info("시간표 연결 해제: userId={}, semesterId={}, deleted={}, detached={}", userId, semesterId, deleted, detached);
     }
 
@@ -211,7 +213,7 @@ public class PlannerServiceImpl implements PlannerService {
     public boolean shouldSendInactivityReminder(UUID userId) {
         LocalDate today = LocalDate.now();
         LocalDate threeDaysAgo = today.minusDays(3);
-        return !planEntryRepository.existsManualEntryBetween(userId, threeDaysAgo, today);
+        return !planEntryRepository.existsEntryBySourceBetween(userId, PlanSource.MANUAL, threeDaysAgo, today);
     }
 
     // ===== Validation helpers =====
