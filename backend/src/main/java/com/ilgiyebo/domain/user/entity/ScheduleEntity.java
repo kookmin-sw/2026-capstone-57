@@ -54,7 +54,8 @@ public class ScheduleEntity extends BaseSchema {
     private UserEntity user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "semester_id")
+    @JoinColumn(name = "semester_id", nullable = false)
+    @NotNull
     private SemesterEntity semester;
 
     public static ScheduleEntity fromEverytime(JsonNode name, JsonNode node, UserEntity user, SemesterEntity semester) {
