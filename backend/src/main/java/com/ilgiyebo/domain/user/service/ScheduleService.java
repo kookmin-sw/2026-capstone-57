@@ -54,6 +54,12 @@ public class ScheduleService {
         return ScheduleResponse.from(schedules);
     }
 
+    /**
+     * 에브리타임 시간표를 등록/재등록한다.
+     *
+     * <p>정책: 외부 API 응답 파싱이 성공한 뒤에만 기존 데이터를 삭제한다.
+     * identifier가 잘못되었거나 API 실패 시 기존 시간표/일정을 보존한다.</p>
+     */
     @Transactional
     @SneakyThrows(IOException.class)
     public ScheduleUpsertResponse upsertMySchedule(UUID userId, String identifier) {
@@ -63,16 +69,7 @@ public class ScheduleService {
         // 현재 활성 학기 조회
         SemesterEntity currentSemester = getCurrentSemester();
 
-        // 해당 학기의 연관된 plan_entry 먼저 정리 (FK 제약 해소)
-        plannerService.deleteScheduleLinkedEntries(userId, currentSemester.getId());
-
-        // 해당 user + semester 기존 시간표 전체 삭제
-        scheduleRepository.deleteByUserIdAndSemesterId(userId, currentSemester.getId());
-
-        // 건물 이름 목록 조회 (이름 길이 내림차순 정렬)
-        List<CampusBuildingEntity> buildings = campusBuildingRepository.findAll();
-        buildings.sort(Comparator.comparingInt((CampusBuildingEntity b) -> b.getName().length()).reversed());
-
+        // 1. 외부 API 호출 + 파싱 (기존 데이터 삭제 전에 수행)
         byte[] response = Unirest.post("https://api.everytime.kr/find/timetable/table/friend")
                 .contentType(ContentType.APPLICATION_FORM_URLENCODED.getMimeType())
                 .header("User-Agent", userAgent)
@@ -84,11 +81,23 @@ public class ScheduleService {
         JsonNode table = root.get("table");
         JsonNode subjects = table != null ? table.get("subject") : null;
 
+        // 파싱 실패 시 기존 데이터 유지하고 예외 발생
         if (subjects == null) {
-            var emptyResult = plannerService.regenerateScheduleAutoEntries(userId);
-            return ScheduleUpsertResponse.from(List.of(), emptyResult);
+            throw UserException.SCHEDULE_FETCH_FAILED.toException();
         }
 
+        // 2. 파싱 성공 확인 후 기존 데이터 삭제
+        // 건물 이름 목록 조회 (이름 길이 내림차순 정렬)
+        List<CampusBuildingEntity> buildings = campusBuildingRepository.findAll();
+        buildings.sort(Comparator.comparingInt((CampusBuildingEntity b) -> b.getName().length()).reversed());
+
+        // 해당 학기의 연관된 plan_entry 먼저 정리 (FK 제약 해소)
+        plannerService.deleteScheduleLinkedEntries(userId, currentSemester.getId());
+
+        // 해당 user + semester 기존 시간표 전체 삭제
+        scheduleRepository.deleteByUserIdAndSemesterId(userId, currentSemester.getId());
+
+        // 3. 새 시간표 저장
         List<ScheduleEntity> schedules = new ArrayList<>();
         for (JsonNode subject : subjects) {
             JsonNode name = subject.get("name");
@@ -113,7 +122,7 @@ public class ScheduleService {
             }
         }
 
-        // 시간표 등록 후 SCHEDULE_AUTO PLAN_ENTRY 재생성
+        // 4. 시간표 등록 후 SCHEDULE_AUTO PLAN_ENTRY 재생성
         var plannerResult = plannerService.regenerateScheduleAutoEntries(userId);
 
         return ScheduleUpsertResponse.from(schedules, plannerResult);
