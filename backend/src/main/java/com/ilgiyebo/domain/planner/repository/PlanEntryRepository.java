@@ -138,4 +138,22 @@ public interface PlanEntryRepository extends JpaRepository<PlanEntryEntity, UUID
             @Param("sources") List<PlanSource> sources,
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime);
+
+    /**
+     * 특정 사용자의 날짜 범위 내 MANUAL/SCHEDULE_OVERRIDE 일정을 한 번에 조회한다.
+     * 주 단위 충돌 검사를 메모리에서 수행하기 위해 사용한다.
+     */
+    @Query("""
+        SELECT e FROM PlanEntryEntity e
+        WHERE e.user.id = :userId
+          AND e.date >= :fromDate
+          AND e.date <= :toDate
+          AND e.source IN :sources
+        ORDER BY e.date, e.startTime
+    """)
+    List<PlanEntryEntity> findByUserIdAndDateBetweenAndSourceIn(
+            @Param("userId") UUID userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("sources") List<PlanSource> sources);
 }

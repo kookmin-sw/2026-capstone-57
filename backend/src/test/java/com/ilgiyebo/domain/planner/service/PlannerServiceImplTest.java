@@ -466,7 +466,7 @@ class PlannerServiceImplTest {
 
             ScheduleEntity schedule = ScheduleEntity.builder()
                     .name("데이터베이스")
-                    .dayOfWeek(DayOfWeek.MONDAY)
+                    .dayOfWeek(today.getDayOfWeek()) // 오늘 요일로 설정하여 현재 주에 생성되도록
                     .startedAt(LocalTime.of(9, 0))
                     .endedAt(LocalTime.of(10, 30))
                     .place("공학관 301호")
@@ -480,6 +480,8 @@ class PlannerServiceImplTest {
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
             when(scheduleRepository.findAllByUserIdAndSemesterId(eq(userId), any(UUID.class)))
                     .thenReturn(List.of(schedule));
+            when(planEntryRepository.findByUserIdAndDateBetweenAndSourceIn(eq(userId), any(), any(), anyList()))
+                    .thenReturn(List.of());
             when(planEntryRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
             plannerService.regenerateScheduleAutoEntries(userId);
@@ -501,7 +503,7 @@ class PlannerServiceImplTest {
                 assertThat(entry.getSource()).isEqualTo(PlanSource.SCHEDULE_AUTO);
                 assertThat(entry.getSourceSchedule()).isNotNull();
                 assertThat(entry.getSourceSchedule().getId()).isEqualTo(scheduleId);
-                assertThat(entry.getDate().getDayOfWeek()).isEqualTo(DayOfWeek.MONDAY);
+                assertThat(entry.getDate().getDayOfWeek()).isEqualTo(today.getDayOfWeek());
                 assertThat(entry.getStartTime()).isEqualTo(LocalTime.of(9, 0));
                 assertThat(entry.getEndTime()).isEqualTo(LocalTime.of(10, 30));
                 assertThat(entry.getName()).isEqualTo("데이터베이스");

@@ -22,9 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -105,17 +108,76 @@ public class PlannerServiceImpl implements PlannerService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PlanEntryResponse> getPlanEntries(UUID userId, LocalDate date) {
-        return planEntryRepository.findByUserIdAndDateOrderByStartTimeAsc(userId, date)
-                .stream()
+        List<PlanEntryEntity> entries = planEntryRepository.findByUserIdAndDateOrderByStartTimeAsc(userId, date);
+
+        // Lazy 생성: 미래 날짜인데 SCHEDULE_AUTO가 없으면 해당 날짜만 생성
+        if (!date.isBefore(LocalDate.now()) && entries.stream().noneMatch(e -> e.getSource() == PlanSource.SCHEDULE_AUTO)) {
+            List<PlanEntryEntity> generated = lazyGenerateForDate(userId, date);
+            if (!generated.isEmpty()) {
+                entries = planEntryRepository.findByUserIdAndDateOrderByStartTimeAsc(userId, date);
+            }
+        }
+
+        return entries.stream()
                 .map(PlanEntryResponse::from)
                 .toList();
     }
 
     /**
-     * 학기 범위 내 SCHEDULE_AUTO PLAN_ENTRY를 생성하는 내부 메서드.
-     * MANUAL/SCHEDULE_OVERRIDE와 충돌하는 일정은 생성하지 않고 skip한다.
+     * 특정 날짜에 대해 SCHEDULE_AUTO PLAN_ENTRY를 lazy 생성한다.
+     * 주간 배치가 아직 실행되지 않은 미래 날짜를 조회할 때 fallback으로 사용한다.
+     */
+    private List<PlanEntryEntity> lazyGenerateForDate(UUID userId, LocalDate date) {
+        LocalDate today = LocalDate.now();
+        SemesterEntity semester = semesterRepository.findCurrentByDate(today).orElse(null);
+        if (semester == null || date.isAfter(semester.getEndedAt())) {
+            return List.of();
+        }
+
+        List<ScheduleEntity> schedules = scheduleRepository.findAllByUserIdAndSemesterId(userId, semester.getId());
+        if (schedules.isEmpty()) {
+            return List.of();
+        }
+
+        UserEntity user = findUserOrThrow(userId);
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+
+        // 해당 날짜의 기존 MANUAL/SCHEDULE_OVERRIDE 조회 (충돌 검사용)
+        List<PlanEntryEntity> existing = planEntryRepository.findByUserIdAndDateBetweenAndSourceIn(
+                userId, date, date, List.of(PlanSource.MANUAL, PlanSource.SCHEDULE_OVERRIDE));
+
+        List<PlanEntryEntity> generated = new ArrayList<>();
+        for (ScheduleEntity schedule : schedules) {
+            if (schedule.getDayOfWeek() == dayOfWeek) {
+                if (!hasTimeConflict(existing, schedule.getStartedAt(), schedule.getEndedAt())) {
+                    generated.add(PlanEntryEntity.builder()
+                            .user(user)
+                            .date(date)
+                            .startTime(schedule.getStartedAt())
+                            .endTime(schedule.getEndedAt())
+                            .location(schedule.getPlace())
+                            .name(schedule.getName())
+                            .type(PlanItemType.CLASS)
+                            .source(PlanSource.SCHEDULE_AUTO)
+                            .sourceSchedule(schedule)
+                            .build());
+                }
+            }
+        }
+
+        if (!generated.isEmpty()) {
+            planEntryRepository.saveAll(generated);
+            log.debug("Lazy PLAN_ENTRY 생성: userId={}, date={}, count={}", userId, date, generated.size());
+        }
+        return generated;
+    }
+
+    /**
+     * 현재 주(이번 주) 기준으로만 SCHEDULE_AUTO PLAN_ENTRY를 생성하는 내부 메서드.
+     * 시간표 등록/재등록 시 호출된다.
+     * 나머지 주차는 주간 배치 스케줄러 또는 조회 시 lazy 생성으로 처리한다.
      */
     @Transactional
     private ScheduleAutoGenerateResult generatePlanEntriesFromSchedule(UUID userId, UUID semesterId, LocalDate semesterStart, LocalDate semesterEnd) {
@@ -135,23 +197,50 @@ public class PlannerServiceImpl implements PlannerService {
             return ScheduleAutoGenerateResult.success(0);
         }
 
-        // 3. 학기 범위 내 날짜별 PLAN_ENTRY 생성 (충돌 검사 포함)
+        // 3. 현재 주(이번 주 월~일)만 즉시 생성
+        LocalDate weekStart = deleteFrom;
+        LocalDate weekEnd = today.with(DayOfWeek.SUNDAY);
+        if (weekEnd.isAfter(semesterEnd)) {
+            weekEnd = semesterEnd;
+        }
+
+        ScheduleAutoGenerateResult result = generateWeekEntries(user, userId, schedules, weekStart, weekEnd);
+        log.info("시간표 등록 후 현재 주 PLAN_ENTRY 생성: userId={}, created={}, skipped={}",
+                userId, result.createdCount(), result.skippedCount());
+
+        return result;
+    }
+
+    /**
+     * 특정 주 범위의 SCHEDULE_AUTO PLAN_ENTRY를 생성한다.
+     * 주간 배치 스케줄러와 시간표 등록 시 공통으로 사용한다.
+     * 기존 MANUAL/SCHEDULE_OVERRIDE와 충돌하는 일정은 skip한다.
+     */
+    @Transactional
+    public ScheduleAutoGenerateResult generateWeekEntries(UserEntity user, UUID userId,
+                                                          List<ScheduleEntity> schedules,
+                                                          LocalDate weekStart, LocalDate weekEnd) {
+        // 해당 주의 기존 MANUAL/SCHEDULE_OVERRIDE 일정을 한 번에 조회
+        List<PlanEntryEntity> existingEntries = planEntryRepository.findByUserIdAndDateBetweenAndSourceIn(
+                userId, weekStart, weekEnd,
+                List.of(PlanSource.MANUAL, PlanSource.SCHEDULE_OVERRIDE));
+
+        // 날짜별로 그룹핑하여 메모리에서 빠르게 충돌 검사
+        Map<LocalDate, List<PlanEntryEntity>> existingByDate = existingEntries.stream()
+                .collect(Collectors.groupingBy(PlanEntryEntity::getDate));
+
         List<PlanEntryEntity> entries = new ArrayList<>();
         List<ScheduleAutoGenerateResult.SkippedSchedule> skipped = new ArrayList<>();
-        LocalDate current = deleteFrom;
 
-        while (!current.isAfter(semesterEnd)) {
+        LocalDate current = weekStart;
+        while (!current.isAfter(weekEnd)) {
             DayOfWeek dayOfWeek = current.getDayOfWeek();
+            List<PlanEntryEntity> dayEntries = existingByDate.getOrDefault(current, List.of());
 
             for (ScheduleEntity schedule : schedules) {
                 if (schedule.getDayOfWeek() == dayOfWeek) {
-                    // 충돌 검사: MANUAL/SCHEDULE_OVERRIDE와 겹치는지 확인
-                    boolean hasConflict = planEntryRepository.existsConflictingUserEntry(
-                            userId, current,
-                            List.of(PlanSource.MANUAL, PlanSource.SCHEDULE_OVERRIDE),
-                            schedule.getStartedAt(), schedule.getEndedAt());
-
-                    if (hasConflict) {
+                    // 메모리 충돌 검사
+                    if (hasTimeConflict(dayEntries, schedule.getStartedAt(), schedule.getEndedAt())) {
                         skipped.add(new ScheduleAutoGenerateResult.SkippedSchedule(
                                 current,
                                 schedule.getName(),
@@ -162,7 +251,7 @@ public class PlannerServiceImpl implements PlannerService {
                         continue;
                     }
 
-                    PlanEntryEntity entry = PlanEntryEntity.builder()
+                    entries.add(PlanEntryEntity.builder()
                             .user(user)
                             .date(current)
                             .startTime(schedule.getStartedAt())
@@ -172,19 +261,57 @@ public class PlannerServiceImpl implements PlannerService {
                             .type(PlanItemType.CLASS)
                             .source(PlanSource.SCHEDULE_AUTO)
                             .sourceSchedule(schedule)
-                            .build();
-                    entries.add(entry);
+                            .build());
                 }
             }
             current = current.plusDays(1);
         }
 
-        // Bulk save
         planEntryRepository.saveAll(entries);
-        log.info("SCHEDULE_AUTO 일정 자동 생성 완료: userId={}, created={}, skipped={}",
-                userId, entries.size(), skipped.size());
-
         return new ScheduleAutoGenerateResult(entries.size(), skipped.size(), skipped);
+    }
+
+    /**
+     * 다음 주 PLAN_ENTRY를 배치 생성한다.
+     * 주간 스케줄러에서 호출한다.
+     */
+    @Override
+    @Transactional
+    public ScheduleAutoGenerateResult generateNextWeekEntries(UUID userId) {
+        LocalDate today = LocalDate.now();
+        SemesterEntity semester = semesterRepository.findCurrentByDate(today)
+                .orElseThrow(() -> PlannerException.SEMESTER_NOT_FOUND.toException());
+
+        List<ScheduleEntity> schedules = scheduleRepository.findAllByUserIdAndSemesterId(userId, semester.getId());
+        if (schedules.isEmpty()) {
+            return ScheduleAutoGenerateResult.success(0);
+        }
+
+        UserEntity user = findUserOrThrow(userId);
+        LocalDate nextMonday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        LocalDate nextSunday = nextMonday.plusDays(6);
+        if (nextSunday.isAfter(semester.getEndedAt())) {
+            nextSunday = semester.getEndedAt();
+        }
+        if (nextMonday.isAfter(semester.getEndedAt())) {
+            return ScheduleAutoGenerateResult.success(0);
+        }
+
+        return generateWeekEntries(user, userId, schedules, nextMonday, nextSunday);
+    }
+
+    /**
+     * 메모리에서 시간 충돌을 검사한다.
+     * 기존 일정 중 하나라도 새 시간 범위와 겹치면 true를 반환한다.
+     * 충돌 조건: existing.startTime < newEndTime AND existing.endTime > newStartTime
+     */
+    private boolean hasTimeConflict(List<PlanEntryEntity> existingEntries, LocalTime newStart, LocalTime newEnd) {
+        for (PlanEntryEntity existing : existingEntries) {
+            if (existing.getStartTime().isBefore(newEnd) && existing.getEndTime().isAfter(newStart)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
