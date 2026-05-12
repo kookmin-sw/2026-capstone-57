@@ -29,8 +29,8 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Define PALETTE color constants
     - _Requirements: 16.2, 6.2, 6.3, 6.4_
 
-- [ ] 3. Core systems implementation
-  - [ ] 3.1 Implement StompClient wrapper
+- [-] 3. Core systems implementation
+  - [x] 3.1 Implement StompClient wrapper
     - Create `src/socket/stompClient.ts` with @stomp/stompjs Client configuration
     - Implement SockJS webSocketFactory for `/ws/game` endpoint
     - Configure connectHeaders with `Authorization: Bearer {token}` (STOMP CONNECT frame, NOT HTTP headers)
