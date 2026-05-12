@@ -37,7 +37,7 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Expose activate/deactivate/publish methods
     - _Requirements: 5.1, 5.2, 16.3_
 
-  - [ ] 3.2 Implement NetworkSystem singleton
+  - [x] 3.2 Implement NetworkSystem singleton
     - Create `src/game/systems/NetworkSystem.ts` as singleton with connect/disconnect/destroy/reset methods
     - Implement `/topic/game/{gameSessionId}` subscription and message routing by type field
     - Implement `/app/game/{gameSessionId}/action` publish for READY, PLAYER_INPUT, RESTART_REQUEST
