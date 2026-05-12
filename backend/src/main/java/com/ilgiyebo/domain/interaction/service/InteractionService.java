@@ -20,4 +20,7 @@ public interface InteractionService {
 
     /** 퀴즈 데이터 저장 (요청자 기준으로 해당 유저의 퀴즈 슬롯에 저장) */
     void storeQuizData(UUID matchId, UUID requesterId, List<QuizQuestionDto> quizData);
+
+    /** 게임 완료 처리 (3단계 → 4단계 진행) */
+    void completeGame(UUID matchId, String gameType);
 }

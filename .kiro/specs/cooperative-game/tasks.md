@@ -234,8 +234,8 @@
 - [x] 10. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Scheduler for expired session cleanup
-  - [ ] 11.1 Create GameSessionScheduler
+- [x] 11. Scheduler for expired session cleanup
+  - [x] 11.1 Create GameSessionScheduler
     - `@Component` with `@Scheduled` methods
     - Task 1: Find PLAYING sessions exceeding max game duration → failGame(TIMEOUT)
     - Task 2: Find GameRooms with all users disconnected → remove from store, failGame(DISCONNECTED)
@@ -244,8 +244,8 @@
     - Package: `com.ilgiyebo.domain.game.scheduler`
     - _Requirements: 9.1, 9.2, 9.3_
 
-- [ ] 12. Domain event integration (Interaction domain)
-  - [ ] 12.1 Create InteractionGameEventHandler
+- [x] 12. Domain event integration (Interaction domain)
+  - [x] 12.1 Create InteractionGameEventHandler
     - `@Component` in `com.ilgiyebo.domain.interaction.handler` package
     - `@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)` for GameCompletedEvent
     - On cleared=true: call interactionService.completeGame(matchId, gameType)
@@ -253,7 +253,7 @@
     - Error handling: catch + log (GameSession already saved, no rollback needed)
     - _Requirements: 5.4, 5.5_
 
-  - [ ] 12.2 Extend InteractionService with completeGame method
+  - [x] 12.2 Extend InteractionService with completeGame method
     - Add `void completeGame(UUID matchId, String gameType)` to InteractionService interface
     - Implement in InteractionServiceImpl: find interaction, validate currentStage >= 3, advance to stage 4 with IN_PROGRESS status
     - _Requirements: 5.5_

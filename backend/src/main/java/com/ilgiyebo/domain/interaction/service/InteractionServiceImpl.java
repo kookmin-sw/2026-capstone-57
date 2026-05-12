@@ -143,6 +143,26 @@ public class InteractionServiceImpl implements InteractionService {
                 matchId, requesterId, quizData.size());
     }
 
+    @Override
+    @Transactional
+    public void completeGame(UUID matchId, String gameType) {
+        InteractionEntity interaction = findInteraction(matchId);
+
+        if (interaction.getCurrentStage() < 3) {
+            log.warn("게임 완료 처리 스킵: matchId={}, currentStage={}", matchId, interaction.getCurrentStage());
+            return;
+        }
+
+        // 3단계 완료 → 4단계로 진행
+        interaction.setCurrentStage(4);
+        interaction.setStageStatus(StageStatus.IN_PROGRESS);
+        interaction.setGameType(gameType);
+        interaction.setGameCompleted(true);
+        interactionRepository.save(interaction);
+
+        log.info("3단계 게임 완료 → 4단계 진행: matchId={}", matchId);
+    }
+
     // --- Private helpers ---
     private MatchEntity findMatch(UUID matchId) {
         return matchRepository.findById(matchId)
