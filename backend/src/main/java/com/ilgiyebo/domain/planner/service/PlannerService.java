@@ -29,6 +29,13 @@ public interface PlannerService {
     void regenerateScheduleAutoEntries(UUID userId);
 
     /**
+     * 시간표 재등록 전 호출.
+     * sourceSchedule FK로 연결된 모든 plan_entry를 삭제하여
+     * schedule 삭제 시 FK 제약 위반을 방지한다.
+     */
+    void deleteScheduleLinkedEntries(UUID userId);
+
+    /**
      * 최근 3일간 source=MANUAL 플래너 미작성 여부를 확인.
      * 향후 비활성 사용자 타겟팅 정책으로 전환 시 재활용 예정.
      */

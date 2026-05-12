@@ -176,6 +176,13 @@ public class PlannerServiceImpl implements PlannerService {
     }
 
     @Override
+    @Transactional
+    public void deleteScheduleLinkedEntries(UUID userId) {
+        int deleted = planEntryRepository.deleteByUserIdAndSourceScheduleNotNull(userId);
+        log.info("시간표 연결 일정 삭제: userId={}, deleted={}", userId, deleted);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean shouldSendInactivityReminder(UUID userId) {
         LocalDate today = LocalDate.now();

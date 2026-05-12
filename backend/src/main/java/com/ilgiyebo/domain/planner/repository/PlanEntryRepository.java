@@ -79,4 +79,17 @@ public interface PlanEntryRepository extends JpaRepository<PlanEntryEntity, UUID
           AND e.date = :date
     """)
     long countManualEntriesByDate(@Param("userId") UUID userId, @Param("date") LocalDate date);
+
+    /**
+     * 특정 사용자의 SCHEDULE_AUTO 또는 SCHEDULE_OVERRIDE 일정 중
+     * sourceSchedule이 연결된 것을 모두 삭제한다.
+     * 시간표 재등록 시 FK 제약 해소를 위해 schedule 삭제 전에 호출한다.
+     */
+    @Modifying
+    @Query("""
+        DELETE FROM PlanEntryEntity e
+        WHERE e.user.id = :userId
+          AND e.sourceSchedule IS NOT NULL
+    """)
+    int deleteByUserIdAndSourceScheduleNotNull(@Param("userId") UUID userId);
 }
