@@ -106,21 +106,21 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Apply failure display with reason for GAME_OVER
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7_
 
-- [ ] 6. Game objects implementation
-  - [ ] 6.1 Implement Player game object
+- [x] 6. Game objects implementation
+  - [x] 6.1 Implement Player game object
     - Create `src/game/objects/Player.ts` extending Phaser.GameObjects.Rectangle
     - Implement userId-based deterministic color assignment (hash function)
     - Implement interpolation fields (targetX/Y, previousX/Y, interpolationAlpha)
     - Implement smooth position update via lerp between snapshots
     - _Requirements: 14.1, 14.2, 12.2_
 
-  - [ ] 6.2 Implement Switch game object
+  - [x] 6.2 Implement Switch game object
     - Create `src/game/objects/Switch.ts` extending Phaser.GameObjects.Rectangle
     - Implement pressed state toggle with glow effect (Phaser.FX.Glow)
     - Show activatedBy visual indicator
     - _Requirements: 14.3, 12.3_
 
-  - [ ] 6.3 Implement Door game object
+  - [x] 6.3 Implement Door game object
     - Create `src/game/objects/Door.ts` extending Phaser.GameObjects.Rectangle
     - Implement open/closed visual distinction (color/opacity change)
     - Implement starlight particle effect on door open (ParticleEmitter)
