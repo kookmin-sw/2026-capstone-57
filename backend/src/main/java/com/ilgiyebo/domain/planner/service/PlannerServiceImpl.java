@@ -197,7 +197,7 @@ public class PlannerServiceImpl implements PlannerService {
             return ScheduleAutoGenerateResult.success(0);
         }
 
-        // 3. 현재 주(이번 주 월~일)만 즉시 생성
+        // 3. 현재 주(오늘~일)만 즉시 생성
         LocalDate weekStart = deleteFrom;
         LocalDate weekEnd = today.with(DayOfWeek.SUNDAY);
         if (weekEnd.isAfter(semesterEnd)) {
