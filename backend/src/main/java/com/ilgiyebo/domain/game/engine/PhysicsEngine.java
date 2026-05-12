@@ -50,9 +50,34 @@ public class PhysicsEngine {
 
     /**
      * Updates player position based on current velocity.
+     * Clamps position to map boundaries.
      */
     public void applyMovement(PlayerState player, double deltaMs) {
         player.setX(player.getX() + player.getVelocityX() * deltaMs);
         player.setY(player.getY() + player.getVelocityY() * deltaMs);
+    }
+
+    /**
+     * Clamps player position within map boundaries.
+     * Resets player to spawn if fallen below map.
+     */
+    public void clampToMap(PlayerState player, double mapWidth, double mapHeight, double spawnX, double spawnY) {
+        // Horizontal boundary (player width = 32)
+        if (player.getX() < 0) {
+            player.setX(0);
+            player.setVelocityX(0);
+        } else if (player.getX() > mapWidth - 32) {
+            player.setX(mapWidth - 32);
+            player.setVelocityX(0);
+        }
+
+        // If player falls below map, respawn
+        if (player.getY() > mapHeight + 100) {
+            player.setX(spawnX);
+            player.setY(spawnY);
+            player.setVelocityX(0);
+            player.setVelocityY(0);
+            player.setOnGround(false);
+        }
     }
 }
