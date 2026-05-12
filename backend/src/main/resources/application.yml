@@ -97,14 +97,14 @@ aws:
 cloud:
   aws:
     region:
-      static: ${AWS_REGION}
+      static: ${AWS_REGION:ap-northeast-2}
     sqs:
       max-concurrent-messages: 5
-      quiz-request-queue: ${SQS_QUIZ_REQUEST_QUEUE}
-      quiz-response-queue: ${SQS_QUIZ_RESPONSE_QUEUE}
-      retro-request-queue: ${SQS_RETRO_REQUEST_QUEUE}
-      retro-response-queue: ${SQS_RETRO_RESPONSE_QUEUE}
-      diary-request-queue: ${SQS_DIARY_REQUEST_QUEUE}
-      diary-response-queue: ${SQS_DIARY_RESPONSE_QUEUE}
+      quiz-request-queue: ${SQS_QUIZ_REQUEST_QUEUE:}
+      quiz-response-queue: ${SQS_QUIZ_RESPONSE_QUEUE:}
+      retro-request-queue: ${SQS_RETRO_REQUEST_QUEUE:}
+      retro-response-queue: ${SQS_RETRO_RESPONSE_QUEUE:}
+      diary-request-queue: ${SQS_DIARY_REQUEST_QUEUE:}
+      diary-response-queue: ${SQS_DIARY_RESPONSE_QUEUE:}
     bedrock:
-      model-id: ${BEDROCK_MODEL_ID}
+      model-id: ${BEDROCK_MODEL_ID:}

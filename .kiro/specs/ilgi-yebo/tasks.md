@@ -85,21 +85,40 @@
     - **Property 45: 이메일 서비스 추상화 불변식** (Mailtrap/SES 구현체 동작 검증)
     - **검증 대상: 요구사항 1.3, 1.4, 1.5, 1.6, 1.8**
 
-- [ ] 3. 플래너 및 일기 서비스 구현 [MVP 후순위]
-  - [ ] 3.1 PlannerService 구현 [MVP 후순위]
-    - `createDailyPlan`: 일일 플래너 작성 (JPA upsert 방식)
-    - `registerTimetable`: 시간표 일괄 등록
-    - `getDailyPlan`: 특정 날짜 플래너 조회
-    - `extractRouteInfo`: 동선 정보 추출 (AIService.inferRoute 연동, 캠퍼스 공간 데이터 기반 이동 경로 추론)
-    - 플래너 미작성 시 시간표 기반 대체 (AIService에 시간표 데이터 전달)
-    - 3일 이상 미작성 시 알림 트리거 로직
-    - _요구사항: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
+- [ ] 3. 플래너 및 일기 서비스 구현
+  - [x] 3.1 PlannerService 구현
+    - `createPlanEntry`: 날짜 기반 단일 일정 생성 (source=MANUAL)
+    - `updatePlanEntry`: 일정 수정 (MANUAL, SCHEDULE_AUTO 모두 수정 가능)
+    - `deletePlanEntry`: 일정 삭제
+    - `getPlanEntries`: 특정 날짜 일정 목록 조회 (본인만 조회 가능)
+    - 시간표 등록 시 학기 범위 내 PLAN_ENTRY 자동 생성 (ScheduleService.upsertMySchedule 연동)
+    - 자동 생성 일정: source=SCHEDULE_AUTO, sourceScheduleId로 원본 시간표 참조
+    - 직접 작성 일정: source=MANUAL
+    - SCHEDULE 재등록 시 기존 SCHEDULE_AUTO 소스의 미래 PLAN_ENTRY 삭제 후 재생성
+    - PLAN_ENTRY bulk insert 최적화 (학기 전체 × 주 5일 × 과목 수 대량 생성 대응)
+    - 30분 단위 입력 검증 (startTime, endTime이 30분 단위인지)
+    - 일정 시간 충돌 검증 (겹치는 시간대 등록 불가, 단 종료시간=시작시간 맞닿는 경우 허용)
+    - 종료 시간이 시작 시간보다 이후인지 검증
+    - 사용자는 본인 플래너만 조회/수정/삭제 가능
+    - 3일 이상 source=MANUAL 플래너 미작성 시 오전 9시 알림 트리거
+    - 플래너 작성 경험치 하루 1회만 지급
+    - 현재 매칭은 SCHEDULE 기반으로만 수행 (AI 동선 분석 MVP 제외)
+    - _요구사항: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13, 2.14, 2.15, 2.16_
 
-  - [ ]* 3.2 Property 4, 5, 6 속성 테스트: 플래너 관련 [MVP 후순위]
+  - [ ]* 3.2 Property 4, 5, 6, 11 속성 테스트: 플래너 관련
     - **Property 4: 플래너 데이터 라운드트립**
-    - **Property 5: 플래너 미작성 시 알림 트리거**
-    - **Property 6: 플래너 미작성 시 시간표 기반 동선 대체 (AIService 연동)**
-    - **검증 대상: 요구사항 2.2, 2.3, 2.4, 2.5, 2.6**
+      - 저장 후 조회 시 동일 데이터 보장
+    - **Property 5: 플래너 미작성 알림 트리거**
+      - 최근 3일간 source=MANUAL 일정이 없으면 알림 발생
+    - **Property 6: 시간표 기반 플래너 자동 생성**
+      - 시간표 등록 시 PLAN_ENTRY 자동 생성 검증
+      - source=SCHEDULE_AUTO 검증
+      - sourceScheduleId 참조 정확성 검증
+    - **Property 11: 일정 충돌 검증**
+      - 겹치는 시간대 등록 실패
+      - 종료시간=시작시간 경계 접촉 허용
+      - 30분 단위 입력 검증
+    - **검증 대상: 요구사항 2.2, 2.4, 2.9, 2.10, 2.11**
 
   - [ ] 3.3 DiaryService 구현 [MVP 후순위]
     - `createEntry`: 일기 작성 (upsert, 빈 내용 검증, 감정 태그 선택)
@@ -107,6 +126,7 @@
     - `getStreak`: 연속 작성 일수 계산
     - `getEmotionTrend`: 감정 변화 추이 조회
     - 일기 작성 시 경험치 부여 연동, 연속 작성 보너스 경험치 로직
+    - TODO: 당일 플래너 기반 회고 연동 확장 고려
     - _요구사항: 3.1, 3.2, 3.3, 3.4, 3.5_
 
   - [ ]* 3.4 Property 7, 8, 9, 10 속성 테스트: 일기 관련 [MVP 후순위]
