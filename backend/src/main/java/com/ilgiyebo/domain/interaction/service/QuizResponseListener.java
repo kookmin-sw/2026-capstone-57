@@ -15,6 +15,7 @@ import java.util.UUID;
 
 @Slf4j
 @Component
+@org.springframework.context.annotation.Profile("!local")
 @RequiredArgsConstructor
 public class QuizResponseListener {
 
