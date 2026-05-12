@@ -6,6 +6,8 @@ EC2에서 실행:
     python3 test_retro_e2e.py
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import time
