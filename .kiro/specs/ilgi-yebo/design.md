@@ -324,9 +324,52 @@ public record LocationTime(LocalTime time, String place) {}
 
 #### 4. 일기 서비스 (DiaryService)
 
+> **AI 일기 작성 흐름**: 사용자는 일반 일기(직접 작성)와 AI 일기(AI 대화 기반 생성) 두 가지 방식으로 일기를 작성할 수 있다. AI 일기 작성 시 시스템이 질문을 생성하고, 사용자가 답변하는 멀티턴 대화를 반복한 후, 최종적으로 AI가 답변을 기반으로 일기를 생성한다. 두 방식 모두 동일한 DiaryEntry로 저장되며, `aiSessionId`를 통해 AI 생성 일기를 추적할 수 있다.
+
+```mermaid
+sequenceDiagram
+    participant U as 사용자
+    participant D as DiaryService
+    participant S as DiarySessionService
+    participant AI as AIService
+    participant DB as Database
+
+    Note over U,DB: [일반 일기 작성]
+    U->>D: createEntry(userId, DiaryInput)
+    D->>DB: DiaryEntry 저장 (source=MANUAL)
+    D-->>U: DiaryEntry 반환
+
+    Note over U,DB: [AI 일기 작성 흐름]
+    U->>S: startAISession(userId, date)
+    S->>AI: generateDiaryQuestions(context)
+    AI-->>S: 첫 번째 질문
+    S->>DB: DiarySession 생성 (status=IN_PROGRESS)
+    S-->>U: DiarySession + 첫 번째 질문
+
+    loop 멀티턴 대화 (질문-답변 반복)
+        U->>S: answerQuestion(sessionId, answer)
+        S->>DB: DiaryConversationTurn 저장
+        S->>AI: generateNextQuestion(context + 이전 답변들)
+        AI-->>S: 다음 질문 또는 대화 완료 신호
+        S-->>U: 다음 질문 또는 완료 상태
+    end
+
+    U->>S: generateDiary(sessionId)
+    S->>AI: generateDiaryContent(모든 답변)
+    AI-->>S: 생성된 일기 내용
+    S->>DB: DiarySession 상태 → GENERATED
+    S-->>U: 생성된 일기 미리보기
+
+    U->>S: confirmDiary(sessionId, editedContent?)
+    S->>D: createEntry(userId, AI 생성 내용, aiSessionId)
+    D->>DB: DiaryEntry 저장 (source=AI_GENERATED, aiSessionId)
+    S->>DB: DiarySession 상태 → COMPLETED
+    S-->>U: 최종 DiaryEntry
+```
+
 ```java
 public interface DiaryService {
-    /** 일기 작성 */
+    /** 일기 작성 (일반 직접 작성 또는 AI 생성 확정 시 호출) */
     DiaryEntry createEntry(String userId, DiaryInput entry);
 
     /** 일기 목록 조회 (본인만) */
@@ -342,8 +385,12 @@ public interface DiaryService {
 public record DiaryInput(
     String content,
     @Nullable EmotionTag emotionTag,
-    LocalDate date
+    LocalDate date,
+    DiarySource source,
+    @Nullable String aiSessionId
 ) {}
+
+public enum DiarySource { MANUAL, AI_GENERATED }
 
 public enum EmotionTag { HAPPY, SAD, ANGRY, ANXIOUS, CALM, EXCITED, TIRED }
 
@@ -353,6 +400,8 @@ public record DiaryEntry(
     LocalDate date,
     String content,
     @Nullable EmotionTag emotionTag,
+    DiarySource source,
+    @Nullable String aiSessionId,
     int streakCount,
     Instant createdAt
 ) {}
@@ -361,6 +410,174 @@ public record StreakInfo(int currentStreak, int longestStreak) {}
 
 public record EmotionTrend(LocalDate date, EmotionTag emotion) {}
 ```
+
+#### 4-1. AI 일기 세션 서비스 (DiarySessionService)
+
+> AI 일기 작성의 멀티턴 대화를 관리하는 서비스. DiaryService와 분리하여 단일 책임 원칙을 준수하고, 추후 Conversation 도메인 확장 시 독립적으로 발전 가능하도록 설계한다.
+
+```java
+public interface DiarySessionService {
+    /** AI 일기 세션 시작 - 첫 번째 질문 생성 */
+    DiarySessionResponse startAISession(String userId, LocalDate date);
+
+    /** 질문에 답변 - 다음 질문 또는 대화 완료 반환 */
+    DiaryTurnResponse answerQuestion(String sessionId, String userId, String answer);
+
+    /** 답변 기반 일기 생성 요청 */
+    GeneratedDiaryPreview generateDiary(String sessionId, String userId);
+
+    /** 생성된 일기 확정 (선택적 수정 포함) */
+    DiaryEntry confirmDiary(String sessionId, String userId, @Nullable String editedContent, @Nullable EmotionTag emotionTag);
+
+    /** 세션 조회 (진행 중인 세션 확인) */
+    Optional<DiarySessionResponse> getActiveSession(String userId, LocalDate date);
+
+    /** 세션 취소 */
+    void cancelSession(String sessionId, String userId);
+}
+
+public record DiarySessionResponse(
+    String sessionId,
+    String userId,
+    LocalDate date,
+    DiarySessionStatus status,
+    String currentQuestion,
+    int currentTurnNumber,
+    int maxTurns,
+    List<DiaryConversationTurn> conversationHistory
+) {}
+
+public record DiaryTurnResponse(
+    String sessionId,
+    boolean isCompleted,
+    @Nullable String nextQuestion,
+    int currentTurnNumber,
+    int maxTurns
+) {}
+
+public record DiaryConversationTurn(
+    int turnNumber,
+    String question,
+    @Nullable String answer,
+    Instant askedAt,
+    @Nullable Instant answeredAt
+) {}
+
+public record GeneratedDiaryPreview(
+    String sessionId,
+    String generatedContent,
+    @Nullable EmotionTag suggestedEmotion,
+    Instant generatedAt
+) {}
+
+public enum DiarySessionStatus {
+    IN_PROGRESS,   // 질문-답변 진행 중
+    READY_TO_GENERATE, // 모든 질문 답변 완료, 생성 대기
+    GENERATED,     // AI 일기 생성 완료, 확정 대기
+    COMPLETED,     // 일기 확정 완료
+    CANCELLED      // 사용자 취소
+}
+```
+
+#### 4-2. AI 일기 질문 생성 (AIService 확장)
+
+> AIService에 일기 관련 질문/내용 생성 메서드를 추가한다. 당일 플래너 데이터를 컨텍스트로 활용하여 맞춤형 질문을 생성한다.
+
+```java
+// AIService에 추가되는 메서드
+public interface AIService {
+    // ... 기존 메서드 ...
+
+    /** 일기 작성을 위한 첫 번째 질문 생성 */
+    String generateDiaryFirstQuestion(DiaryQuestionContext context);
+
+    /** 이전 대화 기반 다음 질문 생성 (또는 대화 완료 판단) */
+    DiaryNextQuestionResult generateDiaryNextQuestion(DiaryQuestionContext context, List<DiaryConversationTurn> history);
+
+    /** 대화 내용 기반 일기 내용 생성 */
+    DiaryGenerationResult generateDiaryContent(List<DiaryConversationTurn> conversationHistory, DiaryQuestionContext context);
+}
+
+public record DiaryQuestionContext(
+    String userId,
+    LocalDate date,
+    @Nullable List<PlanEntry> todaySchedule,  // 당일 플래너 데이터
+    @Nullable DiaryEntry previousDiary        // 전날 일기 (연속성 참고)
+) {}
+
+public record DiaryNextQuestionResult(
+    boolean isConversationComplete,
+    @Nullable String nextQuestion,
+    @Nullable String completionReason  // 예: "충분한 답변 수집", "사용자 피로도 고려"
+) {}
+
+public record DiaryGenerationResult(
+    String generatedContent,
+    @Nullable EmotionTag suggestedEmotion
+) {}
+```
+
+#### 4-3. AI 일기 데이터 모델
+
+```mermaid
+erDiagram
+    USER ||--o{ DIARY_ENTRY : "작성"
+    USER ||--o{ DIARY_SESSION : "AI 세션"
+    DIARY_SESSION ||--o{ DIARY_CONVERSATION_TURN : "대화 턴"
+    DIARY_SESSION ||--o| DIARY_ENTRY : "생성된 일기"
+
+    DIARY_ENTRY {
+        binary_16 id PK "BINARY(16) UUID"
+        binary_16 user_id FK
+        date entry_date
+        text content
+        enum emotion_tag
+        enum source "MANUAL|AI_GENERATED"
+        binary_16 ai_session_id FK "nullable - AI 생성 시 세션 참조"
+        int streak_count
+        timestamp created_at
+    }
+
+    DIARY_SESSION {
+        binary_16 id PK "BINARY(16) UUID"
+        binary_16 user_id FK
+        date target_date "일기 대상 날짜"
+        enum status "in_progress|ready_to_generate|generated|completed|cancelled"
+        text generated_content "nullable - AI 생성 일기 내용"
+        enum suggested_emotion "nullable - AI 추천 감정 태그"
+        int max_turns "최대 질문 수 (기본 5)"
+        int current_turn "현재 턴 번호"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    DIARY_CONVERSATION_TURN {
+        binary_16 id PK "BINARY(16) UUID"
+        binary_16 session_id FK
+        int turn_number
+        text question
+        text answer "nullable - 미답변 시 null"
+        timestamp asked_at
+        timestamp answered_at "nullable"
+    }
+```
+
+**주요 인덱스 (추가):**
+
+| 테이블 | 인덱스 | 용도 |
+|--------|--------|------|
+| DIARY_SESSION | (user_id, target_date, status) | 사용자별 날짜별 활성 세션 조회 |
+| DIARY_SESSION | (user_id, status) | 사용자별 진행 중 세션 조회 |
+| DIARY_CONVERSATION_TURN | (session_id, turn_number) | 세션별 대화 순서 조회 |
+| DIARY_ENTRY | (user_id, source) | 소스별 일기 필터링 |
+
+**설계 결정 사항:**
+
+1. **DiaryService와 DiarySessionService 분리**: 일반 일기 CRUD는 DiaryService가 담당하고, AI 멀티턴 대화 관리는 DiarySessionService가 담당한다. 이를 통해 단일 책임 원칙을 준수하고, 추후 AI 대화 로직이 복잡해져도 DiaryService에 영향을 주지 않는다.
+2. **DiaryEntry에 source/aiSessionId 추가**: AI 생성 일기와 일반 일기가 동일 테이블에 공존하되, source 필드로 구분하고 aiSessionId로 원본 세션을 추적할 수 있다.
+3. **DiarySession 독립 엔티티**: 멀티턴 대화 상태를 별도 테이블로 관리하여, 추후 Conversation 도메인으로 확장하거나 다른 AI 대화 기능(회고 등)과 공통 패턴을 추출할 수 있다.
+4. **maxTurns 설정**: 질문 수를 제한하여 사용자 피로도를 관리한다. 기본값 5회이며, AI가 충분한 답변을 수집했다고 판단하면 조기 종료할 수 있다.
+5. **생성 후 확정 2단계**: AI가 일기를 생성한 후 사용자가 수정/확정하는 단계를 분리하여, 사용자가 최종 결과물에 대한 통제권을 유지한다.
 
 #### 5. 매칭 서비스 (MatchingService)
 
@@ -1046,6 +1263,9 @@ public record OpenAtFilter(DayOfWeek dayOfWeek, LocalTime time) {}
 erDiagram
     USER ||--o{ SLOT : "보유"
     USER ||--o{ DIARY_ENTRY : "작성"
+    USER ||--o{ DIARY_SESSION : "AI 일기 세션"
+    DIARY_SESSION ||--o{ DIARY_CONVERSATION_TURN : "대화 턴"
+    DIARY_SESSION ||--o| DIARY_ENTRY : "생성된 일기"
     USER ||--o{ PLAN_ENTRY : "작성"
     USER ||--o{ SCHEDULE : "등록"
     SCHEDULE ||--o{ PLAN_ENTRY : "자동 생성"
@@ -1141,8 +1361,33 @@ erDiagram
         date entry_date
         text content
         enum emotion_tag
+        enum source "MANUAL|AI_GENERATED"
+        binary_16 ai_session_id FK "nullable - AI 생성 시 세션 참조"
         int streak_count
         timestamp created_at
+    }
+
+    DIARY_SESSION {
+        binary_16 id PK "BINARY(16) UUID"
+        binary_16 user_id FK
+        date target_date "일기 대상 날짜"
+        enum status "in_progress|ready_to_generate|generated|completed|cancelled"
+        text generated_content "nullable"
+        enum suggested_emotion "nullable"
+        int max_turns
+        int current_turn
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    DIARY_CONVERSATION_TURN {
+        binary_16 id PK "BINARY(16) UUID"
+        binary_16 session_id FK
+        int turn_number
+        text question
+        text answer "nullable"
+        timestamp asked_at
+        timestamp answered_at "nullable"
     }
 
     PLAN_ENTRY {
@@ -1340,6 +1585,10 @@ erDiagram
 | BLOCK | (user_id, blocked_user_id) UNIQUE | 차단 관계 중복 방지 및 빠른 조회 |
 | REPORT | (target_id, status) | 신고 횟수 집계 |
 | DIARY_ENTRY | (user_id, entry_date) UNIQUE | 일일 1건 제약 및 조회 |
+| DIARY_ENTRY | (user_id, source) | 소스별 일기 필터링 |
+| DIARY_SESSION | (user_id, target_date, status) | 사용자별 날짜별 활성 세션 조회 |
+| DIARY_SESSION | (user_id, status) | 사용자별 진행 중 세션 조회 |
+| DIARY_CONVERSATION_TURN | (session_id, turn_number) | 세션별 대화 순서 조회 |
 | PLAN_ENTRY | (user_id, entry_date, start_time) | 날짜별 일정 조회 및 충돌 검사 |
 | PLAN_ENTRY | (user_id, source, created_at) | 직접 입력 플래너 존재 여부 확인 (알림용) |
 | SCHEDULE | (user_id, day_of_week) | 사용자별 요일 시간표 조회 |
