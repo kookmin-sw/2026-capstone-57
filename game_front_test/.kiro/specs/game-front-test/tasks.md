@@ -47,7 +47,7 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Handle unknown message types with console.warn (no throw)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 7.8, 17.5, 17.6_
 
-  - [ ] 3.3 Implement InputSystem
+  - [x] 3.3 Implement InputSystem
     - Create `src/game/systems/InputSystem.ts` with keyboard mapping (Arrow Left/A → left, Arrow Right/D → right, Space/W/Arrow Up → jump)
     - Implement InputState diff detection (compare with previous state, publish only on change)
     - Implement mobile touch button creation (48x48px minimum, rounded, pastel style)
