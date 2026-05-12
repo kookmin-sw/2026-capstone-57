@@ -258,7 +258,7 @@
     - Implement in InteractionServiceImpl: find interaction, validate currentStage >= 3, advance to stage 4 with IN_PROGRESS status
     - _Requirements: 5.5_
 
-- [ ] 13. Checkpoint - Ensure all tests pass
+- [x] 13. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 14. Game_Front_Test client setup and implementation

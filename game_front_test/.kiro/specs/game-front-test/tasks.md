@@ -6,8 +6,8 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
 
 ## Tasks
 
-- [ ] 1. Project scaffolding and configuration
-  - [ ] 1.1 Initialize Vite + TypeScript project with Phaser.js dependencies
+- [x] 1. Project scaffolding and configuration
+  - [x] 1.1 Initialize Vite + TypeScript project with Phaser.js dependencies
     - Create `package.json` with dependencies: phaser, @stomp/stompjs, sockjs-client, and devDependencies: typescript, vite, vitest, fast-check, @types/sockjs-client
     - Create `tsconfig.json` with strict mode enabled
     - Create `vite.config.ts` with default settings
@@ -15,7 +15,7 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Create directory structure: `src/game/scenes`, `src/game/objects`, `src/game/systems`, `src/game/types`, `src/game/config`, `src/socket`, `assets/sprites`, `assets/audio`, `assets/shaders`
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 16.1, 16.6_
 
-  - [ ] 1.2 Create Phaser game configuration and entry point
+  - [x] 1.2 Create Phaser game configuration and entry point
     - Create `src/game/config/gameConfig.ts` with 1280x720 resolution, Scale.FIT, CENTER_BOTH, Arcade physics
     - Create `src/main.ts` with URL parameter parsing (token, gameSessionId, userId) and Phaser.Game instantiation
     - Create `src/game/PhaserGame.ts` as Phaser.Game wrapper applying config
