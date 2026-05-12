@@ -2,6 +2,7 @@ package com.ilgiyebo.domain.planner.service;
 
 import com.ilgiyebo.domain.planner.dto.PlanEntryRequest;
 import com.ilgiyebo.domain.planner.dto.PlanEntryResponse;
+import com.ilgiyebo.domain.planner.dto.ScheduleAutoGenerateResult;
 import com.ilgiyebo.domain.planner.entity.PlanEntryEntity;
 import com.ilgiyebo.domain.planner.entity.PlanItemType;
 import com.ilgiyebo.domain.planner.entity.PlanSource;
@@ -114,9 +115,10 @@ public class PlannerServiceImpl implements PlannerService {
 
     /**
      * 학기 범위 내 SCHEDULE_AUTO PLAN_ENTRY를 생성하는 내부 메서드.
+     * MANUAL/SCHEDULE_OVERRIDE와 충돌하는 일정은 생성하지 않고 skip한다.
      */
     @Transactional
-    private void generatePlanEntriesFromSchedule(UUID userId, LocalDate semesterStart, LocalDate semesterEnd) {
+    private ScheduleAutoGenerateResult generatePlanEntriesFromSchedule(UUID userId, LocalDate semesterStart, LocalDate semesterEnd) {
         UserEntity user = findUserOrThrow(userId);
 
         // 1. 기존 SCHEDULE_AUTO 미래 일정 삭제
@@ -130,11 +132,12 @@ public class PlannerServiceImpl implements PlannerService {
         List<ScheduleEntity> schedules = scheduleRepository.findAllByUserId(userId);
         if (schedules.isEmpty()) {
             log.info("시간표가 없어 PLAN_ENTRY 자동 생성을 건너뜁니다: userId={}", userId);
-            return;
+            return ScheduleAutoGenerateResult.success(0);
         }
 
-        // 3. 학기 범위 내 날짜별 PLAN_ENTRY 생성 (bulk)
+        // 3. 학기 범위 내 날짜별 PLAN_ENTRY 생성 (충돌 검사 포함)
         List<PlanEntryEntity> entries = new ArrayList<>();
+        List<ScheduleAutoGenerateResult.SkippedSchedule> skipped = new ArrayList<>();
         LocalDate current = deleteFrom;
 
         while (!current.isAfter(semesterEnd)) {
@@ -142,6 +145,21 @@ public class PlannerServiceImpl implements PlannerService {
 
             for (ScheduleEntity schedule : schedules) {
                 if (schedule.getDayOfWeek() == dayOfWeek) {
+                    // 충돌 검사: MANUAL/SCHEDULE_OVERRIDE와 겹치는지 확인
+                    boolean hasConflict = planEntryRepository.existsConflictingUserEntry(
+                            userId, current, schedule.getStartedAt(), schedule.getEndedAt());
+
+                    if (hasConflict) {
+                        skipped.add(new ScheduleAutoGenerateResult.SkippedSchedule(
+                                current,
+                                schedule.getName(),
+                                schedule.getStartedAt(),
+                                schedule.getEndedAt(),
+                                "CONFLICT_WITH_EXISTING_PLAN"
+                        ));
+                        continue;
+                    }
+
                     PlanEntryEntity entry = PlanEntryEntity.builder()
                             .user(user)
                             .date(current)
@@ -161,25 +179,31 @@ public class PlannerServiceImpl implements PlannerService {
 
         // Bulk save
         planEntryRepository.saveAll(entries);
-        log.info("SCHEDULE_AUTO 일정 자동 생성 완료: userId={}, count={}", userId, entries.size());
+        log.info("SCHEDULE_AUTO 일정 자동 생성 완료: userId={}, created={}, skipped={}",
+                userId, entries.size(), skipped.size());
+
+        return new ScheduleAutoGenerateResult(entries.size(), skipped.size(), skipped);
     }
 
     @Override
     @Transactional
-    public void regenerateScheduleAutoEntries(UUID userId) {
+    public ScheduleAutoGenerateResult regenerateScheduleAutoEntries(UUID userId) {
         // 현재 활성 학기를 DB에서 조회
         LocalDate today = LocalDate.now();
         SemesterEntity semester = semesterRepository.findCurrentByDate(today)
                 .orElseThrow(() -> PlannerException.SEMESTER_NOT_FOUND.toException());
 
-        generatePlanEntriesFromSchedule(userId, semester.getStartedAt(), semester.getEndedAt());
+        return generatePlanEntriesFromSchedule(userId, semester.getStartedAt(), semester.getEndedAt());
     }
 
     @Override
     @Transactional
     public void deleteScheduleLinkedEntries(UUID userId) {
+        // SCHEDULE_OVERRIDE의 FK를 null로 설정 (일정 자체는 보존)
+        int detached = planEntryRepository.detachSourceScheduleForOverrides(userId);
+        // SCHEDULE_AUTO만 삭제
         int deleted = planEntryRepository.deleteByUserIdAndSourceScheduleNotNull(userId);
-        log.info("시간표 연결 일정 삭제: userId={}, deleted={}", userId, deleted);
+        log.info("시간표 연결 해제: userId={}, deleted={}, detached={}", userId, deleted, detached);
     }
 
     @Override

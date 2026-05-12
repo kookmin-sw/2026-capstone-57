@@ -2,6 +2,7 @@ package com.ilgiyebo.domain.planner.service;
 
 import com.ilgiyebo.domain.planner.dto.PlanEntryRequest;
 import com.ilgiyebo.domain.planner.dto.PlanEntryResponse;
+import com.ilgiyebo.domain.planner.dto.ScheduleAutoGenerateResult;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,11 +23,12 @@ public interface PlannerService {
     List<PlanEntryResponse> getPlanEntries(UUID userId, LocalDate date);
 
     /**
-     * 시간표 등록 시 호출
+     * 시간표 등록 시 호출.
      * 현재 활성 학기를 조회하여 기존 SCHEDULE_AUTO 미래 일정을 삭제하고,
      * 학기 범위 내 PLAN_ENTRY를 자동 생성한다.
+     * MANUAL/SCHEDULE_OVERRIDE와 충돌하는 일정은 생성하지 않고 skip한다.
      */
-    void regenerateScheduleAutoEntries(UUID userId);
+    ScheduleAutoGenerateResult regenerateScheduleAutoEntries(UUID userId);
 
     /**
      * 시간표 재등록 전 호출.

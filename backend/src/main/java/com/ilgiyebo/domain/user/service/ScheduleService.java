@@ -11,6 +11,7 @@ import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
 import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
 import com.ilgiyebo.domain.user.exception.UserException;
 import com.ilgiyebo.domain.user.dto.ScheduleResponse;
+import com.ilgiyebo.domain.user.dto.ScheduleUpsertResponse;
 import com.ilgiyebo.domain.user.repository.ScheduleRepository;
 import com.ilgiyebo.domain.user.repository.SemesterRepository;
 import com.ilgiyebo.domain.user.repository.UserRepository;
@@ -55,7 +56,7 @@ public class ScheduleService {
 
     @Transactional
     @SneakyThrows(IOException.class)
-    public ScheduleResponse upsertMySchedule(UUID userId, String identifier) {
+    public ScheduleUpsertResponse upsertMySchedule(UUID userId, String identifier) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(UserException.USER_NOT_FOUND::toException);
 
@@ -84,7 +85,8 @@ public class ScheduleService {
         JsonNode subjects = table != null ? table.get("subject") : null;
 
         if (subjects == null) {
-            return ScheduleResponse.from(List.of());
+            var emptyResult = plannerService.regenerateScheduleAutoEntries(userId);
+            return ScheduleUpsertResponse.from(List.of(), emptyResult);
         }
 
         List<ScheduleEntity> schedules = new ArrayList<>();
@@ -112,9 +114,9 @@ public class ScheduleService {
         }
 
         // 시간표 등록 후 SCHEDULE_AUTO PLAN_ENTRY 재생성
-        plannerService.regenerateScheduleAutoEntries(userId);
+        var plannerResult = plannerService.regenerateScheduleAutoEntries(userId);
 
-        return ScheduleResponse.from(schedules);
+        return ScheduleUpsertResponse.from(schedules, plannerResult);
     }
 
     /**
