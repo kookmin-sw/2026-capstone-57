@@ -21,8 +21,8 @@ Phaser.js + TypeScript 기반 STOMP 실시간 협동 게임 테스트 클라이�
     - Create `src/game/PhaserGame.ts` as Phaser.Game wrapper applying config
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 4.1, 4.2_
 
-- [ ] 2. Type definitions and shared constants
-  - [ ] 2.1 Define all TypeScript interfaces in gameTypes.ts
+- [x] 2. Type definitions and shared constants
+  - [x] 2.1 Define all TypeScript interfaces in gameTypes.ts
     - Create `src/game/types/gameTypes.ts` with all server→client message interfaces (GameStatePayload, PlayerStateDto, SwitchStateDto, RoomStateMessage, GameStartedMessage, GameClearedMessage, GameOverMessage, PlayerDisconnectedMessage, PlayerReconnectedMessage, RestartRequestedMessage, GameErrorMessage)
     - Define client→server message interfaces (ReadyMessage, PlayerInputMessage, RestartRequestMessage)
     - Define InputState, GameParams, ConnectionStatus, ReconnectionState, NetworkSystemConfig, Snapshot, CoopSceneData, ResultSceneData interfaces
