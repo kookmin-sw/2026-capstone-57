@@ -1,8 +1,7 @@
 package com.ilgiyebo.domain.planner.service;
 
-import com.ilgiyebo.domain.planner.dto.CreatePlanEntryRequest;
+import com.ilgiyebo.domain.planner.dto.PlanEntryRequest;
 import com.ilgiyebo.domain.planner.dto.PlanEntryResponse;
-import com.ilgiyebo.domain.planner.dto.UpdatePlanEntryRequest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,10 +10,10 @@ import java.util.UUID;
 public interface PlannerService {
 
     /** 일정 생성 (source=MANUAL) */
-    PlanEntryResponse createPlanEntry(UUID userId, CreatePlanEntryRequest request);
+    PlanEntryResponse createPlanEntry(UUID userId, PlanEntryRequest request);
 
     /** 일정 수정 (MANUAL, SCHEDULE_AUTO 모두 수정 가능) */
-    PlanEntryResponse updatePlanEntry(UUID userId, UUID entryId, UpdatePlanEntryRequest request);
+    PlanEntryResponse updatePlanEntry(UUID userId, UUID entryId, PlanEntryRequest request);
 
     /** 일정 삭제 */
     void deletePlanEntry(UUID userId, UUID entryId);

@@ -1,8 +1,7 @@
 package com.ilgiyebo.domain.planner.service;
 
-import com.ilgiyebo.domain.planner.dto.CreatePlanEntryRequest;
+import com.ilgiyebo.domain.planner.dto.PlanEntryRequest;
 import com.ilgiyebo.domain.planner.dto.PlanEntryResponse;
-import com.ilgiyebo.domain.planner.dto.UpdatePlanEntryRequest;
 import com.ilgiyebo.domain.planner.entity.PlanEntryEntity;
 import com.ilgiyebo.domain.planner.entity.PlanItemType;
 import com.ilgiyebo.domain.planner.entity.PlanSource;
@@ -38,7 +37,7 @@ public class PlannerServiceImpl implements PlannerService {
 
     @Override
     @Transactional
-    public PlanEntryResponse createPlanEntry(UUID userId, CreatePlanEntryRequest request) {
+    public PlanEntryResponse createPlanEntry(UUID userId, PlanEntryRequest request) {
         UserEntity user = findUserOrThrow(userId);
 
         validateTimeUnit(request.startTime());
@@ -67,7 +66,7 @@ public class PlannerServiceImpl implements PlannerService {
 
     @Override
     @Transactional
-    public PlanEntryResponse updatePlanEntry(UUID userId, UUID entryId, UpdatePlanEntryRequest request) {
+    public PlanEntryResponse updatePlanEntry(UUID userId, UUID entryId, PlanEntryRequest request) {
         PlanEntryEntity entity = findEntryOrThrow(entryId);
         verifyOwnership(entity, userId);
 

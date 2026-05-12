@@ -1,9 +1,8 @@
 package com.ilgiyebo.domain.planner.service;
 
 import com.ilgiyebo.common.exception.BusinessException;
-import com.ilgiyebo.domain.planner.dto.CreatePlanEntryRequest;
+import com.ilgiyebo.domain.planner.dto.PlanEntryRequest;
 import com.ilgiyebo.domain.planner.dto.PlanEntryResponse;
-import com.ilgiyebo.domain.planner.dto.UpdatePlanEntryRequest;
 import com.ilgiyebo.domain.planner.entity.PlanEntryEntity;
 import com.ilgiyebo.domain.planner.entity.PlanItemType;
 import com.ilgiyebo.domain.planner.entity.PlanSource;
@@ -77,7 +76,7 @@ class PlannerServiceImplTest {
         @Test
         @DisplayName("유효한 요청으로 MANUAL 일정을 생성한다")
         void shouldCreateManualEntry() {
-            CreatePlanEntryRequest request = new CreatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(9, 0),
                     LocalTime.of(10, 30),
@@ -111,7 +110,7 @@ class PlannerServiceImplTest {
         @Test
         @DisplayName("30분 단위가 아닌 시작 시간은 거부한다")
         void shouldRejectNon30MinuteStartTime() {
-            CreatePlanEntryRequest request = new CreatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(9, 15),
                     LocalTime.of(10, 30),
@@ -130,7 +129,7 @@ class PlannerServiceImplTest {
         @Test
         @DisplayName("30분 단위가 아닌 종료 시간은 거부한다")
         void shouldRejectNon30MinuteEndTime() {
-            CreatePlanEntryRequest request = new CreatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(9, 0),
                     LocalTime.of(10, 45),
@@ -149,7 +148,7 @@ class PlannerServiceImplTest {
         @Test
         @DisplayName("종료 시간이 시작 시간보다 이전이면 거부한다")
         void shouldRejectEndTimeBeforeStartTime() {
-            CreatePlanEntryRequest request = new CreatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(10, 30),
                     LocalTime.of(9, 0),
@@ -168,7 +167,7 @@ class PlannerServiceImplTest {
         @Test
         @DisplayName("시간 충돌이 있으면 거부한다")
         void shouldRejectTimeConflict() {
-            CreatePlanEntryRequest request = new CreatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(9, 0),
                     LocalTime.of(10, 30),
@@ -199,7 +198,7 @@ class PlannerServiceImplTest {
         @Test
         @DisplayName("종료시간=시작시간 맞닿는 경우는 충돌이 아니다 (쿼리가 빈 결과 반환)")
         void shouldAllowAdjacentEntries() {
-            CreatePlanEntryRequest request = new CreatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(10, 30),
                     LocalTime.of(12, 0),
@@ -245,7 +244,7 @@ class PlannerServiceImplTest {
                     .build();
             setId(existing, entryId);
 
-            UpdatePlanEntryRequest request = new UpdatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(10, 0),
                     LocalTime.of(11, 30),
@@ -285,7 +284,7 @@ class PlannerServiceImplTest {
                     .build();
             setId(existing, entryId);
 
-            UpdatePlanEntryRequest request = new UpdatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(9, 30),
                     LocalTime.of(11, 0),
@@ -313,7 +312,7 @@ class PlannerServiceImplTest {
 
             when(planEntryRepository.findById(entryId)).thenReturn(Optional.empty());
 
-            UpdatePlanEntryRequest request = new UpdatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(9, 0),
                     LocalTime.of(10, 30),
@@ -352,7 +351,7 @@ class PlannerServiceImplTest {
 
             when(planEntryRepository.findById(entryId)).thenReturn(Optional.of(existing));
 
-            UpdatePlanEntryRequest request = new UpdatePlanEntryRequest(
+            PlanEntryRequest request = new PlanEntryRequest(
                     LocalDate.of(2025, 3, 10),
                     LocalTime.of(9, 0),
                     LocalTime.of(10, 30),

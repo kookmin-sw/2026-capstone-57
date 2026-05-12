@@ -1,8 +1,7 @@
 package com.ilgiyebo.domain.planner.controller;
 
-import com.ilgiyebo.domain.planner.dto.CreatePlanEntryRequest;
+import com.ilgiyebo.domain.planner.dto.PlanEntryRequest;
 import com.ilgiyebo.domain.planner.dto.PlanEntryResponse;
-import com.ilgiyebo.domain.planner.dto.UpdatePlanEntryRequest;
 import com.ilgiyebo.domain.planner.service.PlannerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,7 +30,7 @@ public class PlannerController {
     @PostMapping
     public ResponseEntity<PlanEntryResponse> createPlanEntry(
             @AuthenticationPrincipal UUID userId,
-            @Valid @RequestBody CreatePlanEntryRequest request) {
+            @Valid @RequestBody PlanEntryRequest request) {
         return ResponseEntity.ok(plannerService.createPlanEntry(userId, request));
     }
 
@@ -40,7 +39,7 @@ public class PlannerController {
     public ResponseEntity<PlanEntryResponse> updatePlanEntry(
             @AuthenticationPrincipal UUID userId,
             @PathVariable UUID entryId,
-            @Valid @RequestBody UpdatePlanEntryRequest request) {
+            @Valid @RequestBody PlanEntryRequest request) {
         return ResponseEntity.ok(plannerService.updatePlanEntry(userId, entryId, request));
     }
 
