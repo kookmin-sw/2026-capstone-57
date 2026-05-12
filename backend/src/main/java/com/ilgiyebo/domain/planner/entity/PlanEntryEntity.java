@@ -54,7 +54,7 @@ public class PlanEntryEntity extends BaseSchema {
     private PlanItemType type;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "source", nullable = false)
+    @Column(name = "source", nullable = false, length = 20)
     @Builder.Default
     private PlanSource source = PlanSource.MANUAL;
 

@@ -82,6 +82,11 @@ public class PlannerServiceImpl implements PlannerService {
         entity.setName(request.name());
         entity.setType(request.type());
 
+        // SCHEDULE_AUTO 일정을 수정하면 SCHEDULE_OVERRIDE로 전환
+        if (entity.getSource() == PlanSource.SCHEDULE_AUTO) {
+            entity.setSource(PlanSource.SCHEDULE_OVERRIDE);
+        }
+
         entity = planEntryRepository.save(entity);
         log.debug("일정 수정: userId={}, entryId={}", userId, entryId);
 
