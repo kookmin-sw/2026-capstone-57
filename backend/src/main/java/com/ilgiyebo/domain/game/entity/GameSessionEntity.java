@@ -42,14 +42,16 @@ public class GameSessionEntity extends BaseSchema {
     @Column(name = "fail_reason", length = 20)
     private GameFailReason failReason;
 
+    @Builder.Default
     @Column(name = "score")
-    private Integer score;
+    private Integer score = 0;
 
     @Column(name = "clear_time_ms")
     private Long clearTimeMs;
 
+    @Builder.Default
     @Column(name = "intimacy_points")
-    private Integer intimacyPoints;
+    private Integer intimacyPoints = 0;
 
     @Column(name = "final_state", columnDefinition = "JSON")
     private String finalState;
