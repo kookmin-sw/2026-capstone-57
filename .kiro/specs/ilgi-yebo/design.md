@@ -55,6 +55,7 @@ graph TB
             CACHE[(Amazon ElastiCache Redis)]
             MQ[Amazon SQS / Amazon MQ]
             S3[Amazon S3 - 정적 자산]
+            VECTOR[(Amazon OpenSearch Serverless - 벡터 DB)]
         end
 
         subgraph Scheduler["스케줄러"]
@@ -97,11 +98,13 @@ graph TB
     AI --> BEDROCK
     MATCHING --> AI
     MISSION --> AI
+    MISSION --> VECTOR
     INTERACTION --> AI
     REVIEW --> AI
     PLANNER --> AI
     AI --> CAMPUS
     CAMPUS --> DB
+    CAMPUS --> VECTOR
 ```
 
 ### 설계 결정 사항
@@ -111,8 +114,8 @@ graph TB
 3. **배치 매칭 (월요일 자정 실행)**: Spring Scheduler를 활용한 배치 처리. 매주 월요일 자정에만 실행하여 한 주간의 매칭을 일괄 생성. 중간에 매칭이 일찍 끝나도 다음 월요일까지 재매칭하지 않음
 4. **Redis 캐시 (Amazon ElastiCache)**: Spring Data Redis를 통한 채팅 세션, 매칭 풀 임시 데이터, 게임 상태 등 실시간성이 필요한 데이터에 활용
 5. **메시지 큐 (Amazon SQS / Amazon MQ)**: Spring AMQP를 통한 알림 전송의 비동기 처리로 서비스 간 결합도 감소
-6. **Amazon Bedrock 기반 AI 서비스**: AWS SDK for Java v2의 BedrockRuntimeClient를 활용하여 퀴즈 생성, 회고 질문/글 생성을 수행. MVP에서는 매칭 점수 계산과 동선 추론에 AI를 사용하지 않으며, 시간표 기반 단순 동선 겹침으로 대체한다. 프로필 속성(취미, 관심사, 이상형)과 매칭 범위(나이, 성별)는 데이터 수집만 하고 매칭 알고리즘에 반영하지 않는다. 출시 후 데이터가 충분히 쌓이면 AI 기반 매칭 점수 계산, 동선 추론, 미션 장소 추천으로 확장 예정. 캠퍼스 데이터는 MySQL에 저장하고 Bedrock API 호출 시 프롬프트 컨텍스트로 전달 (Knowledge Bases 미사용). AWS 생태계와의 자연스러운 통합, IAM 기반 인증으로 별도 API 키 관리 불필요, 다양한 파운데이션 모델(Claude, Titan 등) 선택 가능
-7. **캠퍼스 공간 데이터**: 건물/경로/거점 정보를 별도 테이블로 관리하여 AI 추론의 프롬프트 컨텍스트로 활용
+6. **Amazon Bedrock 기반 AI 서비스**: AWS SDK for Java v2의 BedrockRuntimeClient를 활용하여 퀴즈 생성, 회고 질문/글 생성, AI 일기 대화를 수행. 미션 생성은 RAG(Retrieval-Augmented Generation) 파이프라인을 통해 캠퍼스 장소 데이터를 벡터 검색한 후 LLM에 주입하여 맥락에 맞는 미션을 생성한다. MVP에서는 매칭 점수 계산과 동선 추론에 AI를 사용하지 않으며, 시간표 기반 단순 동선 겹침으로 대체한다. 프로필 속성(취미, 관심사, 이상형)과 매칭 범위(나이, 성별)는 데이터 수집만 하고 매칭 알고리즘에 반영하지 않는다. 출시 후 데이터가 충분히 쌓이면 AI 기반 매칭 점수 계산, 동선 추론으로 확장 예정. AWS 생태계와의 자연스러운 통합, IAM 기반 인증으로 별도 API 키 관리 불필요, 다양한 파운데이션 모델(Claude, Titan 등) 선택 가능
+7. **캠퍼스 공간 데이터 + RAG 벡터 저장소**: 건물/경로/거점 정보를 MySQL에 관리하고, 미션 생성을 위해 장소 데이터(장소명, 설명, 특성, 운영시간, 추천 활동)를 Amazon Bedrock Titan Embeddings로 벡터화하여 OpenSearch Serverless에 저장한다. 미션 생성 시 동선 교집합 정보를 쿼리로 유사도 검색하여 관련 장소를 검색(Retrieval)하고, 검색 결과를 Bedrock Claude 프롬프트에 주입(Augmented Generation)하여 자연스러운 미션을 생성한다
 8. **Spring Security + JWT**: 대학 이메일 인증 기반 가입 및 JWT 토큰 기반 인증/인가 처리. `JwtAuthenticationFilter`가 모든 요청에서 Bearer 토큰을 파싱하여 SecurityContext에 userId를 설정한다. 실제 인증 강제는 `@MemberGuard` 커스텀 어노테이션(AOP 기반)이 메서드 단위로 처리하며, `@CurrentMember` 파라미터 어노테이션으로 컨트롤러에서 현재 로그인한 사용자의 UUID를 주입받는다. Spring Security의 `authorizeHttpRequests`는 `permitAll()`로 열어두고, 인증이 필요한 API에만 `@MemberGuard`를 선택적으로 적용하는 구조이다
 9. **Spring Data JPA + MySQL (Amazon RDS Aurora MySQL 호환)**: JPA를 통한 ORM 매핑으로 도메인 모델과 데이터베이스 간 매핑 간소화. 팀 내 MySQL 운영 경험이 풍부하여 생산성 극대화. Aurora MySQL 호환 모드로 고가용성 및 자동 장애 복구 지원. RDS 관리형 서비스로 운영 부담 감소. **스키마 관리는 Flyway 마이그레이션을 사용하지 않고, JPA `ddl-auto: update` 설정을 통해 엔티티 기반으로 테이블을 자동 생성/수정한다.** 엔티티 클래스가 곧 스키마의 단일 진실 공급원(Single Source of Truth)이다
 10. **AWS 배포 전략**: ECS Fargate 기반 컨테이너 배포로 서버 관리 부담 최소화, ALB를 통한 트래픽 분산, RDS/ElastiCache/SQS 등 관리형 서비스 활용으로 운영 효율성 극대화. S3를 통한 정적 자산 관리
@@ -835,9 +838,41 @@ public record GameResult(
 
 #### 9. 미션 서비스 (MissionService)
 
+> **RAG 기반 미션 생성**: 미션 생성은 RAG(Retrieval-Augmented Generation) 파이프라인을 사용한다. 캠퍼스 장소 데이터를 벡터 DB(OpenSearch Serverless)에 임베딩하여 저장하고, 미션 생성 요청 시 동선 교집합 정보를 기반으로 유사도 검색을 수행한 후, 검색된 장소 정보를 LLM 프롬프트에 주입하여 자연스러운 미션을 생성한다.
+
+```mermaid
+flowchart TD
+    A[미션 생성 요청] --> B[동선 교집합 정보 추출]
+    B --> C[검색 쿼리 구성]
+    C --> D["벡터 유사도 검색 (OpenSearch Serverless)"]
+    D --> E[상위 K개 장소 정보 반환]
+    E --> F["프롬프트 구성 (검색 결과 + 사용자 컨텍스트)"]
+    F --> G["LLM 호출 (Bedrock Claude)"]
+    G --> H[미션 생성 결과 반환]
+
+    subgraph "Retrieval (검색)"
+        C
+        D
+        E
+    end
+
+    subgraph "Augmented Generation (증강 생성)"
+        F
+        G
+        H
+    end
+```
+
+**RAG 파이프라인 상세:**
+
+1. **임베딩 & 인덱싱 (오프라인)**: 캠퍼스 장소 데이터(장소명 + 설명 + 특성 + 운영시간 + 추천 활동)를 Bedrock Titan Embeddings로 벡터화하여 OpenSearch Serverless 인덱스에 저장. 관리자가 장소 데이터를 등록/수정할 때 자동으로 재임베딩.
+2. **검색 쿼리 구성 (온라인)**: 동선 교집합 정보(시간대, 건물 위치)와 사용자 프로필을 자연어 쿼리로 변환. 예: "14시에 공학관 근처에서 두 사람이 대화할 수 있는 조용한 장소"
+3. **벡터 유사도 검색**: OpenSearch Serverless에서 코사인 유사도 기반 상위 5개 장소 검색
+4. **프롬프트 증강 & 생성**: 검색된 장소 정보 + 사용자 컨텍스트(프로필, 동선)를 Bedrock Claude 프롬프트에 주입하여 구체적 미션 생성
+
 ```java
 public interface MissionService {
-    /** 동선 기반 미션 생성 (AIService 연동) */
+    /** RAG 기반 미션 생성 (벡터 검색 → LLM 생성) */
     Mission generateMission(String matchId);
 
     /** 미션 수행 확인 */
@@ -856,10 +891,54 @@ public record Mission(
     Instant deadline,
     List<String> confirmedBy,
     boolean extended,
-    MissionStatus status
+    MissionStatus status,
+    @Nullable List<String> retrievedVenueIds  // RAG 검색에 사용된 장소 ID (추적용)
 ) {}
 
 public enum MissionStatus { PENDING, CONFIRMED, EXPIRED }
+```
+
+#### 9-1. 캠퍼스 벡터 저장소 서비스 (CampusVectorStoreService)
+
+> 캠퍼스 장소 데이터의 임베딩 및 벡터 검색을 담당하는 서비스. OpenSearch Serverless를 벡터 DB로 사용한다.
+
+```java
+public interface CampusVectorStoreService {
+    /** 장소 데이터를 벡터화하여 인덱스에 저장 (장소 등록/수정 시 호출) */
+    void indexVenue(CampusVenue venue);
+
+    /** 장소 데이터 벡터 인덱스에서 삭제 */
+    void removeVenueFromIndex(String venueId);
+
+    /** 전체 장소 데이터 재인덱싱 (초기 세팅 또는 스키마 변경 시) */
+    void reindexAll();
+
+    /** 유사도 검색: 쿼리와 관련된 장소 검색 */
+    List<VenueSearchResult> searchVenues(MissionSearchQuery query, int topK);
+}
+
+public record MissionSearchQuery(
+    String naturalLanguageQuery,       // 자연어 검색 쿼리
+    @Nullable String nearBuildingId,   // 근처 건물 필터
+    @Nullable LocalTime targetTime,    // 대상 시간 (운영시간 필터)
+    @Nullable DayOfWeek dayOfWeek      // 요일 (운영시간 필터)
+) {}
+
+public record VenueSearchResult(
+    CampusVenue venue,
+    double similarityScore,
+    String matchReason  // 왜 이 장소가 검색되었는지 설명
+) {}
+
+/**
+ * 벡터 인덱스에 저장되는 장소 문서 구조.
+ * 이 텍스트가 Titan Embeddings로 벡터화된다.
+ */
+public record VenueDocument(
+    String venueId,
+    String embeddingText,  // "학생회관 1층 카페 | 조용하고 대화하기 좋은 분위기 | 카페 | 만남적합도:5 | 월-금 08:00-21:00 | 커피, 대화, 스터디"
+    Map<String, Object> metadata  // 필터링용 메타데이터 (type, meetingSuitability, buildingId 등)
+) {}
 ```
 
 #### 10. 회고 서비스 (ReviewService)
@@ -1071,7 +1150,7 @@ public enum ReminderType { MISSION_DEADLINE, PLANNER_INACTIVE }
 
 #### 14. AI/LLM 서비스 (AIService)
 
-> **MVP 범위**: 퀴즈 생성, 회고 질문/글 생성만 AI를 사용한다. 동선 추론(`inferRoute`), 매칭 점수 계산(`calculateRouteMatchScore`), 미션 생성(`generateMission`)은 MVP에서 AI를 사용하지 않으며, 시간표 기반 단순 로직으로 대체한다. 출시 후 데이터가 충분히 쌓이면 AI 기반으로 확장한다.
+> **MVP 범위**: 퀴즈 생성, 회고 질문/글 생성, AI 일기 대화는 컨텍스트 주입 방식으로 동작한다. 미션 생성은 RAG 파이프라인(벡터 검색 → LLM 생성)을 사용한다. 동선 추론(`inferRoute`), 매칭 점수 계산(`calculateRouteMatchScore`)은 MVP에서 AI를 사용하지 않으며, 시간표 기반 단순 로직으로 대체한다. 출시 후 데이터가 충분히 쌓이면 AI 기반으로 확장한다.
 
 ```java
 public interface AIService {
@@ -1081,8 +1160,8 @@ public interface AIService {
     /** [MVP 후순위] 매칭 점수 계산: MVP에서는 시간대 겹침 기반 단순 점수로 대체 */
     RouteMatchScore calculateRouteMatchScore(InferredRoute routeA, InferredRoute routeB, CampusContext campusData);
 
-    /** [MVP 후순위] 미션 생성: MVP에서는 동선 겹침 장소 기반 단순 미션 생성으로 대체 */
-    GeneratedMission generateMission(RouteOverlap routeOverlap, CampusContext campusData, UserProfilePair userProfiles);
+    /** RAG 기반 미션 생성: 벡터 검색 결과를 프롬프트에 주입하여 미션 생성 */
+    GeneratedMission generateMission(List<VenueSearchResult> retrievedVenues, RouteOverlap routeOverlap, UserProfilePair userProfiles);
 
     /** 퀴즈 생성: 프로필 기반 자연스러운 퀴즈 문항 생성 */
     GeneratedQuiz generateQuiz(UserProfile targetProfile);

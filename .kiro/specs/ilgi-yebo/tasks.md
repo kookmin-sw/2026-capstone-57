@@ -272,7 +272,7 @@
     - **검증 대상: 요구사항 7.2**
 
   - [ ] 8.3 미션 단계 (4단계) 구현
-    - `generateMission`: MVP에서는 동선 겹침 장소 기반 단순 미션 생성 (AI 미사용). 캠퍼스 공간 데이터에서 겹침 장소 인근 거점을 조회하여 미션 제안
+    - `generateMission`: RAG 파이프라인으로 미션 생성. CampusVectorStoreService에서 동선 겹침 장소 기반 유사도 검색 후, 검색 결과를 Bedrock Claude에 주입하여 자연스러운 미션 생성
     - `confirmMission`: 양쪽 미션 수행 확인 시 5단계 해금
     - `extendMissionDeadline`: 미션 기한 1회 연장 (이미 연장된 경우 거부)
     - 미션 기한 만료 처리 (연장 미사용 시 연장 옵션, 연장 후 만료 시 매칭 종료)
@@ -382,9 +382,18 @@
     - MVP에서는 시간대 겹침 기반 단순 점수로 대체. 출시 후 데이터 축적 시 AI 기반으로 확장
     - _요구사항: 4.10_
 
-  - [ ] 15.4 AI 미션 생성 구현 [MVP 후순위]
-    - `generateMission`: 동선 교집합 장소 + 캠퍼스 공간 데이터(장소 특성, 운영시간) 기반 미션 생성
-    - MVP에서는 동선 겹침 장소 인근 거점 기반 단순 미션 생성으로 대체
+  - [ ] 15.4 RAG 기반 미션 생성 구현
+    - CampusVectorStoreService 구현 (OpenSearch Serverless 연동)
+    - Bedrock Titan Embeddings를 사용한 장소 데이터 벡터화 로직
+    - `indexVenue`: 장소 등록/수정 시 벡터 인덱스 자동 업데이트
+    - `searchVenues`: 동선 교집합 정보 기반 유사도 검색 (상위 5개)
+    - `reindexAll`: 전체 재인덱싱 (초기 세팅용)
+    - MissionService.generateMission RAG 파이프라인 구현:
+      1. 동선 교집합에서 검색 쿼리 구성
+      2. CampusVectorStoreService.searchVenues로 관련 장소 검색 (Retrieval)
+      3. 검색 결과 + 사용자 컨텍스트를 Bedrock Claude 프롬프트에 주입 (Augmented Generation)
+      4. 생성된 미션 반환
+    - OpenSearch Serverless 인덱스 설정 (knn_vector 필드, 코사인 유사도)
     - _요구사항: 8.1, 14.6_
 
   - [ ] 15.5 AI 퀴즈 생성 구현
