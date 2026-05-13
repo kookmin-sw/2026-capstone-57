@@ -210,8 +210,8 @@
 - [ ] 6. 체크포인트 - 매칭 엔진 검증
   - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
 
-- [ ] 7. 단계별 상호작용 서비스 구현 (1~2단계)
-  - [ ] 7.1 InteractionService 핵심 로직 구현
+- [x] 7. 단계별 상호작용 서비스 구현 (1~2단계)
+  - [x] 7.1 InteractionService 핵심 로직 구현
     - `getInteractionState`: 현재 상호작용 상태 조회
     - `respondToStageAdvance`: 단계 진행 동의/거부 처리
     - `terminateMatch`: 매칭 종료 (거부, 기한 만료, 신고 등)
@@ -223,7 +223,7 @@
     - **Property 19: 거부 시 매칭 종료**
     - **검증 대상: 요구사항 5.4, 6.3, 6.4, 7.3, 8.3**
 
-  - [ ] 7.3 퀴즈 단계 (1단계) 구현
+  - [x] 7.3 퀴즈 단계 (1단계) 구현
     - AI 기반 상대방 프로필 퀴즈 생성 (AIService.generateQuiz 연동, 최소 5문항)
     - 퀴즈 완료 시 정답률 및 상대방 요약 정보 제공
     - 양쪽 퀴즈 완료 시 2단계 해금
@@ -233,7 +233,7 @@
     - **Property 16: 퀴즈 불변식**
     - **검증 대상: 요구사항 5.2, 5.3**
 
-  - [ ] 7.5 힌트 질문 기능 구현
+  - [x] 7.5 힌트 질문 기능 구현
     - `sendHintQuestion`: 퀴즈 단계에서만 힌트 질문 전송 가능
     - `answerHintQuestion`: 힌트 질문 답변 처리
     - `getHintQuestions`: 힌트 질문/답변 목록 조회
@@ -246,7 +246,7 @@
     - **Property 34: 힌트 질문은 퀴즈 단계에서만 가능**
     - **검증 대상: 요구사항 5.5, 5.6, 5.7, 5.8**
 
-  - [ ] 7.7 채팅 단계 (2단계) 구현
+  - [x] 7.7 채팅 단계 (2단계) 구현
     - `startChatSession`: 30분 제한 채팅 세션 생성
     - `sendMessage`: 메시지 전송 (Spring WebSocket + Redis 기반 실시간 처리)
     - `getIcebreakerQuestion`: 아이스브레이킹 질문 제안
@@ -343,8 +343,8 @@
 - [ ] 13. 체크포인트 - 보조 서비스 검증
   - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
 
-- [ ] 14. 캠퍼스 공간 데이터 서비스 구현
-  - [ ] 14.1 CampusDataService 구현
+- [x] 14. 캠퍼스 공간 데이터 서비스 구현
+  - [x] 14.1 CampusDataService 구현
     - `createBuilding`, `updateBuilding`, `getBuildings`, `getBuildingById`: 건물 CRUD (Spring Data JPA)
     - `createPath`, `updatePath`, `getPathBetween`, `getAllPaths`: 경로 CRUD
     - `createVenue`, `updateVenue`, `getVenues`, `getVenueById`: 거점(만남 장소) CRUD
@@ -352,7 +352,7 @@
     - 관리자 권한 검증 로직 (Spring Security @PreAuthorize)
     - _요구사항: 14.1, 14.2, 14.3, 14.4, 14.5_
 
-  - [ ] 14.2 캠퍼스 시드 데이터 작성
+  - [x] 14.2 캠퍼스 시드 데이터 작성
     - Flyway 시드 마이그레이션 또는 ApplicationRunner로 테스트용 캠퍼스 건물 데이터 (최소 10개 건물)
     - 건물 간 경로 데이터 (주요 이동 경로)
     - 주요 거점 데이터 (카페, 매점, 벤치, 광장 등)
