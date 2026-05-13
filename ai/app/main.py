@@ -6,8 +6,9 @@ lifespan 이벤트 핸들러를 통해 컴포넌트 초기화/정리를 관리�
 시작 시:
 - Settings 로드
 - BedrockClient, SQSPublisher, ConversationManager, RAG 컴포넌트 초기화
+- 공유 의존성을 app.state에 등록 (HTTP 라우터에서 사용)
 - 기능별 핸들러 생성 및 MessageRouter 등록
-- SQS Poller 시작 (기능별 큐 폴링)
+- SQS Poller 시작 (퀴즈 큐만 폴링 — 일기/회고는 HTTP로 전환)
 - 세션 만료 정리 주기적 태스크 등록
 
 종료 시:
@@ -16,6 +17,8 @@ lifespan 이벤트 핸들러를 통해 컴포넌트 초기화/정리를 관리�
 
 Requirements: 1.6, 3.1, 3.4, 3.8
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -26,9 +29,9 @@ from fastapi import FastAPI
 from app.bedrock.client import BedrockClient
 from app.config import get_settings
 from app.conversation.manager import ConversationManager
-from app.features.diary.handler import DiaryHandler
+from app.features.diary.router import router as diary_router
 from app.features.quiz.handler import QuizHandler
-from app.features.retrospective.handler import RetrospectiveHandler
+from app.features.retrospective.router import router as retro_router
 from app.health import router as health_router
 from app.rag.embeddings import EmbeddingGenerator
 from app.rag.pipeline import RAGPipeline
@@ -92,32 +95,22 @@ async def lifespan(app: FastAPI):
     vector_store = VectorStore(settings)
     rag_pipeline = RAGPipeline(embedding_generator, vector_store, settings)
 
-    # 기능별 핸들러 생성
+    # 공유 의존성을 app.state에 등록 (HTTP 라우터에서 사용)
+    app.state.settings = settings
+    app.state.bedrock_client = bedrock_client
+    app.state.conversation_manager = conversation_manager
+    app.state.rag_pipeline = rag_pipeline
+    app.state.embedding_generator = embedding_generator
+    app.state.vector_store = vector_store
+
+    # 기능별 핸들러 생성 (퀴즈만 SQS 유지)
     quiz_handler = QuizHandler(bedrock_client, publisher, settings)
 
-    retro_handler = RetrospectiveHandler(
-        bedrock_client, publisher, conversation_manager, rag_pipeline, settings
-    )
-
-    diary_handler = DiaryHandler(
-        bedrock_client, publisher, conversation_manager, rag_pipeline, settings
-    )
-
-    # 기능별 MessageRouter 생성 (큐별 독립 라우터)
+    # 퀴즈 MessageRouter 생성
     quiz_router = MessageRouter()
     quiz_router.register_handler("GENERATE_QUIZ", quiz_handler.handle)
 
-    retro_router = MessageRouter()
-    retro_router.register_handler("START_SESSION", retro_handler.handle)
-    retro_router.register_handler("ANSWER", retro_handler.handle)
-    retro_router.register_handler("COMPLETE", retro_handler.handle)
-
-    diary_router = MessageRouter()
-    diary_router.register_handler("START_SESSION", diary_handler.handle)
-    diary_router.register_handler("ANSWER", diary_handler.handle)
-    diary_router.register_handler("COMPLETE", diary_handler.handle)
-
-    # SQS Poller 생성 및 큐 등록
+    # SQS Poller 생성 및 큐 등록 (퀴즈만 폴링)
     poller = SQSPoller(
         region=settings.aws_region,
         poll_interval=settings.sqs_poll_interval_seconds,
@@ -127,14 +120,6 @@ async def lifespan(app: FastAPI):
     poller.register_queue(
         settings.sqs_quiz_request_queue,
         lambda msg: quiz_router.route("quiz-requests", msg),
-    )
-    poller.register_queue(
-        settings.sqs_retro_request_queue,
-        lambda msg: retro_router.route("retro-requests", msg),
-    )
-    poller.register_queue(
-        settings.sqs_diary_request_queue,
-        lambda msg: diary_router.route("diary-requests", msg),
     )
 
     # SQS Poller 시작
@@ -174,3 +159,5 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(diary_router)
+app.include_router(retro_router)
