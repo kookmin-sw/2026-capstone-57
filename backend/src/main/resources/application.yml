@@ -32,12 +32,6 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
-
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -88,23 +82,13 @@ chat:
   websocket:
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:*}
 
-aws:
-  region: ${AWS_REGION:ap-northeast-2}
-  bedrock:
-    model-id: ${BEDROCK_MODEL_ID:anthropic.claude-3-sonnet-20240229-v1:0}
-    timeout-seconds: 30
-    max-tokens: 4096
 cloud:
   aws:
     region:
-      static: ${AWS_REGION:ap-northeast-2}
+      static: ${AWS_REGION:us-east-1}
     sqs:
       max-concurrent-messages: 5
-      quiz-request-queue: ${SQS_QUIZ_REQUEST_QUEUE:}
-      quiz-response-queue: ${SQS_QUIZ_RESPONSE_QUEUE:}
-      retro-request-queue: ${SQS_RETRO_REQUEST_QUEUE:}
-      retro-response-queue: ${SQS_RETRO_RESPONSE_QUEUE:}
-      diary-request-queue: ${SQS_DIARY_REQUEST_QUEUE:}
-      diary-response-queue: ${SQS_DIARY_RESPONSE_QUEUE:}
+      quiz-request-queue: ${SQS_QUIZ_REQUEST_QUEUE}
+      quiz-response-queue: ${SQS_QUIZ_RESPONSE_QUEUE}
     bedrock:
-      model-id: ${BEDROCK_MODEL_ID:}
+      model-id: ${BEDROCK_MODEL_ID}
