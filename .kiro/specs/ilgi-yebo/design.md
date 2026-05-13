@@ -415,6 +415,23 @@ public record EmotionTrend(LocalDate date, EmotionTag emotion) {}
 
 > AI 일기 작성의 멀티턴 대화를 관리하는 서비스. DiaryService와 분리하여 단일 책임 원칙을 준수하고, 추후 Conversation 도메인 확장 시 독립적으로 발전 가능하도록 설계한다.
 
+**통신 아키텍처:**
+
+AI 일기 멀티턴 대화는 **동기 요청-응답** 방식으로 동작한다. SQS/AMQP 등 메시지 큐를 사용하지 않는다.
+
+```
+모바일 앱 ──HTTP──→ Spring Boot REST API ──AWS SDK──→ Amazon Bedrock
+    ↑                      │                              │
+    └──── JSON 응답 ───────┘←──── 모델 응답 ──────────────┘
+```
+
+- Spring Boot 내부에서 `BedrockRuntimeClient.invokeModel()`을 직접 호출하여 Bedrock API와 통신
+- 별도의 Python/FastAPI 서버 없이 Java SDK로 직접 호출
+- Bedrock 응답 시간(~2-5초)이 HTTP 요청 내에서 처리 가능한 수준이므로 동기 방식 채택
+- 사용자가 질문을 받고 답변을 입력하는 시간이 AI 응답 시간보다 훨씬 길어 병목 없음
+- 에러 처리: Spring Retry로 Bedrock API 타임아웃/스로틀링 시 최대 3회 재시도
+- SQS는 알림 서비스(NotificationService)에서만 사용 (일기 작성 완료 후 경험치 부여 알림 등 fire-and-forget 이벤트)
+
 ```java
 public interface DiarySessionService {
     /** AI 일기 세션 시작 - 첫 번째 질문 생성 */
