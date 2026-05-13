@@ -145,12 +145,12 @@
     - maxTurns 기본값 5, AI 조기 종료 지원
     - _요구사항: 3.1 (AI 일기 확장)_
 
-  - [ ] 3.5 AIService 일기 관련 메서드 구현
-    - `generateDiaryFirstQuestion`: 당일 플래너 + 전날 일기 컨텍스트 기반 첫 질문 생성
-    - `generateDiaryNextQuestion`: 이전 대화 히스토리 기반 다음 질문 생성 또는 대화 완료 판단
-    - `generateDiaryContent`: 전체 대화 내용 기반 일기 내용 + 감정 태그 추천 생성
-    - BedrockRuntimeClient.invokeModel 호출
-    - 프롬프트 템플릿 작성 (일기 질문 생성용, 일기 내용 생성용)
+  - [ ] 3.5 AI 서버 일기 HTTP 클라이언트 연동
+    - DiarySessionService에서 AIServiceClient의 일기 관련 HTTP 메서드 호출
+    - `generateDiaryFirstQuestion`: 당일 플래너 + 전날 일기를 입력값으로 AI 서버에 전달
+    - `generateDiaryNextQuestion`: 이전 대화 히스토리를 입력값으로 AI 서버에 전달, 다음 질문 또는 대화 완료 응답 수신
+    - `generateDiaryContent`: 전체 대화 내용을 입력값으로 AI 서버에 전달, 생성된 일기 + 감정 태그 추천 응답 수신
+    - AI 서버 엔드포인트: POST /api/diary/first-question, /next-question, /generate
     - _요구사항: 3.1 (AI 일기 확장)_
 
   - [ ]* 3.6 Property 7, 8, 9, 10 속성 테스트: 일기 관련
@@ -364,13 +364,15 @@
     - jqwik로 임의의 건물/경로/거점 데이터에 대해 등록 후 조회 시 동일 데이터 반환 검증
     - **검증 대상: 요구사항 14.1, 14.2, 14.3, 14.4, 14.5**
 
-- [ ] 15. AI/LLM 서비스 구현 (Amazon Bedrock)
-  - [ ] 15.1 AIService 기본 구조 구현
-    - AWS SDK for Java v2의 BedrockRuntimeClient 설정 및 Spring Bean 등록
-    - 프롬프트 템플릿 관리 모듈 (캠퍼스 데이터를 프롬프트 컨텍스트로 주입)
+- [ ] 15. AI 서비스 클라이언트 구현 (별도 AI 서버 연동)
+  - [ ] 15.1 AIServiceClient 기본 구조 구현
+    - AIServiceClient 인터페이스 정의 (비동기 SQS + 동기 HTTP 통합)
+    - SQS 발행 클라이언트 구현 (퀴즈/미션 요청큐 발행)
+    - SQS 응답큐 리스너 구현 (퀴즈/미션 생성 결과 수신 → DB 저장)
+    - HTTP 클라이언트 구현 (RestTemplate/WebClient 기반, 일기/회고용)
+    - 에러 핸들링: HTTP 타임아웃 시 Spring Retry 최대 3회 재시도
     - 응답 파싱 및 검증 유틸리티 (Jackson ObjectMapper)
-    - 에러 핸들링 (API 타임아웃, ThrottlingException, 잘못된 응답 형식) - Spring Retry 활용
-    - _요구사항: 5.1, 9.2, 9.3_
+    - _요구사항: 5.1, 8.1, 9.2, 9.3_
 
   - [ ] 15.2 AI 동선 추론 구현 [MVP 후순위]
     - `inferRoute`: 시간표/플래너 + 캠퍼스 공간 데이터 기반 이동 경로 추론
@@ -382,37 +384,37 @@
     - MVP에서는 시간대 겹침 기반 단순 점수로 대체. 출시 후 데이터 축적 시 AI 기반으로 확장
     - _요구사항: 4.10_
 
-  - [ ] 15.4 RAG 기반 미션 생성 구현
-    - CampusVectorStoreService 구현 (OpenSearch Serverless 연동)
-    - Bedrock Titan Embeddings를 사용한 장소 데이터 벡터화 로직
-    - `indexVenue`: 장소 등록/수정 시 벡터 인덱스 자동 업데이트
-    - `searchVenues`: 동선 교집합 정보 기반 유사도 검색 (상위 5개)
-    - `reindexAll`: 전체 재인덱싱 (초기 세팅용)
-    - MissionService.generateMission RAG 파이프라인 구현:
-      1. 동선 교집합에서 검색 쿼리 구성
-      2. CampusVectorStoreService.searchVenues로 관련 장소 검색 (Retrieval)
-      3. 검색 결과 + 사용자 컨텍스트를 Bedrock Claude 프롬프트에 주입 (Augmented Generation)
-      4. 생성된 미션 반환
-    - OpenSearch Serverless 인덱스 설정 (knn_vector 필드, 코사인 유사도)
+  - [ ] 15.4 RAG 기반 미션 생성 연동 구현
+    - MissionGenerationInput DTO 정의 (동선 교집합 + 사용자 프로필)
+    - 매칭 성사 시 SQS 미션 요청큐에 MissionGenerationInput 발행
+    - SQS 응답큐 리스너에서 생성된 미션 결과 수신 → MissionEntity DB 저장
+    - AI 서버 측 RAG 파이프라인 (OpenSearch 검색 + Bedrock 생성)은 AI 서버에서 구현
     - _요구사항: 8.1, 14.6_
 
-  - [ ] 15.5 AI 퀴즈 생성 구현
-    - `generateQuiz`: 프로필(취미, 관심사, 성격 유형) 기반 자연스러운 퀴즈 문항 생성
-    - 최소 5문항, 객관식 형태, 정답 포함 검증
-    - BedrockRuntimeClient.invokeModel 호출
+  - [ ] 15.5 퀴즈 사전 생성 연동 구현
+    - 퀴즈 생성 시점을 클라이언트 요청 → 매칭 성사 시점으로 변경
+    - 매칭 성사 시 SQS 퀴즈 요청큐에 QuizGenerationInput (상대방 프로필) 발행
+    - SQS 응답큐 리스너에서 생성된 퀴즈 결과 수신 → DB 저장
+    - 클라이언트 퀴즈 조회 API: DB에서 즉시 반환 (대기 없음)
     - _요구사항: 5.1_
 
-  - [ ] 15.6 AI 회고 질문/글 생성 구현
-    - `generateReviewQuestions`: 만남 컨텍스트 기반 회고 질문 생성
-    - `generateReviewContent`: 답변 기반 회고 글 자동 생성
-    - BedrockRuntimeClient.invokeModel 호출
+  - [ ] 15.6 AI 일기 대화 HTTP 클라이언트 구현
+    - AI 서버 엔드포인트 호출: POST /api/diary/first-question, /next-question, /generate
+    - DiarySessionService에서 AIServiceClient.generateDiaryFirstQuestion/NextQuestion/Content 호출
+    - 입력값: 플래너 데이터 + 대화 히스토리, 출력값: 질문 또는 생성된 일기
+    - _요구사항: 3.1 (AI 일기 확장)_
+
+  - [ ] 15.7 AI 회고 대화 HTTP 클라이언트 구현
+    - AI 서버 엔드포인트 호출: POST /api/review/questions, /generate
+    - ReviewService에서 AIServiceClient.generateReviewQuestions/Content 호출
+    - 입력값: 만남 컨텍스트 + 답변, 출력값: 질문 목록 또는 생성된 회고 글
     - _요구사항: 9.2, 9.3_
 
-  - [ ]* 15.7 Property 37, 38, 40 속성 테스트: AI 서비스 관련
+  - [ ]* 15.8 Property 37, 38, 40 속성 테스트: AI 서비스 관련
     - **Property 37: AI 동선 추론 - 캠퍼스 공간 데이터 활용**
     - **Property 38: AI 미션 생성 - 운영시간 준수**
     - **Property 40: AI 퀴즈 생성 - 프로필 기반 관련성**
-    - BedrockRuntimeClient를 Mockito로 모킹하여 테스트
+    - AI 서버 HTTP/SQS 응답을 Mockito로 모킹하여 테스트
     - **검증 대상: 요구사항 2.6, 5.1, 8.1, 14.6**
 
 - [ ] 16. 체크포인트 - AI/캠퍼스 서비스 검증

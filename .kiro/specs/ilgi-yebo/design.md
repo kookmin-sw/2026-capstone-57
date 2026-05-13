@@ -42,24 +42,30 @@ graph TB
             EXP[경험치 서비스]
             SAFETY[안전/신고 서비스]
             NOTIFICATION[알림 서비스 - Spring AMQP]
-            AI[AI/LLM 서비스 - AWS SDK Bedrock]
             CAMPUS[캠퍼스 공간 데이터 서비스]
         end
 
-        subgraph AI_Service["AI 서비스"]
-            BEDROCK[Amazon Bedrock]
+        subgraph AI_Server["AI 서버 (별도 서비스)"]
+            AI_QUIZ[퀴즈 생성 - SQS 소비]
+            AI_MISSION[미션 생성 - RAG + SQS 소비]
+            AI_DIARY[일기 대화 - HTTP 엔드포인트]
+            AI_REVIEW[회고 대화 - HTTP 엔드포인트]
+        end
+
+        subgraph AWS_AI["AWS AI 서비스"]
+            BEDROCK[Amazon Bedrock - Claude/Titan]
+            VECTOR[(Amazon OpenSearch Serverless - 벡터 DB)]
         end
 
         subgraph Data["데이터 계층"]
             DB[(Amazon RDS MySQL - Aurora MySQL 호환)]
             CACHE[(Amazon ElastiCache Redis)]
-            MQ[Amazon SQS / Amazon MQ]
+            MQ[Amazon SQS]
             S3[Amazon S3 - 정적 자산]
-            VECTOR[(Amazon OpenSearch Serverless - 벡터 DB)]
         end
 
         subgraph Scheduler["스케줄러"]
-            BATCH[배치 매칭 스케줄러 - Spring Scheduler 평일 자정 실행]
+            BATCH[배치 매칭 스케줄러 - Spring Scheduler 월요일 자정 실행]
             REMINDER[리마인더 스케줄러 - Spring Scheduler]
         end
     end
@@ -91,20 +97,28 @@ graph TB
     EXP --> DB
     SAFETY --> DB
     NOTIFICATION --> MQ
+    CAMPUS --> DB
 
     BATCH --> MATCHING
     REMINDER --> NOTIFICATION
 
-    AI --> BEDROCK
-    MATCHING --> AI
-    MISSION --> AI
-    MISSION --> VECTOR
-    INTERACTION --> AI
-    REVIEW --> AI
-    PLANNER --> AI
-    AI --> CAMPUS
-    CAMPUS --> DB
-    CAMPUS --> VECTOR
+    %% 비동기 큐 통신 (사전 생성)
+    MATCHING -->|"매칭 성사 시 SQS 발행"| MQ
+    MQ -->|"퀴즈 요청"| AI_QUIZ
+    MQ -->|"미션 요청"| AI_MISSION
+    AI_QUIZ -->|"SQS 응답"| MQ
+    AI_MISSION -->|"SQS 응답"| MQ
+
+    %% 동기 HTTP 통신 (실시간 대화)
+    DIARY -->|"HTTP"| AI_DIARY
+    REVIEW -->|"HTTP"| AI_REVIEW
+
+    %% AI 서버 → AWS AI 서비스
+    AI_QUIZ --> BEDROCK
+    AI_MISSION --> VECTOR
+    AI_MISSION --> BEDROCK
+    AI_DIARY --> BEDROCK
+    AI_REVIEW --> BEDROCK
 ```
 
 ### 설계 결정 사항
@@ -114,8 +128,12 @@ graph TB
 3. **배치 매칭 (월요일 자정 실행)**: Spring Scheduler를 활용한 배치 처리. 매주 월요일 자정에만 실행하여 한 주간의 매칭을 일괄 생성. 중간에 매칭이 일찍 끝나도 다음 월요일까지 재매칭하지 않음
 4. **Redis 캐시 (Amazon ElastiCache)**: Spring Data Redis를 통한 채팅 세션, 매칭 풀 임시 데이터, 게임 상태 등 실시간성이 필요한 데이터에 활용
 5. **메시지 큐 (Amazon SQS / Amazon MQ)**: Spring AMQP를 통한 알림 전송의 비동기 처리로 서비스 간 결합도 감소
-6. **Amazon Bedrock 기반 AI 서비스**: AWS SDK for Java v2의 BedrockRuntimeClient를 활용하여 퀴즈 생성, 회고 질문/글 생성, AI 일기 대화를 수행. 미션 생성은 RAG(Retrieval-Augmented Generation) 파이프라인을 통해 캠퍼스 장소 데이터를 벡터 검색한 후 LLM에 주입하여 맥락에 맞는 미션을 생성한다. MVP에서는 매칭 점수 계산과 동선 추론에 AI를 사용하지 않으며, 시간표 기반 단순 동선 겹침으로 대체한다. 프로필 속성(취미, 관심사, 이상형)과 매칭 범위(나이, 성별)는 데이터 수집만 하고 매칭 알고리즘에 반영하지 않는다. 출시 후 데이터가 충분히 쌓이면 AI 기반 매칭 점수 계산, 동선 추론으로 확장 예정. AWS 생태계와의 자연스러운 통합, IAM 기반 인증으로 별도 API 키 관리 불필요, 다양한 파운데이션 모델(Claude, Titan 등) 선택 가능
-7. **캠퍼스 공간 데이터 + RAG 벡터 저장소**: 건물/경로/거점 정보를 MySQL에 관리하고, 미션 생성을 위해 장소 데이터(장소명, 설명, 특성, 운영시간, 추천 활동)를 Amazon Bedrock Titan Embeddings로 벡터화하여 OpenSearch Serverless에 저장한다. 미션 생성 시 동선 교집합 정보를 쿼리로 유사도 검색하여 관련 장소를 검색(Retrieval)하고, 검색 결과를 Bedrock Claude 프롬프트에 주입(Augmented Generation)하여 자연스러운 미션을 생성한다
+6. **별도 AI 서버 + Amazon Bedrock**: AI 관련 로직(프롬프트 관리, Bedrock 호출, RAG 검색)은 별도 AI 서버에서 담당한다. Spring Boot 백엔드는 필요한 입력값만 전달하고, AI 서버가 프롬프트를 구성하여 Bedrock을 호출한다. 통신 방식은 기능별로 구분한다:
+   - **퀴즈/미션 (비동기 SQS)**: 매칭 성사 시점에 사전 생성. Spring Boot가 SQS 요청큐에 입력값을 발행하면, AI 서버가 소비하여 Bedrock 호출 후 SQS 응답큐로 결과를 반환. 사용자 대기 없음
+   - **일기/회고 (동기 HTTP)**: 사용자가 실시간으로 대화하는 흐름. Spring Boot가 AI 서버의 HTTP 엔드포인트를 직접 호출하여 즉시 응답을 받음
+   - **미션 RAG**: AI 서버가 OpenSearch Serverless에서 벡터 유사도 검색을 수행한 후 검색 결과를 Bedrock 프롬프트에 주입하여 미션 생성
+   - MVP에서는 매칭 점수 계산과 동선 추론에 AI를 사용하지 않으며, 시간표 기반 단순 동선 겹침으로 대체한다. 출시 후 데이터가 충분히 쌓이면 AI 기반으로 확장 예정
+7. **캠퍼스 공간 데이터 + RAG 벡터 저장소**: 건물/경로/거점 정보를 MySQL에 관리하고, 미션 생성을 위해 장소 데이터(장소명, 설명, 특성, 운영시간, 추천 활동)를 Amazon Bedrock Titan Embeddings로 벡터화하여 OpenSearch Serverless에 저장한다. AI 서버가 미션 생성 요청을 받으면 동선 교집합 정보를 쿼리로 유사도 검색하여 관련 장소를 검색(Retrieval)하고, 검색 결과를 Bedrock Claude 프롬프트에 주입(Augmented Generation)하여 자연스러운 미션을 생성한다
 8. **Spring Security + JWT**: 대학 이메일 인증 기반 가입 및 JWT 토큰 기반 인증/인가 처리. `JwtAuthenticationFilter`가 모든 요청에서 Bearer 토큰을 파싱하여 SecurityContext에 userId를 설정한다. 실제 인증 강제는 `@MemberGuard` 커스텀 어노테이션(AOP 기반)이 메서드 단위로 처리하며, `@CurrentMember` 파라미터 어노테이션으로 컨트롤러에서 현재 로그인한 사용자의 UUID를 주입받는다. Spring Security의 `authorizeHttpRequests`는 `permitAll()`로 열어두고, 인증이 필요한 API에만 `@MemberGuard`를 선택적으로 적용하는 구조이다
 9. **Spring Data JPA + MySQL (Amazon RDS Aurora MySQL 호환)**: JPA를 통한 ORM 매핑으로 도메인 모델과 데이터베이스 간 매핑 간소화. 팀 내 MySQL 운영 경험이 풍부하여 생산성 극대화. Aurora MySQL 호환 모드로 고가용성 및 자동 장애 복구 지원. RDS 관리형 서비스로 운영 부담 감소. **스키마 관리는 Flyway 마이그레이션을 사용하지 않고, JPA `ddl-auto: update` 설정을 통해 엔티티 기반으로 테이블을 자동 생성/수정한다.** 엔티티 클래스가 곧 스키마의 단일 진실 공급원(Single Source of Truth)이다
 10. **AWS 배포 전략**: ECS Fargate 기반 컨테이너 배포로 서버 관리 부담 최소화, ALB를 통한 트래픽 분산, RDS/ElastiCache/SQS 등 관리형 서비스 활용으로 운영 효율성 극대화. S3를 통한 정적 자산 관리
@@ -420,19 +438,19 @@ public record EmotionTrend(LocalDate date, EmotionTag emotion) {}
 
 **통신 아키텍처:**
 
-AI 일기 멀티턴 대화는 **동기 요청-응답** 방식으로 동작한다. SQS/AMQP 등 메시지 큐를 사용하지 않는다.
+AI 일기 멀티턴 대화는 **동기 HTTP 요청-응답** 방식으로 별도 AI 서버와 통신한다. SQS/AMQP 등 메시지 큐를 사용하지 않는다.
 
 ```
-모바일 앱 ──HTTP──→ Spring Boot REST API ──AWS SDK──→ Amazon Bedrock
-    ↑                      │                              │
-    └──── JSON 응답 ───────┘←──── 모델 응답 ──────────────┘
+모바일 앱 ──HTTP──→ Spring Boot REST API ──HTTP──→ AI 서버 ──AWS SDK──→ Amazon Bedrock
+    ↑                      │                          │                      │
+    └──── JSON 응답 ───────┘←──── JSON 응답 ──────────┘←──── 모델 응답 ──────┘
 ```
 
-- Spring Boot 내부에서 `BedrockRuntimeClient.invokeModel()`을 직접 호출하여 Bedrock API와 통신
-- 별도의 Python/FastAPI 서버 없이 Java SDK로 직접 호출
-- Bedrock 응답 시간(~2-5초)이 HTTP 요청 내에서 처리 가능한 수준이므로 동기 방식 채택
+- Spring Boot는 필요한 입력값(플래너, 대화 히스토리 등)만 AI 서버에 전달
+- AI 서버가 프롬프트를 구성하고 Bedrock을 호출하여 결과를 반환
+- AI 서버 응답 시간(~2-5초)이 HTTP 요청 내에서 처리 가능한 수준이므로 동기 방식 채택
 - 사용자가 질문을 받고 답변을 입력하는 시간이 AI 응답 시간보다 훨씬 길어 병목 없음
-- 에러 처리: Spring Retry로 Bedrock API 타임아웃/스로틀링 시 최대 3회 재시도
+- 에러 처리: Spring Retry로 AI 서버 타임아웃 시 최대 3회 재시도
 
 ```java
 public interface DiarySessionService {
@@ -498,39 +516,53 @@ public enum DiarySessionStatus {
 }
 ```
 
-#### 4-2. AI 일기 질문 생성 (AIService 확장)
+#### 4-2. AI 일기 질문 생성 (AI 서버 연동)
 
-> AIService에 일기 관련 질문/내용 생성 메서드를 추가한다. 당일 플래너 데이터를 컨텍스트로 활용하여 맞춤형 질문을 생성한다.
+> 일기 관련 AI 호출은 별도 AI 서버의 HTTP 엔드포인트를 통해 수행한다. Spring Boot는 당일 플래너 데이터와 대화 히스토리를 입력값으로 전달하고, AI 서버가 프롬프트를 구성하여 Bedrock을 호출한다.
 
 ```java
-// AIService에 추가되는 메서드
-public interface AIService {
-    // ... 기존 메서드 ...
+/**
+ * DiarySessionService가 AI 서버와 통신할 때 사용하는 입출력 구조.
+ * AIServiceClient 인터페이스의 일기 관련 메서드를 통해 호출한다.
+ *
+ * AI 서버 엔드포인트:
+ *   POST /api/diary/first-question  → DiaryQuestionInput → DiaryQuestionResponse
+ *   POST /api/diary/next-question   → DiaryNextQuestionInput → DiaryNextQuestionResponse
+ *   POST /api/diary/generate        → DiaryContentInput → DiaryContentResponse
+ */
 
-    /** 일기 작성을 위한 첫 번째 질문 생성 */
-    String generateDiaryFirstQuestion(DiaryQuestionContext context);
-
-    /** 이전 대화 기반 다음 질문 생성 (또는 대화 완료 판단) */
-    DiaryNextQuestionResult generateDiaryNextQuestion(DiaryQuestionContext context, List<DiaryConversationTurn> history);
-
-    /** 대화 내용 기반 일기 내용 생성 */
-    DiaryGenerationResult generateDiaryContent(List<DiaryConversationTurn> conversationHistory, DiaryQuestionContext context);
-}
-
-public record DiaryQuestionContext(
+// Spring Boot가 AI 서버에 전달하는 입력값
+public record DiaryQuestionInput(
     String userId,
     LocalDate date,
     @Nullable List<PlanEntry> todaySchedule,  // 당일 플래너 데이터
     @Nullable DiaryEntry previousDiary        // 전날 일기 (연속성 참고)
 ) {}
 
-public record DiaryNextQuestionResult(
+public record DiaryNextQuestionInput(
+    String userId,
+    LocalDate date,
+    List<DiaryConversationTurn> conversationHistory,
+    @Nullable List<PlanEntry> todaySchedule
+) {}
+
+public record DiaryContentInput(
+    String userId,
+    LocalDate date,
+    List<DiaryConversationTurn> conversationHistory,
+    @Nullable List<PlanEntry> todaySchedule
+) {}
+
+// AI 서버가 반환하는 응답
+public record DiaryQuestionResponse(String question) {}
+
+public record DiaryNextQuestionResponse(
     boolean isConversationComplete,
     @Nullable String nextQuestion,
     @Nullable String completionReason  // 예: "충분한 답변 수집", "사용자 피로도 고려"
 ) {}
 
-public record DiaryGenerationResult(
+public record DiaryContentResponse(
     String generatedContent,
     @Nullable EmotionTag suggestedEmotion
 ) {}
@@ -898,46 +930,42 @@ public record Mission(
 public enum MissionStatus { PENDING, CONFIRMED, EXPIRED }
 ```
 
-#### 9-1. 캠퍼스 벡터 저장소 서비스 (CampusVectorStoreService)
+#### 9-1. 캠퍼스 벡터 저장소 (AI 서버 측 구현)
 
-> 캠퍼스 장소 데이터의 임베딩 및 벡터 검색을 담당하는 서비스. OpenSearch Serverless를 벡터 DB로 사용한다.
+> 캠퍼스 장소 데이터의 임베딩 및 벡터 검색은 **AI 서버**에서 담당한다. Spring Boot의 CampusDataService가 장소를 등록/수정하면, AI 서버에 인덱싱 요청을 보내 OpenSearch Serverless에 벡터를 업데이트한다. 미션 생성 시에는 AI 서버가 자체적으로 벡터 검색을 수행한다.
 
 ```java
-public interface CampusVectorStoreService {
-    /** 장소 데이터를 벡터화하여 인덱스에 저장 (장소 등록/수정 시 호출) */
-    void indexVenue(CampusVenue venue);
-
-    /** 장소 데이터 벡터 인덱스에서 삭제 */
-    void removeVenueFromIndex(String venueId);
-
-    /** 전체 장소 데이터 재인덱싱 (초기 세팅 또는 스키마 변경 시) */
-    void reindexAll();
-
-    /** 유사도 검색: 쿼리와 관련된 장소 검색 */
-    List<VenueSearchResult> searchVenues(MissionSearchQuery query, int topK);
-}
-
-public record MissionSearchQuery(
-    String naturalLanguageQuery,       // 자연어 검색 쿼리
-    @Nullable String nearBuildingId,   // 근처 건물 필터
-    @Nullable LocalTime targetTime,    // 대상 시간 (운영시간 필터)
-    @Nullable DayOfWeek dayOfWeek      // 요일 (운영시간 필터)
-) {}
-
-public record VenueSearchResult(
-    CampusVenue venue,
-    double similarityScore,
-    String matchReason  // 왜 이 장소가 검색되었는지 설명
-) {}
-
 /**
- * 벡터 인덱스에 저장되는 장소 문서 구조.
- * 이 텍스트가 Titan Embeddings로 벡터화된다.
+ * [AI 서버 측 구현]
+ * 아래는 AI 서버가 내부적으로 수행하는 로직의 개념적 인터페이스.
+ * Spring Boot에서는 직접 호출하지 않으며, SQS 미션 요청을 통해 간접적으로 트리거된다.
+ *
+ * AI 서버 내부 흐름:
+ * 1. SQS에서 MissionGenerationInput 수신
+ * 2. 동선 교집합 정보로 자연어 검색 쿼리 구성
+ * 3. OpenSearch Serverless에서 벡터 유사도 검색 (상위 5개 장소)
+ * 4. 검색 결과 + 사용자 컨텍스트로 Bedrock Claude 프롬프트 구성
+ * 5. 생성된 미션을 SQS 응답큐에 발행
  */
+
+// AI 서버가 OpenSearch에 저장하는 벡터 문서 구조
 public record VenueDocument(
     String venueId,
     String embeddingText,  // "학생회관 1층 카페 | 조용하고 대화하기 좋은 분위기 | 카페 | 만남적합도:5 | 월-금 08:00-21:00 | 커피, 대화, 스터디"
     Map<String, Object> metadata  // 필터링용 메타데이터 (type, meetingSuitability, buildingId 등)
+) {}
+
+// Spring Boot → AI 서버 (장소 인덱싱 요청, 장소 등록/수정 시 HTTP 호출)
+// POST /api/venues/index
+public record VenueIndexRequest(
+    String venueId,
+    String name,
+    String description,
+    String type,
+    int meetingSuitability,
+    Map<String, String> operatingHours,
+    List<String> characteristics,
+    @Nullable String buildingName
 ) {}
 ```
 
@@ -1148,100 +1176,119 @@ public record NotificationSettings(
 public enum ReminderType { MISSION_DEADLINE, PLANNER_INACTIVE }
 ```
 
-#### 14. AI/LLM 서비스 (AIService)
+#### 14. AI 서비스 클라이언트 (AIServiceClient)
 
-> **MVP 범위**: 퀴즈 생성, 회고 질문/글 생성, AI 일기 대화는 컨텍스트 주입 방식으로 동작한다. 미션 생성은 RAG 파이프라인(벡터 검색 → LLM 생성)을 사용한다. 동선 추론(`inferRoute`), 매칭 점수 계산(`calculateRouteMatchScore`)은 MVP에서 AI를 사용하지 않으며, 시간표 기반 단순 로직으로 대체한다. 출시 후 데이터가 충분히 쌓이면 AI 기반으로 확장한다.
+> **역할**: Spring Boot 백엔드에서 별도 AI 서버와 통신하는 클라이언트. 프롬프트 관리와 Bedrock 호출은 AI 서버가 담당하며, Spring Boot는 필요한 입력값만 전달한다.
+
+> **통신 방식**:
+> - 퀴즈/미션: SQS 큐 기반 비동기 (매칭 시점에 사전 생성, 사용자 대기 없음)
+> - 일기/회고: HTTP 동기 호출 (사용자 실시간 대화, 즉시 응답 필요)
+
+> **MVP 범위**: 퀴즈 생성, 미션 생성(RAG), AI 일기 대화, 회고 질문/글 생성을 AI 서버를 통해 수행한다. 동선 추론(`inferRoute`), 매칭 점수 계산(`calculateRouteMatchScore`)은 MVP에서 AI를 사용하지 않으며, 시간표 기반 단순 로직으로 대체한다.
 
 ```java
-public interface AIService {
-    /** [MVP 후순위] 동선 추론: MVP에서는 시간표 기반 단순 동선 계산으로 대체 */
-    InferredRoute inferRoute(String userId, LocalDate date, List<Object> schedule, CampusContext campusData);
+/**
+ * AI 서버와의 통신을 담당하는 클라이언트 인터페이스.
+ * 프롬프트 관리는 AI 서버 측에서 담당하며,
+ * Spring Boot는 입력 데이터만 전달한다.
+ */
+public interface AIServiceClient {
 
-    /** [MVP 후순위] 매칭 점수 계산: MVP에서는 시간대 겹침 기반 단순 점수로 대체 */
-    RouteMatchScore calculateRouteMatchScore(InferredRoute routeA, InferredRoute routeB, CampusContext campusData);
+    // ===== 비동기 (SQS 큐) - 매칭 시점 사전 생성 =====
 
-    /** RAG 기반 미션 생성: 벡터 검색 결과를 프롬프트에 주입하여 미션 생성 */
-    GeneratedMission generateMission(List<VenueSearchResult> retrievedVenues, RouteOverlap routeOverlap, UserProfilePair userProfiles);
+    /** 퀴즈 생성 요청을 SQS에 발행 (매칭 성사 시 호출) */
+    void requestQuizGeneration(QuizGenerationInput input);
 
-    /** 퀴즈 생성: 프로필 기반 자연스러운 퀴즈 문항 생성 */
-    GeneratedQuiz generateQuiz(UserProfile targetProfile);
+    /** 미션 생성 요청을 SQS에 발행 (매칭 성사 시 호출, AI 서버가 RAG 수행) */
+    void requestMissionGeneration(MissionGenerationInput input);
 
-    /** 회고 질문 생성: 만남 컨텍스트 기반 AI 질문 생성 */
-    List<String> generateReviewQuestions(InteractionContext interactionContext);
+    // ===== 동기 (HTTP) - 사용자 실시간 대화 =====
 
-    /** 회고 글 생성: 답변 기반 회고 글 자동 생성 */
-    String generateReviewContent(List<QuestionAnswer> answers);
+    /** 일기 첫 번째 질문 생성 */
+    DiaryQuestionResponse generateDiaryFirstQuestion(DiaryQuestionInput input);
+
+    /** 일기 다음 질문 생성 (또는 대화 완료 판단) */
+    DiaryNextQuestionResponse generateDiaryNextQuestion(DiaryNextQuestionInput input);
+
+    /** 대화 내용 기반 일기 내용 생성 */
+    DiaryContentResponse generateDiaryContent(DiaryContentInput input);
+
+    /** 회고 질문 생성 */
+    List<String> generateReviewQuestions(ReviewQuestionInput input);
+
+    /** 회고 글 생성 */
+    String generateReviewContent(ReviewContentInput input);
 }
 
-public record UserProfilePair(UserProfile userA, UserProfile userB) {}
-public record QuestionAnswer(String question, String answer) {}
+// ===== 퀴즈 (SQS 비동기) =====
 
-public record InferredRoute(
+public record QuizGenerationInput(
+    String matchId,
+    String targetUserId,
+    UserProfile targetProfile  // 상대방 프로필
+) {}
+
+// ===== 미션 (SQS 비동기 + RAG) =====
+
+public record MissionGenerationInput(
+    String matchId,
+    RouteOverlap routeOverlap,       // 동선 교집합 정보
+    UserProfilePair userProfiles     // 양쪽 사용자 프로필
+) {}
+
+// ===== 일기 (HTTP 동기) =====
+
+public record DiaryQuestionInput(
     String userId,
     LocalDate date,
-    List<Waypoint> waypoints,
-    List<RouteTransition> transitions
+    @Nullable List<PlanEntry> todaySchedule,
+    @Nullable DiaryEntry previousDiary
 ) {}
 
-public record Waypoint(
-    LocalTime time,
-    String buildingId,
-    String buildingName,
-    Coordinates coordinates,
-    int stayDurationMinutes
+public record DiaryNextQuestionInput(
+    String userId,
+    LocalDate date,
+    List<DiaryConversationTurn> conversationHistory,
+    @Nullable List<PlanEntry> todaySchedule
 ) {}
 
-public record Coordinates(double lat, double lng) {}
-
-public record RouteTransition(
-    String fromBuildingId,
-    String toBuildingId,
-    LocalTime departureTime,
-    LocalTime arrivalTime,
-    List<String> passingVenues
+public record DiaryContentInput(
+    String userId,
+    LocalDate date,
+    List<DiaryConversationTurn> conversationHistory,
+    @Nullable List<PlanEntry> todaySchedule
 ) {}
 
-public record RouteMatchScore(
-    int score, // 0-100
-    List<NaturalOverlapPoint> naturalOverlapPoints
+public record DiaryQuestionResponse(String question) {}
+
+public record DiaryNextQuestionResponse(
+    boolean isConversationComplete,
+    @Nullable String nextQuestion,
+    @Nullable String completionReason
 ) {}
 
-public record NaturalOverlapPoint(
-    String venueId,
-    String venueName,
-    String timeRange,
-    String reason
+public record DiaryContentResponse(
+    String generatedContent,
+    @Nullable EmotionTag suggestedEmotion
 ) {}
 
-public record GeneratedMission(
-    String location,
-    String activity,
-    String description,
-    String suggestedTime,
-    String reason
-) {}
+// ===== 회고 (HTTP 동기) =====
 
-public record GeneratedQuiz(List<QuizQuestion> questions) {}
-
-public record QuizQuestion(
-    String question,
-    List<String> options,
-    int correctAnswer,
-    String explanation
-) {}
-
-public record InteractionContext(
+public record ReviewQuestionInput(
     String matchId,
     String missionDescription,
     String missionLocation,
     UserProfilePair userProfiles
 ) {}
 
-public record CampusContext(
-    List<CampusBuilding> buildings,
-    List<CampusPath> paths,
-    List<CampusVenue> venues
+public record ReviewContentInput(
+    List<QuestionAnswer> answers,
+    String matchId,
+    String missionDescription
 ) {}
+
+public record UserProfilePair(UserProfile userA, UserProfile userB) {}
+public record QuestionAnswer(String question, String answer) {}
 ```
 
 
