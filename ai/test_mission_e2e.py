@@ -137,29 +137,8 @@ async def step_3_process_mission(message: dict):
 
     print(f"   ✅ 처리 완료 ({elapsed:.1f}초 소요)")
 
-    # 발행 직후 직접 큐 확인
-    print("\n   [DEBUG] 발행 직후 Response Queue 직접 확인...")
-    time.sleep(2)
-    debug_response = sqs.receive_message(
-        QueueUrl=settings.sqs_mission_response_queue,
-        MaxNumberOfMessages=1,
-        WaitTimeSeconds=5,
-    )
-    debug_msgs = debug_response.get("Messages", [])
-    if debug_msgs:
-        body = json.loads(debug_msgs[0]["Body"])
-        print(f"   [DEBUG] ✅ 메시지 발견! status={body.get('status')}")
-        if body.get("mission"):
-            print(f"   [DEBUG] placeName={body['mission'].get('placeName')}")
-    else:
-        print("   [DEBUG] ❌ 메시지 없음 - publisher가 다른 큐로 보냈을 가능성")
-        attrs = sqs.get_queue_attributes(
-            QueueUrl=settings.sqs_mission_response_queue,
-            AttributeNames=["ApproximateNumberOfMessages", "ApproximateNumberOfMessagesNotVisible"],
-        )
-        visible = attrs["Attributes"]["ApproximateNumberOfMessages"]
-        not_visible = attrs["Attributes"]["ApproximateNumberOfMessagesNotVisible"]
-        print(f"   [DEBUG] 큐 상태: visible={visible}, not_visible={not_visible}")
+    # 발행 확인은 step_4에서 수행 (여기서 수신하면 step_4에서 못 받음)
+    print("   응답 큐 발행 완료 - step 4에서 확인 예정")
 
 
 def step_4_check_response():
