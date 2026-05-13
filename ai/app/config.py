@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     sqs_retro_response_queue: str = "retro-session-responses"
     sqs_diary_request_queue: str = "diary-session-requests"
     sqs_diary_response_queue: str = "diary-session-responses"
+    sqs_mission_request_queue: str = "mission-generation-requests"
+    sqs_mission_response_queue: str = "mission-generation-responses"
     sqs_max_concurrent_messages: int = 5
     sqs_poll_interval_seconds: float = 1.0
     sqs_publish_max_retries: int = 3
@@ -55,6 +57,7 @@ class Settings(BaseSettings):
     # RAG
     chroma_persist_directory: str = "./data/chroma"
     rag_top_k: int = 3
+    mission_search_top_k: int = 5
 
     # Server
     server_port: int = 8081

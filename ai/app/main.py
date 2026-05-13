@@ -30,6 +30,8 @@ from app.bedrock.client import BedrockClient
 from app.config import get_settings
 from app.conversation.manager import ConversationManager
 from app.features.diary.router import router as diary_router
+from app.features.mission.handler import MissionHandler
+from app.features.mission.search import MissionSearch
 from app.features.quiz.handler import QuizHandler
 from app.features.retrospective.router import router as retro_router
 from app.health import router as health_router
@@ -103,14 +105,24 @@ async def lifespan(app: FastAPI):
     app.state.embedding_generator = embedding_generator
     app.state.vector_store = vector_store
 
-    # 기능별 핸들러 생성 (퀴즈만 SQS 유지)
+    # 기능별 핸들러 생성
     quiz_handler = QuizHandler(bedrock_client, publisher, settings)
+
+    # 미션 검색 및 핸들러 초기화 (기존 embedding_generator, vector_store 재사용)
+    mission_search = MissionSearch(embedding_generator, vector_store, settings)
+    mission_handler = MissionHandler(
+        bedrock_client, publisher, mission_search, settings
+    )
 
     # 퀴즈 MessageRouter 생성
     quiz_router = MessageRouter()
     quiz_router.register_handler("GENERATE_QUIZ", quiz_handler.handle)
 
-    # SQS Poller 생성 및 큐 등록 (퀴즈만 폴링)
+    # 미션 MessageRouter 생성
+    mission_router = MessageRouter()
+    mission_router.register_handler("GENERATE_MISSION", mission_handler.handle)
+
+    # SQS Poller 생성 및 큐 등록
     poller = SQSPoller(
         region=settings.aws_region,
         poll_interval=settings.sqs_poll_interval_seconds,
@@ -120,6 +132,11 @@ async def lifespan(app: FastAPI):
     poller.register_queue(
         settings.sqs_quiz_request_queue,
         lambda msg: quiz_router.route("quiz-requests", msg),
+    )
+
+    poller.register_queue(
+        settings.sqs_mission_request_queue,
+        lambda msg: mission_router.route("mission-requests", msg),
     )
 
     # SQS Poller 시작
