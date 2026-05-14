@@ -189,10 +189,10 @@ class MissionSearch:
     def _build_metadata_filter(
         self, intersection_info: IntersectionInfo
     ) -> dict | None:
-        """building_id 기반 metadata 필터를 구성한다.
+        """building_name 기반 metadata 필터를 구성한다.
 
         ChromaDB where 절에 사용할 필터를 생성한다.
-        건물 ID가 1개면 단일 필터, 여러 개면 $in 연산자를 사용한다.
+        buildingIds에 건물 이름(미래관, 북악관 등)이 들어온다.
 
         Args:
             intersection_info: 동선 교집합 정보.
@@ -206,9 +206,9 @@ class MissionSearch:
             return None
 
         if len(building_ids) == 1:
-            return {"building_id": building_ids[0]}
+            return {"building_name": building_ids[0]}
 
-        return {"building_id": {"$in": building_ids}}
+        return {"building_name": {"$in": building_ids}}
 
     async def _query_venues(
         self,
