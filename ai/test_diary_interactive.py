@@ -1,10 +1,10 @@
-"""일기 작성 대화형 E2E 테스트.
+"""일기 작성 대화형 E2E 테스트 (Stateless API).
 
 터미널에서 입력을 받아 HTTP로 AI 서비스에 전송하고,
 AI의 질문을 화면에 표시하는 대화형 테스트.
 
 사전 조건:
-    - AI 서비스가 실행 중이어야 함 (python -m app)
+    - AI 서비스가 실행 중이어야 함
     - 서버 주소: http://localhost:8081
 
 EC2에서 실행:
@@ -13,102 +13,77 @@ EC2에서 실행:
 
 from __future__ import annotations
 
-import json
-import uuid
-
 import requests
 
 BASE_URL = "http://localhost:8081"
-SESSION_ID = f"diary-test-{uuid.uuid4().hex[:8]}"
 USER_ID = "user-test-001"
+DATE = "2026-05-14"
 
-# 테스트용 플래너 데이터
-PLANNER_ENTRIES = [
-    {
-        "dayOfWeek": 3,
-        "startTime": "09:00",
-        "endTime": "10:30",
-        "location": "공학관",
-        "name": "데이터베이스",
-        "type": "CLASS",
-    },
-    {
-        "dayOfWeek": 3,
-        "startTime": "11:00",
-        "endTime": "12:00",
-        "location": None,
-        "name": "점심시간",
-        "type": "FREE",
-    },
-    {
-        "dayOfWeek": 3,
-        "startTime": "13:00",
-        "endTime": "14:30",
-        "location": "북악관",
-        "name": "캡스톤디자인",
-        "type": "CLASS",
-    },
+# 테스트용 일정 데이터
+TODAY_SCHEDULE = [
+    {"startTime": "09:00", "endTime": "10:30", "location": "공학관", "activity": "알고리즘"},
+    {"startTime": "11:00", "endTime": "12:00", "location": None, "activity": "점심시간"},
+    {"startTime": "13:00", "endTime": "14:30", "location": "북악관", "activity": "캡스톤디자인"},
+    {"startTime": "15:00", "endTime": "16:30", "location": "미래관", "activity": "자율주행스튜디오"},
 ]
 
+PREVIOUS_DIARY = "어제는 캡스톤 발표 준비를 했다. 팀원들이랑 밤늦게까지 PPT를 만들었는데 결과가 꽤 괜찮았다."
 
-def start_session():
-    """세션 시작 → 첫 질문 받기."""
-    print("\n" + "=" * 60)
-    print("📝 일기 작성 세션 시작")
-    print("=" * 60)
-    print(f"   Session ID: {SESSION_ID}")
-    print(f"   User ID: {USER_ID}")
-    print()
 
+def first_question():
+    """첫 질문 요청."""
     response = requests.post(
-        f"{BASE_URL}/api/diary/start",
+        f"{BASE_URL}/api/diary/first-question",
         json={
-            "sessionId": SESSION_ID,
             "userId": USER_ID,
-            "plannerEntries": PLANNER_ENTRIES,
+            "date": DATE,
+            "todaySchedule": TODAY_SCHEDULE,
+            "previousDiaryContent": PREVIOUS_DIARY,
         },
     )
 
     if response.status_code != 200:
-        print(f"   ❌ 세션 시작 실패: {response.status_code}")
-        print(f"   {response.text}")
-        return None
-
-    data = response.json()
-    return data
-
-
-def send_answer(user_message: str):
-    """사용자 답변 전송 → 후속 질문 받기."""
-    response = requests.post(
-        f"{BASE_URL}/api/diary/answer",
-        json={
-            "sessionId": SESSION_ID,
-            "userId": USER_ID,
-            "userMessage": user_message,
-        },
-    )
-
-    if response.status_code != 200:
-        print(f"   ❌ 답변 전송 실패: {response.status_code}")
+        print(f"   ❌ 첫 질문 생성 실패: {response.status_code}")
         print(f"   {response.text}")
         return None
 
     return response.json()
 
 
-def complete_session():
-    """세션 완료 → 컴파일된 일기 받기."""
+def next_question(conversation_history: list[dict]):
+    """다음 질문 요청."""
     response = requests.post(
-        f"{BASE_URL}/api/diary/complete",
+        f"{BASE_URL}/api/diary/next-question",
         json={
-            "sessionId": SESSION_ID,
             "userId": USER_ID,
+            "date": DATE,
+            "conversationHistory": conversation_history,
+            "todaySchedule": TODAY_SCHEDULE,
         },
     )
 
     if response.status_code != 200:
-        print(f"   ❌ 완료 실패: {response.status_code}")
+        print(f"   ❌ 다음 질문 생성 실패: {response.status_code}")
+        print(f"   {response.text}")
+        return None
+
+    return response.json()
+
+
+def generate_diary(conversation_history: list[dict]):
+    """일기 생성 요청."""
+    response = requests.post(
+        f"{BASE_URL}/api/diary/generate",
+        json={
+            "userId": USER_ID,
+            "date": DATE,
+            "conversationHistory": conversation_history,
+            "todaySchedule": TODAY_SCHEDULE,
+        },
+    )
+
+    if response.status_code != 200:
+        print(f"   ❌ 일기 생성 실패: {response.status_code}")
         print(f"   {response.text}")
         return None
 
@@ -116,23 +91,29 @@ def complete_session():
 
 
 def main():
-    print("🚀 일기 작성 대화형 E2E 테스트")
+    print("🚀 일기 작성 대화형 E2E 테스트 (Stateless)")
     print(f"   서버: {BASE_URL}")
-    print("   종료: 'q' 입력 | 완료: 'done' 입력")
+    print(f"   날짜: {DATE}")
+    print("   종료: 'q' 입력 | 일기 생성: 'done' 입력")
 
-    # 1. 세션 시작
-    result = start_session()
+    # 1. 첫 질문
+    print(f"\n{'=' * 60}")
+    print("📝 일기 작성 시작")
+    print(f"{'=' * 60}")
+
+    result = first_question()
     if not result:
         return
 
-    question = result.get("question")
-    current_turn = result.get("currentTurn", 0)
+    question = result["question"]
     max_turns = result.get("maxTurns", 5)
+    conversation_history = []
+    turn_number = 1
 
     # 2. 대화 루프
     while True:
         print(f"\n{'─' * 60}")
-        print(f"🤖 AI ({current_turn}/{max_turns}):")
+        print(f"🤖 AI ({turn_number}/{max_turns}):")
         print(f"   {question}")
         print(f"{'─' * 60}")
 
@@ -143,37 +124,47 @@ def main():
             return
 
         if user_input.lower() == "done":
-            # 완료 요청
-            print("\n📋 일기 컴파일 중...")
-            result = complete_session()
-            if result:
-                print(f"\n{'=' * 60}")
-                print("✅ 일기 작성 완료!")
-                print(f"{'=' * 60}")
-                compiled = result.get("compiledContent", "")
-                print(f"\n{compiled}")
-            return
+            if not conversation_history:
+                print("   ⚠️ 최소 1개 답변이 필요합니다.")
+                continue
+            break
 
         if not user_input:
             continue
 
-        # 답변 전송
-        result = send_answer(user_input)
+        # 대화 히스토리에 추가
+        conversation_history.append({
+            "turnNumber": turn_number,
+            "question": question,
+            "answer": user_input,
+        })
+        turn_number += 1
+
+        # 다음 질문 요청
+        result = next_question(conversation_history)
         if not result:
             return
 
-        # 완료된 경우
-        if result.get("action") == "COMPLETED":
-            print(f"\n{'=' * 60}")
-            print("✅ 일기 작성 완료! (최대 턴 도달)")
-            print(f"{'=' * 60}")
-            compiled = result.get("compiledContent", "")
-            print(f"\n{compiled}")
-            return
+        # AI가 완료 판단한 경우
+        if result.get("isConversationComplete"):
+            print(f"\n   ✅ AI가 충분한 답변이 수집되었다고 판단했습니다.")
+            break
 
-        question = result.get("question", "")
-        current_turn = result.get("currentTurn", current_turn + 1)
+        question = result["question"]
         max_turns = result.get("maxTurns", max_turns)
+
+    # 3. 일기 생성
+    print(f"\n{'=' * 60}")
+    print("📋 일기 생성 중...")
+    print(f"{'=' * 60}")
+
+    result = generate_diary(conversation_history)
+    if result:
+        print(f"\n✅ 일기 생성 완료!")
+        print(f"   생성 시각: {result.get('generatedAt')}")
+        print(f"\n{'─' * 60}")
+        print(result["compiledContent"])
+        print(f"{'─' * 60}")
 
 
 if __name__ == "__main__":

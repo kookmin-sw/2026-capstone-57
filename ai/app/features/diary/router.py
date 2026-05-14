@@ -1,38 +1,23 @@
-"""일기(Diary) HTTP 라우터.
+"""일기(Diary) HTTP 라우터 (Stateless).
 
-SQS 비동기 방식 대신 HTTP 동기 방식으로 일기 기능을 제공한다.
-핵심 로직(DiaryHandler)을 재사용하되, 결과를 HTTP 응답으로 직접 반환한다.
+AI 서버는 stateless하게 동작하며, 매 요청마다 전체 컨텍스트를 받아 처리한다.
+세션 상태는 Backend(Spring Boot)가 DB에서 관리한다.
 
 Endpoints:
-    POST /api/diary/start    - 일기 세션 시작
-    POST /api/diary/answer   - 사용자 답변 제출
-    POST /api/diary/complete - 세션 완료 및 일기 컴파일
-
-Requirements: 7.1, 7.5, 7.6, 7.7, 7.8, 7.9
+    POST /api/diary/first-question  - 첫 질문 생성
+    POST /api/diary/next-question   - 다음 질문 생성 (대화 완료 판단 포함)
+    POST /api/diary/generate        - 대화 내용 기반 일기 생성
 """
 
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.common.exceptions import SessionNotFoundError
 from app.common.logging import get_logger, logging_context
-from app.conversation.models import MessageRole
-from app.features.diary.models import (
-    DiaryResponseAction,
-    DiaryResponseMessage,
-    DiarySessionStatus,
-    PlannerEntry,
-)
-from app.features.diary.prompt import (
-    build_compile_prompt,
-    build_diary_system_prompt,
-)
 
 logger = get_logger(__name__)
 
@@ -42,296 +27,319 @@ router = APIRouter(prefix="/api/diary", tags=["diary"])
 # --- Request / Response Schemas ---
 
 
-class DiaryStartRequest(BaseModel):
-    """일기 세션 시작 요청."""
+class ScheduleEntry(BaseModel):
+    """당일 일정 항목."""
 
-    sessionId: str
-    userId: str
-    plannerEntries: list[PlannerEntry] = Field(default_factory=list)
-
-
-class DiaryAnswerRequest(BaseModel):
-    """사용자 답변 제출 요청."""
-
-    sessionId: str
-    userId: str
-    userMessage: str
+    startTime: str
+    endTime: str
+    location: Optional[str] = None
+    activity: str
 
 
-class DiaryCompleteRequest(BaseModel):
-    """세션 완료 요청."""
+class ConversationTurn(BaseModel):
+    """대화 턴."""
 
-    sessionId: str
-    userId: str
-
-
-class DiaryStartResponse(BaseModel):
-    """세션 시작 응답 (첫 질문 포함)."""
-
-    action: str = DiaryResponseAction.QUESTION.value
-    sessionId: str
-    userId: str
-    status: str = DiarySessionStatus.IN_PROGRESS.value
+    turnNumber: int
     question: str
-    currentTurn: int = 0
+    answer: str
+
+
+class FirstQuestionRequest(BaseModel):
+    """첫 질문 생성 요청."""
+
+    userId: str
+    date: str
+    todaySchedule: list[ScheduleEntry] = Field(default_factory=list)
+    previousDiaryContent: Optional[str] = None
+
+
+class NextQuestionRequest(BaseModel):
+    """다음 질문 생성 요청."""
+
+    userId: str
+    date: str
+    conversationHistory: list[ConversationTurn] = Field(default_factory=list)
+    todaySchedule: list[ScheduleEntry] = Field(default_factory=list)
+
+
+class GenerateRequest(BaseModel):
+    """일기 생성 요청."""
+
+    userId: str
+    date: str
+    conversationHistory: list[ConversationTurn] = Field(default_factory=list)
+    todaySchedule: list[ScheduleEntry] = Field(default_factory=list)
+
+
+class FirstQuestionResponse(BaseModel):
+    """첫 질문 응답."""
+
+    question: str
     maxTurns: int = 5
 
 
-class DiaryAnswerResponse(BaseModel):
-    """답변 제출 응답 (후속 질문 또는 완료)."""
+class NextQuestionResponse(BaseModel):
+    """다음 질문 응답."""
 
-    action: str
-    sessionId: str
-    userId: str
-    status: str
     question: Optional[str] = None
-    compiledContent: Optional[str] = None
-    currentTurn: int = 0
+    isConversationComplete: bool = False
+    currentTurn: int
     maxTurns: int = 5
 
 
-class DiaryCompleteResponse(BaseModel):
-    """세션 완료 응답 (컴파일된 일기 포함)."""
+class GenerateResponse(BaseModel):
+    """일기 생성 응답."""
 
-    action: str = DiaryResponseAction.COMPLETED.value
-    sessionId: str
-    userId: str
-    status: str = DiarySessionStatus.COMPLETED.value
-    compiledContent: Optional[str] = None
-    currentTurn: int = 0
-    maxTurns: int = 5
-    completedAt: Optional[datetime] = None
-
-
-# --- Endpoints ---
-
-
-@router.post("/start", response_model=DiaryStartResponse)
-async def start_diary_session(body: DiaryStartRequest, request: Request):
-    """일기 세션을 시작하고 첫 질문을 반환한다."""
-    bedrock_client = request.app.state.bedrock_client
-    conversation_manager = request.app.state.conversation_manager
-    rag_pipeline = request.app.state.rag_pipeline
-    settings = request.app.state.settings
-
-    with logging_context(correlation_id=body.sessionId, feature="diary"):
-        try:
-            # RAG 검색: 과거 일기 패턴 조회
-            rag_documents = await rag_pipeline.search(
-                user_id=body.userId,
-                query="오늘 하루 일기",
-                collection="diaries",
-            )
-
-            # 시스템 프롬프트 생성
-            system_prompt = build_diary_system_prompt(
-                planner_entries=body.plannerEntries,
-                rag_documents=rag_documents,
-            )
-
-            # 세션 생성
-            await conversation_manager.create_session(
-                session_id=body.sessionId,
-                user_id=body.userId,
-                feature="diary",
-                system_prompt=system_prompt,
-                context={
-                    "planner_entries": [
-                        entry.model_dump() for entry in body.plannerEntries
-                    ],
-                },
-            )
-
-            # 첫 질문 생성
-            first_question = await _generate_question(
-                bedrock_client=bedrock_client,
-                system_prompt=system_prompt,
-                messages=[],
-            )
-
-            # AI 질문을 세션에 추가
-            await conversation_manager.add_message(
-                session_id=body.sessionId,
-                role=MessageRole.ASSISTANT,
-                content=first_question,
-            )
-
-            return DiaryStartResponse(
-                sessionId=body.sessionId,
-                userId=body.userId,
-                question=first_question,
-                currentTurn=0,
-                maxTurns=settings.conversation_max_turns,
-            )
-
-        except Exception as exc:
-            logger.exception("일기 세션 시작 실패")
-            raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.post("/answer", response_model=DiaryAnswerResponse)
-async def answer_diary(body: DiaryAnswerRequest, request: Request):
-    """사용자 답변을 처리하고 후속 질문 또는 완료 결과를 반환한다."""
-    bedrock_client = request.app.state.bedrock_client
-    conversation_manager = request.app.state.conversation_manager
-    settings = request.app.state.settings
-
-    with logging_context(correlation_id=body.sessionId, feature="diary"):
-        try:
-            # 사용자 답변을 세션에 추가
-            session = await conversation_manager.add_message(
-                session_id=body.sessionId,
-                role=MessageRole.USER,
-                content=body.userMessage,
-            )
-
-            # 최대 턴 수 초과로 강제 완료된 경우
-            if conversation_manager.is_session_force_completed(body.sessionId):
-                logger.info("최대 턴 수 도달로 강제 완료 처리")
-                return await _compile_and_respond(
-                    body.sessionId, body.userId, request
-                )
-
-            # 후속 질문 생성
-            history = await conversation_manager.get_history(body.sessionId)
-            session_obj = await conversation_manager.get_session(body.sessionId)
-
-            next_question = await _generate_question(
-                bedrock_client=bedrock_client,
-                system_prompt=session_obj.system_prompt,
-                messages=history,
-            )
-
-            # AI 질문을 세션에 추가
-            await conversation_manager.add_message(
-                session_id=body.sessionId,
-                role=MessageRole.ASSISTANT,
-                content=next_question,
-            )
-
-            return DiaryAnswerResponse(
-                action=DiaryResponseAction.QUESTION.value,
-                sessionId=body.sessionId,
-                userId=body.userId,
-                status=DiarySessionStatus.IN_PROGRESS.value,
-                question=next_question,
-                currentTurn=session.current_turn,
-                maxTurns=session.max_turns,
-            )
-
-        except SessionNotFoundError as e:
-            raise HTTPException(
-                status_code=404, detail=f"세션을 찾을 수 없습니다: {e.session_id}"
-            )
-        except Exception as exc:
-            logger.exception("일기 답변 처리 실패")
-            raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.post("/complete", response_model=DiaryCompleteResponse)
-async def complete_diary(body: DiaryCompleteRequest, request: Request):
-    """세션을 완료하고 컴파일된 일기를 반환한다."""
-    with logging_context(correlation_id=body.sessionId, feature="diary"):
-        try:
-            result = await _compile_and_respond(
-                body.sessionId, body.userId, request
-            )
-            return DiaryCompleteResponse(
-                sessionId=result.sessionId,
-                userId=result.userId,
-                status=result.status,
-                compiledContent=result.compiledContent,
-                currentTurn=result.currentTurn,
-                maxTurns=result.maxTurns,
-                completedAt=datetime.now(timezone.utc),
-            )
-        except SessionNotFoundError as e:
-            raise HTTPException(
-                status_code=404, detail=f"세션을 찾을 수 없습니다: {e.session_id}"
-            )
-        except Exception as exc:
-            logger.exception("일기 완료 처리 실패")
-            raise HTTPException(status_code=500, detail=str(exc))
+    compiledContent: str
+    generatedAt: datetime
 
 
 # --- Internal helpers ---
 
 
-async def _generate_question(
-    bedrock_client,
+def _build_schedule_text(schedule: list[ScheduleEntry]) -> str:
+    """일정 목록을 텍스트로 변환."""
+    if not schedule:
+        return "(일정 없음)"
+
+    lines = []
+    for entry in schedule:
+        location = f" @ {entry.location}" if entry.location else ""
+        lines.append(f"- {entry.startTime}~{entry.endTime}{location}: {entry.activity}")
+    return "\n".join(lines)
+
+
+def _build_conversation_messages(
     system_prompt: str,
-    messages: list[dict],
+    conversation_history: list[ConversationTurn],
+) -> tuple[str, list[dict]]:
+    """대화 히스토리를 Bedrock 메시지 형식으로 변환."""
+    messages = []
+    for turn in conversation_history:
+        messages.append({"role": "assistant", "content": turn.question})
+        messages.append({"role": "user", "content": turn.answer})
+    return system_prompt, messages
+
+
+def _build_first_question_system_prompt(
+    schedule: list[ScheduleEntry],
+    previous_diary: Optional[str],
 ) -> str:
-    """Bedrock을 호출하여 질문을 생성한다."""
-    if not messages:
-        initial_messages = [
-            {
-                "role": "user",
-                "content": "오늘 하루에 대한 일기를 시작하겠습니다. 첫 번째 질문을 해주세요.",
-            }
-        ]
-        response = await bedrock_client.invoke_with_messages(
-            system_prompt=system_prompt,
-            messages=initial_messages,
-        )
-    else:
-        response = await bedrock_client.invoke_with_messages(
-            system_prompt=system_prompt,
-            messages=messages,
-        )
-    return response
+    """첫 질문 생성용 시스템 프롬프트."""
+    schedule_text = _build_schedule_text(schedule)
+
+    previous_section = ""
+    if previous_diary:
+        previous_section = f"""
+[어제 일기]
+{previous_diary}
+"""
+
+    return f"""당신은 대학생의 일기 작성을 도와주는 따뜻한 AI 친구입니다.
+사용자의 오늘 일정을 참고하여, 하루를 돌아볼 수 있는 자연스러운 질문을 해주세요.
+
+[오늘 일정]
+{schedule_text}
+{previous_section}
+[규칙]
+1. 질문은 1개만 생성하세요.
+2. 일정에 있는 구체적인 활동을 언급하며 질문하세요.
+3. 친근하고 부담 없는 해요체를 사용하세요.
+4. 감정, 느낌, 경험에 초점을 맞추세요.
+5. 예/아니오로 답할 수 없는 열린 질문을 하세요.
+"""
 
 
-async def _compile_and_respond(
-    session_id: str, user_id: str, request: Request
-) -> DiaryAnswerResponse:
-    """답변을 컴파일하여 일기를 생성하고 응답을 반환한다."""
+def _build_next_question_system_prompt(
+    schedule: list[ScheduleEntry],
+    max_turns: int,
+    current_turn: int,
+) -> str:
+    """다음 질문 생성용 시스템 프롬프트."""
+    schedule_text = _build_schedule_text(schedule)
+
+    return f"""당신은 대학생의 일기 작성을 도와주는 따뜻한 AI 친구입니다.
+이전 대화를 바탕으로 더 깊이 있는 후속 질문을 해주세요.
+
+[오늘 일정]
+{schedule_text}
+
+[규칙]
+1. 질문은 1개만 생성하세요.
+2. 이전 답변에서 언급된 감정이나 경험을 더 깊이 탐색하세요.
+3. 이미 물어본 내용을 반복하지 마세요.
+4. 친근하고 부담 없는 해요체를 사용하세요.
+5. 현재 {current_turn}/{max_turns} 턴입니다.
+6. 사용자가 충분히 풍부한 답변을 했다고 판단되면, 질문 대신 정확히 "[COMPLETE]"만 출력하세요.
+7. 아직 더 물어볼 내용이 있다면 질문을 생성하세요.
+"""
+
+
+def _build_generate_prompt(
+    schedule: list[ScheduleEntry],
+    conversation_history: list[ConversationTurn],
+) -> str:
+    """일기 생성 프롬프트."""
+    schedule_text = _build_schedule_text(schedule)
+
+    conversation_text = ""
+    for turn in conversation_history:
+        conversation_text += f"Q: {turn.question}\nA: {turn.answer}\n\n"
+
+    return f"""당신은 대학생의 일기를 작성해주는 AI입니다.
+아래 대화 내용을 바탕으로 자연스러운 일기를 작성해주세요.
+
+[오늘 일정]
+{schedule_text}
+
+[대화 내용]
+{conversation_text}
+
+[규칙]
+1. 1인칭 시점으로 작성하세요 (나는, 내가).
+2. 대화에서 나온 감정과 경험을 자연스럽게 녹여내세요.
+3. 일정에 있는 활동과 연결지어 작성하세요.
+4. 3~5문단 분량으로 작성하세요.
+5. 친근하고 자연스러운 문체를 사용하세요 (해요체 X, 반말 일기체).
+6. 대화 형식이 아닌 일기 형식으로 작성하세요.
+"""
+
+
+# --- Endpoints ---
+
+
+@router.post("/first-question", response_model=FirstQuestionResponse)
+async def first_question(body: FirstQuestionRequest, request: Request):
+    """첫 질문을 생성한다.
+
+    당일 일정 + 전날 일기를 기반으로 첫 번째 질문을 생성한다.
+    """
     bedrock_client = request.app.state.bedrock_client
-    conversation_manager = request.app.state.conversation_manager
-    rag_pipeline = request.app.state.rag_pipeline
+    settings = request.app.state.settings
 
-    # 세션 완료 처리 및 사용자 답변 수집
-    user_answers = await conversation_manager.complete_session(session_id)
+    with logging_context(correlation_id=f"diary-{body.userId}-{body.date}", feature="diary"):
+        try:
+            system_prompt = _build_first_question_system_prompt(
+                schedule=body.todaySchedule,
+                previous_diary=body.previousDiaryContent,
+            )
 
-    if not user_answers:
-        raise HTTPException(status_code=400, detail="컴파일할 답변이 없습니다")
+            # Bedrock 호출
+            initial_messages = [
+                {
+                    "role": "user",
+                    "content": "오늘 하루에 대한 일기를 시작하겠습니다. 첫 번째 질문을 해주세요.",
+                }
+            ]
+            question = await bedrock_client.invoke_with_messages(
+                system_prompt=system_prompt,
+                messages=initial_messages,
+            )
 
-    # 세션에서 플래너 엔트리 복원
-    session = await conversation_manager.get_session(session_id)
-    planner_entries_data = session.context.get("planner_entries", [])
-    planner_entries = [PlannerEntry(**entry) for entry in planner_entries_data]
+            return FirstQuestionResponse(
+                question=question,
+                maxTurns=settings.conversation_max_turns,
+            )
 
-    # 일기 컴파일 (Bedrock 호출)
-    compile_prompt = build_compile_prompt(
-        planner_entries=planner_entries,
-        user_answers=user_answers,
-    )
+        except Exception as exc:
+            logger.exception("첫 질문 생성 실패")
+            raise HTTPException(status_code=500, detail=str(exc))
 
-    try:
-        compiled_content = await bedrock_client.invoke(compile_prompt)
-    except Exception:
-        logger.exception("일기 컴파일 Bedrock 호출 실패, 답변 연결로 대체")
-        compiled_content = "\n\n".join(user_answers)
 
-    # 벡터 DB에 저장
-    try:
-        await rag_pipeline.store(
-            user_id=user_id,
-            content=compiled_content,
-            collection="diaries",
-            metadata={
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            },
-        )
-    except Exception:
-        logger.exception("일기 벡터 DB 저장 실패 (계속 진행)")
+@router.post("/next-question", response_model=NextQuestionResponse)
+async def next_question(body: NextQuestionRequest, request: Request):
+    """다음 질문을 생성하거나 대화 완료를 판단한다.
 
-    return DiaryAnswerResponse(
-        action=DiaryResponseAction.COMPLETED.value,
-        sessionId=session_id,
-        userId=user_id,
-        status=DiarySessionStatus.COMPLETED.value,
-        compiledContent=compiled_content,
-        currentTurn=session.current_turn,
-        maxTurns=session.max_turns,
-    )
+    전체 대화 히스토리를 받아 다음 질문을 생성한다.
+    AI가 충분하다고 판단하면 isConversationComplete=true를 반환한다.
+    """
+    bedrock_client = request.app.state.bedrock_client
+    settings = request.app.state.settings
+    max_turns = settings.conversation_max_turns
+    current_turn = len(body.conversationHistory)
+
+    with logging_context(correlation_id=f"diary-{body.userId}-{body.date}", feature="diary"):
+        try:
+            # maxTurns 도달 시 강제 완료
+            if current_turn >= max_turns:
+                return NextQuestionResponse(
+                    question=None,
+                    isConversationComplete=True,
+                    currentTurn=current_turn,
+                    maxTurns=max_turns,
+                )
+
+            system_prompt = _build_next_question_system_prompt(
+                schedule=body.todaySchedule,
+                max_turns=max_turns,
+                current_turn=current_turn,
+            )
+
+            # 대화 히스토리를 메시지로 변환
+            messages = []
+            for turn in body.conversationHistory:
+                messages.append({"role": "assistant", "content": turn.question})
+                messages.append({"role": "user", "content": turn.answer})
+
+            # 후속 질문 요청 추가
+            messages.append({
+                "role": "user",
+                "content": "다음 질문을 해주세요. 충분하다고 판단되면 [COMPLETE]만 출력하세요.",
+            })
+
+            response = await bedrock_client.invoke_with_messages(
+                system_prompt=system_prompt,
+                messages=messages,
+            )
+
+            # AI가 완료 판단한 경우
+            if "[COMPLETE]" in response:
+                return NextQuestionResponse(
+                    question=None,
+                    isConversationComplete=True,
+                    currentTurn=current_turn,
+                    maxTurns=max_turns,
+                )
+
+            return NextQuestionResponse(
+                question=response.strip(),
+                isConversationComplete=False,
+                currentTurn=current_turn,
+                maxTurns=max_turns,
+            )
+
+        except Exception as exc:
+            logger.exception("다음 질문 생성 실패")
+            raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/generate", response_model=GenerateResponse)
+async def generate_diary(body: GenerateRequest, request: Request):
+    """대화 내용을 기반으로 일기를 생성한다.
+
+    전체 대화 히스토리를 받아 일기를 컴파일한다.
+    """
+    bedrock_client = request.app.state.bedrock_client
+
+    with logging_context(correlation_id=f"diary-{body.userId}-{body.date}", feature="diary"):
+        try:
+            if not body.conversationHistory:
+                raise HTTPException(status_code=400, detail="대화 내역이 없습니다")
+
+            prompt = _build_generate_prompt(
+                schedule=body.todaySchedule,
+                conversation_history=body.conversationHistory,
+            )
+
+            compiled_content = await bedrock_client.invoke(prompt)
+
+            return GenerateResponse(
+                compiledContent=compiled_content,
+                generatedAt=datetime.now(timezone.utc),
+            )
+
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("일기 생성 실패")
+            raise HTTPException(status_code=500, detail=str(exc))
