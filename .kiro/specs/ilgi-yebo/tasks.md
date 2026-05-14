@@ -120,7 +120,7 @@
       - 30분 단위 입력 검증
     - **검증 대상: 요구사항 2.2, 2.4, 2.9, 2.10, 2.11**
 
-  - [ ] 3.3 DiaryService 구현
+  - [x] 3.3 DiaryService 구현
     - `createEntry`: 일기 작성 (upsert, 빈 내용 검증, 감정 태그 선택)
     - DiaryEntry 엔티티에 source (MANUAL/AI_GENERATED) 필드 추가
     - DiaryEntry 엔티티에 aiSessionId (nullable, DiarySession FK) 필드 추가
