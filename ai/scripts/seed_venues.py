@@ -73,7 +73,7 @@ VENUE_NODES = [
         "source": "VENUE",
         "name": "경영관 앞문",
         "typeActivity": ["OTHER"],
-        "description": "경영관에서 예술관으로 가는 입구",
+        "description": "경영관에서 조형관으로 가는 입구",
         "operatingHours": "24시간",
     },
     {
@@ -111,17 +111,17 @@ VENUE_NODES = [
     {
         "nodeId": "uuid-12",
         "source": "VENUE",
-        "name": "예대 앞 계단",
+        "name": "조형관 앞 계단",
         "typeActivity": ["OTHER"],
-        "description": "예대에서 경영관 올라가는 계단",
+        "description": "조형관에서 경영관 올라가는 계단",
         "operatingHours": "24시간",
     },
     {
         "nodeId": "uuid-13",
         "source": "VENUE",
-        "name": "미래관 앞문 (예대방향)",
+        "name": "미래관 앞문 (조형관방향)",
         "typeActivity": ["OTHER"],
-        "description": "미래관 4층, 예대쪽으로 가는 입구",
+        "description": "미래관 4층, 조형관쪽으로 가는 입구",
         "operatingHours": "24시간",
     },
     {
@@ -273,11 +273,11 @@ BUILDING_PLACE_NODES = [
     {
         "nodeId": "uuid-108",
         "source": "BUILDING_PLACE",
-        "name": "예대 매점",
+        "name": "조형관 매점",
         "typeActivity": ["CONVENIENCE_STORE", "CAFE"],
-        "description": "예술대학 근처 매점, 간식과 음료 구매 가능",
+        "description": "조형관 근처 매점, 간식과 음료 구매 가능",
         "operatingHours": "월-금 09:00-18:00",
-        "buildingName": "예술대학",
+        "buildingName": "조형관",
         "floor": 1,
     },
     {
