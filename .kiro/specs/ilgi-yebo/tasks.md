@@ -271,11 +271,24 @@
     - **Property 20: 게임 완료 시 친밀도 부여**
     - **검증 대상: 요구사항 7.2**
 
+  - [ ] 8.2.1 캠퍼스 공간 데이터 모델 리팩토링 (RAG 미션 생성 준비)
+    - `PlaceType` enum을 `TypeActivity`로 rename (CAFE, CONVENIENCE_STORE, RESTAURANT, LECTURE_ROOM, STUDY_ROOM, MEETING_ROOM, ELEVATOR, BENCH, OTHER)
+    - `CampusVenueEntity`에 필드 추가: `typeActivity` (List<TypeActivity> — JSON 문자열 컬럼 또는 별도 테이블), `description` (String), `operatingHours` (String)
+    - `CampusBuildingPlaceEntity`의 기존 `type` (PlaceType 단일) → `typeActivity` (List<TypeActivity>)로 변경, `description` (String), `operatingHours` (String) 추가
+    - `CampusPathEntity`의 `venue` (단일 ManyToOne) → `List<CampusVenueEntity> venues` (OneToMany 또는 ManyToMany)로 변경. 순서 보장을 위해 `@OrderColumn` 또는 venue 측에 `orderIndex` 필드 추가
+    - 기존 `CampusPathEntity`를 참조하는 코드(`MatchingServiceImpl.createMissionFromOverlap` 등) 수정
+    - _요구사항: 14.1, 14.3, 14.4_
+
   - [ ] 8.3 미션 단계 (4단계) 구현
-    - `generateMission`: RAG 파이프라인으로 미션 생성. CampusVectorStoreService에서 동선 겹침 장소 기반 유사도 검색 후, 검색 결과를 Bedrock Claude에 주입하여 자연스러운 미션 생성
+    - `requestMissionGeneration`: 매칭 성사 시 SQS 미션 요청 발행. 각 유저의 시간표에서 이동 구간을 파악하고, 캠퍼스 그래프에서 동선(출발 건물 → venue ID 리스트 → 도착 건물)을 선택하여 미션 요청 큐에 발행. 메시지에는 양쪽 유저의 `fromBuilding`, `toBuilding`, `subNodeIds` (동선 venue ID + 출발/도착 건물 place ID), `timeSlot`을 포함
+    - timeSlot 계산: 시간표 상 수업 종료 시간에서 15분을 빼서 실제 종료 시간을 구하고, 그 시점부터 다음 수업 시작까지를 이동 시간으로 산정 (예: 시간표 13:30~15:00 → 실제 종료 14:45, 다음 수업 15:00 시작 → timeSlot = "14:45~15:00")
+    - AI 서버 처리 흐름 (RAG): 양쪽 `subNodeIds` 비교 → 겹치는 노드 ID 추출 (없으면 도착 건물 place 활용) → ChromaDB `campus_nodes` 컬렉션에서 상세 정보 검색(Retrieval) → typeActivity/description/operatingHours 기반으로 LLM 프롬프트 구성(Augmented Generation) → Bedrock Claude 호출 → 미션 생성 결과 SQS 응답
+    - SQS 응답 리스너: `MISSION_GENERATED` 응답 수신 시 Mission 엔티티 생성 및 저장
     - `confirmMission`: 양쪽 미션 수행 확인 시 5단계 해금
     - `extendMissionDeadline`: 미션 기한 1회 연장 (이미 연장된 경우 거부)
     - 미션 기한 만료 처리 (연장 미사용 시 연장 옵션, 연장 후 만료 시 매칭 종료)
+    - 캠퍼스 노드 인덱싱: 장소 등록/수정 시 AI 서버 `POST /api/campus-nodes/index` 호출하여 ChromaDB 동기화
+    - 기존 `createMissionFromOverlap` 로직을 SQS 발행 방식으로 리팩토링 (직접 미션 생성 → AI 서버 위임)
     - _요구사항: 8.1, 8.2, 8.3, 8.4_
 
   - [ ]* 8.4 Property 21, 22 속성 테스트: 미션 관련
