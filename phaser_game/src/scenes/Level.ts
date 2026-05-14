@@ -88,15 +88,79 @@ export default class Level extends Phaser.Scene {
 
 	//탈출 문 조건 체크 변수
 	private totalCoins = 21;
-	private door!: Phaser.GameObjects.Rectangle;
+	private door!: Phaser.Physics.Arcade.Sprite;
 	private doorOpen = false;
 	private player1AtDoor = false;
 	private player2AtDoor = false;
-	//
+	//UI
+	private mobileLeft = false;
+	private mobileRight = false;
+	private mobileJump = false;
 
 	create() {
 
 		this.editorCreate();
+		this.input.addPointer(2);
+		/* ---------------------------------------------------------------------- */
+		/* MOBILE UI */
+		/* ---------------------------------------------------------------------- */
+
+		const leftBtn = this.add.image(60, 800, "left_button")
+			.setScrollFactor(0)
+			.setInteractive()
+			.setScale(0.1,0.1);
+
+		const rightBtn = this.add.image(150, 800, "left_button")
+			.setScrollFactor(0)
+			.setInteractive()
+			.setScale(0.1,0.1);
+		rightBtn.setFlipX(true);
+
+		const jumpBtn = this.add.image(300, 800, "jump_button")
+			.setScrollFactor(0)
+			.setInteractive()
+			.setScale(0.1,0.1);
+
+		//터치 이벤트
+		/* ---------------------------------------------------------------------- */
+		/* TOUCH EVENTS */
+		/* ---------------------------------------------------------------------- */
+
+		leftBtn.on("pointerdown", () => {
+			this.mobileLeft = true;
+		});
+
+		leftBtn.on("pointerup", () => {
+			this.mobileLeft = false;
+		});
+
+		leftBtn.on("pointerout", () => {
+			this.mobileLeft = false;
+		});
+
+		rightBtn.on("pointerdown", () => {
+			this.mobileRight = true;
+		});
+
+		rightBtn.on("pointerup", () => {
+			this.mobileRight = false;
+		});
+
+		rightBtn.on("pointerout", () => {
+			this.mobileRight = false;
+		});
+
+		jumpBtn.on("pointerdown", () => {
+			this.mobileJump = true;
+		});
+
+		jumpBtn.on("pointerup", () => {
+			this.mobileJump = false;
+		});
+
+		jumpBtn.on("pointerout", () => {
+			this.mobileJump = false;
+		});
 		/* ---------------------------------------------------------------------- */
 		/* CLEAR UI */
 		/* ---------------------------------------------------------------------- */
@@ -336,11 +400,18 @@ export default class Level extends Phaser.Scene {
 		/* EXIT DOOR */
 		/* ---------------------------------------------------------------------- */
 		//TODO: 좌표 수정
-		this.door = this.add.rectangle(354, 225, 32, 64, 0x999999);
-		this.door.alpha = 0.4;
+		// this.door = this.add.rectangle(354, 225, 32, 64, 0x999999);
+		// this.door.alpha = 0.4;
 
-		this.physics.add.existing(this.door, true);
+		// this.physics.add.existing(this.door, true);
+		this.door = this.physics.add.staticSprite(
+			354,
+			225,
+			"moonlight_tileset_32x32",
+			10
+		);
 
+		this.door.setAlpha(0.5);
 		this.physics.add.overlap(this.player1, this.door, () => {
 			this.player1AtDoor = true;
 			this.checkClear();
@@ -365,16 +436,16 @@ export default class Level extends Phaser.Scene {
 
 		body1.setVelocityX(0);
 
-		if (this.cursors.left.isDown) {
+		if (this.cursors.left.isDown || this.mobileLeft) {
 			body1.setVelocityX(-200);
 			this.player1.setFlipX(true);
 		}
-		else if (this.cursors.right.isDown) {
+		else if (this.cursors.right.isDown || this.mobileRight) {
 			body1.setVelocityX(200);
 			this.player1.setFlipX(false);
 		}
 
-		if (this.cursors.up.isDown && body1.blocked.down) {
+		if ((this.cursors.up.isDown || this.mobileJump) && body1.blocked.down) {
 			body1.setVelocityY(-400);
 		}
 
