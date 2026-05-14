@@ -42,7 +42,7 @@ MISSION_REQUEST = {
     "targetUserId": "user-target-001",
     "intersectionInfo": {
         "timeSlots": ["14:00-15:00", "16:00-17:00"],
-        "buildingIds": ["building-welfare", "building-building-mirae"],
+        "buildingIds": ["building-mirae"],
         "dayOfWeek": 3,
     },
     "userProfiles": [
