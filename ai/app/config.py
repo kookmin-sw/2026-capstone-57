@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     # RAG
     chroma_persist_directory: str = "./data/chroma"
     rag_top_k: int = 3
-    mission_search_top_k: int = 5
+    mission_search_top_k: int = 3
 
     # Server
     server_port: int = 8081
