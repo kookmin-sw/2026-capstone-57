@@ -17,13 +17,13 @@ import java.util.UUID;
 @Component
 public class QuizRequestPublisher {
 
-    @Value("${cloud.aws.sqs.quiz-request-queue:}")
+    @Value("${cloud.aws.sqs.quiz-request-queue}")
     private String quizRequestQueue;
 
     private final SqsTemplate sqsTemplate;
     private final ObjectMapper objectMapper;
 
-    public QuizRequestPublisher(@Autowired(required = false) SqsTemplate sqsTemplate,
+    public QuizRequestPublisher(SqsTemplate sqsTemplate,
                                 ObjectMapper objectMapper) {
         this.sqsTemplate = sqsTemplate;
         this.objectMapper = objectMapper;

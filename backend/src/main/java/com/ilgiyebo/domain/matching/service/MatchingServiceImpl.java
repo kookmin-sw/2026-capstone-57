@@ -30,6 +30,8 @@ import com.ilgiyebo.domain.mission.repository.MissionRepository;
 import com.ilgiyebo.domain.user.repository.ScheduleRepository;
 import com.ilgiyebo.domain.matching.repository.SlotRepository;
 import com.ilgiyebo.domain.user.repository.UserRepository;
+import com.ilgiyebo.domain.interaction.dto.QuizGenerateRequestMessage;
+import com.ilgiyebo.domain.interaction.service.QuizRequestPublisher;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +64,7 @@ public class MatchingServiceImpl implements MatchingService {
     private final MatchRepository matchRepository;
     private final MissionRepository missionRepository;
     private final InteractionRepository interactionRepository;
+    private final QuizRequestPublisher quizRequestPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -232,6 +235,9 @@ public class MatchingServiceImpl implements MatchingService {
                         // 미션 사전 생성 (선택된 동선 기반)
                         createMissionFromOverlap(match.getId(), selectedOverlap, cycleEnd);
 
+                        // 퀴즈 사전 생성 (양쪽 사용자에 대해 SQS 요청 발행)
+                        preGenerateQuiz(match.getId(), userA, userB);
+
                         // 슬롯 상태 업데이트
                         slotA.setStatus(SlotStatus.ACTIVE);
                         slotA.setCurrentMatch(match);
@@ -372,6 +378,49 @@ public class MatchingServiceImpl implements MatchingService {
         missionRepository.save(mission);
 
         log.info("미션 사전 생성: matchId={}, location={}, activity={}", matchId, location, activity);
+    }
+
+    /**
+     * 매칭 성사 시 양쪽 사용자에 대해 퀴즈 생성을 SQS로 사전 요청한다.
+     * 사용자가 1단계(퀴즈)에 진입할 때 이미 퀴즈가 준비되어 있어 대기 없이 즉시 제공된다.
+     */
+    private void preGenerateQuiz(UUID matchId, UUID userA, UUID userB) {
+        try {
+            // userA를 위한 퀴즈 (userB 프로필 기반)
+            UserEntity partnerB = userRepository.findById(userB).orElse(null);
+            if (partnerB != null) {
+                QuizGenerateRequestMessage.TargetProfile profileB = QuizGenerateRequestMessage.TargetProfile.builder()
+                        .name(partnerB.getName())
+                        .nickname(partnerB.getNickname())
+                        .university(partnerB.getUniversity())
+                        .major(partnerB.getMajor())
+                        .hobbies(partnerB.getHobbies())
+                        .interests(partnerB.getInterests())
+                        .personalityType(partnerB.getPersonalityTypes())
+                        .build();
+                quizRequestPublisher.requestQuizGeneration(matchId, userA, userB, profileB);
+            }
+
+            // userB를 위한 퀴즈 (userA 프로필 기반)
+            UserEntity partnerA = userRepository.findById(userA).orElse(null);
+            if (partnerA != null) {
+                QuizGenerateRequestMessage.TargetProfile profileA = QuizGenerateRequestMessage.TargetProfile.builder()
+                        .name(partnerA.getName())
+                        .nickname(partnerA.getNickname())
+                        .university(partnerA.getUniversity())
+                        .major(partnerA.getMajor())
+                        .hobbies(partnerA.getHobbies())
+                        .interests(partnerA.getInterests())
+                        .personalityType(partnerA.getPersonalityTypes())
+                        .build();
+                quizRequestPublisher.requestQuizGeneration(matchId, userB, userA, profileA);
+            }
+
+            log.info("퀴즈 사전 생성 요청 완료: matchId={}, userA={}, userB={}", matchId, userA, userB);
+        } catch (Exception e) {
+            // 퀴즈 사전 생성 실패는 매칭 성사를 막지 않음 (사용자가 직접 요청 시 재시도 가능)
+            log.warn("퀴즈 사전 생성 요청 실패 (매칭은 유지): matchId={}", matchId, e);
+        }
     }
 
     /**
