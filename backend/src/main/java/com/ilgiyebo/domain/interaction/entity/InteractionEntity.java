@@ -76,10 +76,6 @@ public class InteractionEntity extends BaseSchema {
     @Column(name = "mission_confirmed_by", columnDefinition = "JSON")
     private List<String> missionConfirmedBy;
 
-    @Builder.Default
-    @Column(name = "mission_extended", nullable = false)
-    private boolean missionExtended = false;
-
     @Convert(converter = JsonStringListConverter.class)
     @Column(name = "review_completed_by", columnDefinition = "JSON")
     private List<String> reviewCompletedBy;

@@ -1,19 +1,12 @@
 package com.ilgiyebo.domain.matching.service;
 
 import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
-import com.ilgiyebo.domain.campus.entity.CampusBuildingPlaceEntity;
-import com.ilgiyebo.domain.campus.entity.CampusPathEntity;
-import com.ilgiyebo.domain.campus.entity.CampusPathVenueEntity;
-import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
 import com.ilgiyebo.domain.campus.repository.CampusPathRepository;
-import com.ilgiyebo.domain.campus.repository.CampusBuildingPlaceRepository;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import com.ilgiyebo.domain.matching.entity.MatchStatus;
-import com.ilgiyebo.domain.mission.entity.MissionEntity;
-import com.ilgiyebo.domain.mission.entity.MissionStatus;
 import com.ilgiyebo.domain.user.entity.ScheduleEntity;
 import com.ilgiyebo.domain.matching.entity.SlotEntity;
 import com.ilgiyebo.domain.matching.entity.SlotPriority;
@@ -27,12 +20,12 @@ import com.ilgiyebo.domain.matching.dto.RouteOverlapDto;
 import com.ilgiyebo.domain.matching.dto.SlotResponseDto;
 import com.ilgiyebo.domain.safety.repository.BlockRepository;
 import com.ilgiyebo.domain.matching.repository.MatchRepository;
-import com.ilgiyebo.domain.mission.repository.MissionRepository;
 import com.ilgiyebo.domain.user.repository.ScheduleRepository;
 import com.ilgiyebo.domain.matching.repository.SlotRepository;
 import com.ilgiyebo.domain.user.repository.UserRepository;
 import com.ilgiyebo.domain.interaction.dto.QuizGenerateRequestMessage;
 import com.ilgiyebo.domain.interaction.service.QuizRequestPublisher;
+import com.ilgiyebo.domain.mission.service.MissionService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +33,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -59,13 +51,11 @@ public class MatchingServiceImpl implements MatchingService {
     private final UserRepository userRepository;
     private final ScheduleRepository scheduleRepository;
     private final BlockRepository blockRepository;
-    private final CampusBuildingRepository campusBuildingRepository;
     private final CampusPathRepository campusPathRepository;
-    private final CampusBuildingPlaceRepository placeRepository;
     private final MatchRepository matchRepository;
-    private final MissionRepository missionRepository;
     private final InteractionRepository interactionRepository;
     private final QuizRequestPublisher quizRequestPublisher;
+    private final MissionService missionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -233,8 +223,8 @@ public class MatchingServiceImpl implements MatchingService {
                         // 상호작용 생성
                         createInteraction(match.getId());
 
-                        // 미션 사전 생성 (선택된 동선 기반)
-                        createMissionFromOverlap(match.getId(), selectedOverlap, cycleEnd);
+                        // 미션 생성 요청 (SQS 발행 → AI 서버에서 RAG 기반 생성)
+                        requestMissionGenerationSafe(match.getId());
 
                         // 퀴즈 사전 생성 (양쪽 사용자에 대해 SQS 요청 발행)
                         preGenerateQuiz(match.getId(), userA, userB);
@@ -310,78 +300,16 @@ public class MatchingServiceImpl implements MatchingService {
     }
 
     /**
-     * 선택된 동선 겹침 정보를 기반으로 미션 데이터를 생성한다.
-     *
-     * 1. 이동 중 만나는 경우 (from != to): campus_path의 venue를 사용
-     * 2. 같은 건물에 머무르는 경우 (from == to): place를 사용
+     * 매칭 성사 시 미션 생성을 SQS로 요청한다.
+     * 미션 생성 실패는 매칭 성사를 막지 않는다.
      */
-    private void createMissionFromOverlap(UUID matchId, OverlapLocationDto overlap, LocalDate cycleEnd) {
-        String location;
-        String activity;
-        String description;
-
-        boolean sameBuilding = overlap.fromBuilding().equals(overlap.toBuilding());
-
-        if (sameBuilding) {
-            // 같은 건물에 머무르는 경우 → place 사용
-            location = overlap.fromBuilding();
-            activity = "만남";
-            description = overlap.fromBuilding() + "에서 " + overlap.timeRange() + " 시간대에 만남";
-
-            Optional<CampusBuildingEntity> building = campusBuildingRepository.findByName(overlap.fromBuilding());
-            if (building.isPresent()) {
-                List<CampusBuildingPlaceEntity> places = placeRepository.findByBuildingId(building.get().getId());
-                if (!places.isEmpty()) {
-                    CampusBuildingPlaceEntity selectedPlace = places.get(0);
-                    location = overlap.fromBuilding() + " " + selectedPlace.getFloor() + "층 " + selectedPlace.getName();
-                    activity = location + "에서 만나기";
-                    description = location + "에서 " + overlap.timeRange() + " 시간대에 만남";
-                }
-            }
-        } else {
-            // 이동 중 만나는 경우 → campus_path의 venue 사용
-            location = overlap.fromBuilding() + " → " + overlap.toBuilding();
-            activity = "이동 중 만남";
-            description = overlap.fromBuilding() + "에서 " + overlap.toBuilding() + "으로 이동 중 " + overlap.timeRange() + " 시간대에 만남";
-
-            Optional<CampusBuildingEntity> fromBuilding = campusBuildingRepository.findByName(overlap.fromBuilding());
-            Optional<CampusBuildingEntity> toBuilding = campusBuildingRepository.findByName(overlap.toBuilding());
-
-            if (fromBuilding.isPresent() && toBuilding.isPresent()) {
-                List<CampusPathEntity> paths = campusPathRepository.findByFromBuildingIdAndToBuildingId(
-                        fromBuilding.get().getId(), toBuilding.get().getId());
-                if (!paths.isEmpty()) {
-                    CampusPathEntity selectedPath = paths.get(0);
-                    List<CampusPathVenueEntity> pathVenues = selectedPath.getPathVenues();
-                    if (pathVenues != null && !pathVenues.isEmpty()) {
-                        String venueName = pathVenues.get(0).getVenue().getName();
-                        location = venueName;
-                        activity = venueName + "에서 만나기";
-                        description = overlap.fromBuilding() + " → " + overlap.toBuilding() + " 이동 중 " + venueName + "에서 " + overlap.timeRange() + " 시간대에 만남";
-                    }
-                }
-            }
+    private void requestMissionGenerationSafe(UUID matchId) {
+        try {
+            missionService.requestMissionGeneration(matchId);
+        } catch (Exception e) {
+            // 미션 생성 요청 실패는 매칭 성사를 막지 않음
+            log.warn("미션 생성 요청 실패 (매칭은 유지): matchId={}", matchId, e);
         }
-
-        // 미션 기한: 매칭 주기 종료일(금요일) 23:59:59
-        Instant deadline = cycleEnd.plusDays(1).atStartOfDay()
-                .atZone(java.time.ZoneId.systemDefault())
-                .toInstant()
-                .minusSeconds(1);
-
-        MissionEntity mission = MissionEntity.builder()
-                .match(matchRepository.getReferenceById(matchId))
-                .location(location)
-                .activity(activity)
-                .description(description)
-                .deadline(deadline)
-                .confirmedBy(List.of())
-                .extended(false)
-                .status(MissionStatus.PENDING)
-                .build();
-        missionRepository.save(mission);
-
-        log.info("미션 사전 생성: matchId={}, location={}, activity={}", matchId, location, activity);
     }
 
     /**

@@ -41,11 +41,14 @@ public class MissionEntity extends BaseSchema {
     private List<String> confirmedBy;
 
     @Builder.Default
-    @Column(nullable = false)
-    private boolean extended = false;
-
-    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MissionStatus status = MissionStatus.PENDING;
+
+    /**
+     * AI가 선택한 서브 노드 ID (추적용).
+     * RAG 기반 미션 생성 시 AI 서버가 선택한 장소의 ChromaDB 노드 ID.
+     */
+    @Column(name = "selected_node_id")
+    private String selectedNodeId;
 }

@@ -279,7 +279,7 @@
     - 기존 `CampusPathEntity`를 참조하는 코드(`MatchingServiceImpl.createMissionFromOverlap` 등) 수정
     - _요구사항: 14.1, 14.3, 14.4_
 
-  - [ ] 8.3 미션 단계 (4단계) 구현
+  - [x] 8.3 미션 단계 (4단계) 구현
     - `requestMissionGeneration`: 매칭 성사 시 SQS 미션 요청 발행. 각 유저의 시간표에서 이동 구간을 파악하고, 캠퍼스 그래프에서 동선(출발 건물 → venue ID 리스트 → 도착 건물)을 선택하여 미션 요청 큐에 발행. 메시지에는 양쪽 유저의 `fromBuilding`, `toBuilding`, `subNodeIds` (동선 venue ID + 출발/도착 건물 place ID), `timeSlot`을 포함
     - timeSlot 계산: 시간표 상 수업 종료 시간에서 15분을 빼서 실제 종료 시간을 구하고, 그 시점부터 다음 수업 시작까지를 이동 시간으로 산정 (예: 시간표 13:30~15:00 → 실제 종료 14:45, 다음 수업 15:00 시작 → timeSlot = "14:45~15:00")
     - AI 서버 처리 흐름 (RAG): 양쪽 `subNodeIds` 비교 → 겹치는 노드 ID 추출 (없으면 도착 건물 place 활용) → ChromaDB `campus_nodes` 컬렉션에서 상세 정보 검색(Retrieval) → typeActivity/description/operatingHours 기반으로 LLM 프롬프트 구성(Augmented Generation) → Bedrock Claude 호출 → 미션 생성 결과 SQS 응답

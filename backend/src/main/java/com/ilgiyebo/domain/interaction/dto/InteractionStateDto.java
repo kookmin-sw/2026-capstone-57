@@ -38,8 +38,7 @@ public record InteractionStateDto(
             case 2 -> new ChatData(interaction.getChatStartTime(), interaction.getChatEndTime());
             case 3 -> new GameData(interaction.getGameType(), interaction.isGameCompleted());
             case 4 -> new MissionData(interaction.getMission() != null ? interaction.getMission().getId() : null,
-                    interaction.getMissionConfirmedBy() != null ? interaction.getMissionConfirmedBy() : List.of(),
-                    interaction.isMissionExtended());
+                    interaction.getMissionConfirmedBy() != null ? interaction.getMissionConfirmedBy() : List.of());
             case 5 -> new ReviewData(interaction.getReviewCompletedBy() != null ? interaction.getReviewCompletedBy() : List.of());
             default -> new QuizData(List.of());
         };
@@ -50,6 +49,6 @@ public record InteractionStateDto(
     public record QuizData(List<String> quizCompletedBy) implements StageDataDto {}
     public record ChatData(Instant chatStartTime, Instant chatEndTime) implements StageDataDto {}
     public record GameData(String gameType, boolean gameCompleted) implements StageDataDto {}
-    public record MissionData(UUID missionId, List<String> missionConfirmedBy, boolean extended) implements StageDataDto {}
+    public record MissionData(UUID missionId, List<String> missionConfirmedBy) implements StageDataDto {}
     public record ReviewData(List<String> reviewCompletedBy) implements StageDataDto {}
 }
