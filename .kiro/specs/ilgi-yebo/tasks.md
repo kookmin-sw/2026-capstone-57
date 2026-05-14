@@ -145,7 +145,7 @@
     - maxTurns 기본값 5, AI 조기 종료 지원
     - _요구사항: 3.1 (AI 일기 확장)_
 
-  - [ ] 3.5 AI 서버 일기 HTTP 클라이언트 연동
+  - [x] 3.5 AI 서버 일기 HTTP 클라이언트 연동
     - DiarySessionService에서 AIServiceClient의 일기 관련 HTTP 메서드 호출
     - `generateDiaryFirstQuestion`: 당일 플래너 + 전날 일기를 입력값으로 AI 서버에 전달
     - `generateDiaryNextQuestion`: 이전 대화 히스토리를 입력값으로 AI 서버에 전달, 다음 질문 또는 대화 완료 응답 수신

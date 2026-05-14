@@ -1,13 +1,11 @@
 package com.ilgiyebo.domain.diary.service;
 
 import com.ilgiyebo.domain.diary.entity.EmotionTag;
-import org.springframework.stereotype.Component;
 
 /**
  * AI 서버 연동 전 사용하는 스텁 구현체.
- * task 15.6에서 실제 HTTP 클라이언트로 교체된다.
+ * AI 서버 URL이 설정되지 않은 경우 DiaryAiClientConfig에서 이 구현체를 사용한다.
  */
-@Component
 public class StubDiaryAiClient implements DiaryAiClient {
 
     @Override
