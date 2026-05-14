@@ -32,6 +32,7 @@ from app.config import get_settings
 from app.conversation.manager import ConversationManager
 from app.features.diary.router import router as diary_router
 from app.features.mission.handler import MissionHandler
+from app.features.mission.router import router as mission_router_http
 from app.features.mission.search import MissionSearch
 from app.features.quiz.handler import QuizHandler
 from app.features.retrospective.router import router as retro_router
@@ -197,3 +198,4 @@ app.add_middleware(RequestBodyLogMiddleware)
 app.include_router(health_router)
 app.include_router(diary_router)
 app.include_router(retro_router)
+app.include_router(mission_router_http)

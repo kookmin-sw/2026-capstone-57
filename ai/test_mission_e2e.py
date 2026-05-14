@@ -1,16 +1,15 @@
-"""미션 생성 E2E 테스트.
+"""미션 생성 E2E 테스트 (서브 노드 기반).
 
-전체 흐름: SQS 전송 → 핸들러 처리 (ChromaDB 검색 → Bedrock 호출) → 응답 확인
+전체 흐름:
+1. 서브 노드 인덱싱 (HTTP)
+2. SQS 전송 → 핸들러 처리 (겹치는 노드 검색 → Bedrock 호출) → 응답 확인
 
 사전 조건:
-    - scripts/seed_venues.py 실행하여 장소 데이터 시딩 완료
+    - AI 서비스가 실행 중이어야 함 (포트 8000)
     - AWS 자격증명 설정 완료
-    - .env 파일에 SQS 큐 URL 설정 완료
 
 EC2에서 실행:
     python3 test_mission_e2e.py
-
-Requirements: 1.1, 1.2, 4.1
 """
 
 from __future__ import annotations
@@ -20,6 +19,7 @@ import json
 import time
 
 import boto3
+import requests
 
 from app.bedrock.client import BedrockClient
 from app.config import get_settings
@@ -29,39 +29,76 @@ from app.rag.embeddings import EmbeddingGenerator
 from app.rag.vector_store import VectorStore
 from app.sqs.publisher import SQSPublisher
 
-
 settings = get_settings()
 sqs = boto3.client("sqs", region_name=settings.aws_region)
 
+BASE_URL = "http://localhost:8000"
 
-# 테스트 메시지
-MISSION_REQUEST = {
-  "action": "GENERATE_MISSION",
-  "matchId": "uuid",
-  "requesterId": "uuid",
-  "targetUserId": "uuid",
-  "intersectionInfo": {
-    "timeSlots": ["14:00-15:00", "16:00-17:00"],
-    "buildingIds": ["미래관", "북악관"],
-    "venueIds": ["venue-yongduri"],
-    "dayOfWeek": 3
-  },
-  "userProfiles": [
+# 테스트용 서브 노드 데이터
+TEST_NODES = [
     {
-      "userId": "uuid",
-      "interests": ["커피", "독서"],
-      "personalityType": ["INFP"],
-      "hobbies": ["산책", "게임"]
+        "nodeId": "node-001",
+        "name": "용두리 벤치",
+        "typeActivity": "BENCH",
+        "description": "캠퍼스 내 자연 속 벤치, 산책하며 대화하기 좋은 곳",
+        "operatingHours": "상시 개방",
     },
     {
-      "userId": "uuid",
-      "interests": ["운동", "음악"],
-      "personalityType": ["ENTP"],
-      "hobbies": ["농구", "코딩"]
-    }
-  ],
-  "requestedAt": "2026-05-14T12:00:00Z"
+        "nodeId": "node-002",
+        "name": "북악관 카페",
+        "typeActivity": "CAFE",
+        "description": "북악관 1층 카페, 테이크아웃 가능",
+        "operatingHours": "월-금 08:00-21:00",
+    },
+    {
+        "nodeId": "node-003",
+        "name": "예대 매점",
+        "typeActivity": "CONVENIENCE_STORE",
+        "description": "예술대학 근처 매점, 간식과 음료 구매 가능",
+        "operatingHours": "월-금 09:00-18:00",
+    },
+]
+
+# 테스트 미션 요청 메시지
+MISSION_REQUEST = {
+    "action": "GENERATE_MISSION",
+    "matchId": "e2e-mission-test-001",
+    "userAId": "user-a-001",
+    "userBId": "user-b-001",
+    "timeSlot": "14:00-14:30",
+    "userARoute": {
+        "fromBuilding": {"id": "bld-001", "name": "공학관"},
+        "toBuilding": {"id": "bld-002", "name": "북악관"},
+        "subNodeIds": ["node-001", "node-002", "node-003"],
+    },
+    "userBRoute": {
+        "fromBuilding": {"id": "bld-003", "name": "도서관"},
+        "toBuilding": {"id": "bld-002", "name": "북악관"},
+        "subNodeIds": ["node-004", "node-002", "node-003"],
+    },
+    "requestedAt": "2026-05-14T12:00:00Z",
 }
+
+
+def step_0_index_nodes():
+    """0단계: 서브 노드를 ChromaDB에 인덱싱."""
+    print("\n" + "=" * 60)
+    print("📍 [0단계] 서브 노드 인덱싱 (HTTP)")
+    print("=" * 60)
+
+    for node in TEST_NODES:
+        response = requests.post(
+            f"{BASE_URL}/api/campus-nodes/index",
+            json=node,
+        )
+        if response.status_code == 200:
+            print(f"   ✅ {node['name']} 인덱싱 완료")
+        else:
+            print(f"   ❌ {node['name']} 인덱싱 실패: {response.status_code}")
+            print(f"      {response.text}")
+            return False
+
+    return True
 
 
 def step_1_send_message():
@@ -79,7 +116,7 @@ def step_1_send_message():
 
 
 def step_2_receive_message():
-    """2단계: Mission Request Queue에서 메시지 수신 (폴링 시뮬레이션)."""
+    """2단계: Mission Request Queue에서 메시지 수신."""
     print("\n" + "=" * 60)
     print("📥 [2단계] Mission Request Queue에서 메시지 수신")
     print("=" * 60)
@@ -100,48 +137,38 @@ def step_2_receive_message():
     print(f"   ✅ 수신 성공 - MessageId: {msg['MessageId']}")
     print(f"   Action: {body['action']}")
     print(f"   MatchId: {body['matchId']}")
-    print(f"   TimeSlots: {body['intersectionInfo']['timeSlots']}")
-    print(f"   Buildings: {body['intersectionInfo']['buildingIds']}")
+    print(f"   TimeSlot: {body['timeSlot']}")
+    print(f"   UserA 노드: {body['userARoute']['subNodeIds']}")
+    print(f"   UserB 노드: {body['userBRoute']['subNodeIds']}")
 
-    # 메시지 삭제 (처리 완료)
     sqs.delete_message(
         QueueUrl=settings.sqs_mission_request_queue,
         ReceiptHandle=msg["ReceiptHandle"],
     )
     print("   🗑️ 큐에서 삭제 완료")
-
     return body
 
 
 async def step_3_process_mission(message: dict):
-    """3단계: 핸들러로 미션 생성 (ChromaDB 검색 → Bedrock 호출)."""
+    """3단계: 핸들러로 미션 생성."""
     print("\n" + "=" * 60)
-    print("🧠 [3단계] 미션 생성 처리 (ChromaDB 검색 + Bedrock 호출)")
+    print("🧠 [3단계] 미션 생성 처리 (노드 검색 + Bedrock 호출)")
     print("=" * 60)
 
-    print(f"   [DEBUG] Response Queue URL: '{settings.sqs_mission_response_queue}'")
-
-    # 인프라 초기화
     bedrock_client = BedrockClient(settings)
     publisher = SQSPublisher(region=settings.aws_region)
     embedding_generator = EmbeddingGenerator(settings)
     vector_store = VectorStore(settings)
     mission_search = MissionSearch(embedding_generator, vector_store, settings)
-
     handler = MissionHandler(bedrock_client, publisher, mission_search, settings)
 
-    print("   ChromaDB 장소 검색 중...")
-    print("   프롬프트 증강 중...")
-    print("   Bedrock 호출 중... (최대 60초 소요)")
+    print("   겹치는 노드 검색 중...")
+    print("   Bedrock 호출 중...")
 
     start = time.time()
     await handler.handle(message)
     elapsed = time.time() - start
-
     print(f"   ✅ 처리 완료 ({elapsed:.1f}초 소요)")
-
-    # 발행 확인은 step_4에서 수행 (여기서 수신하면 step_4에서 못 받음)
-    print("   응답 큐 발행 완료 - step 4에서 확인 예정")
 
 
 def step_4_check_response():
@@ -150,6 +177,7 @@ def step_4_check_response():
     print("📬 [4단계] Mission Response Queue에서 결과 확인")
     print("=" * 60)
 
+    time.sleep(2)
     response = sqs.receive_message(
         QueueUrl=settings.sqs_mission_response_queue,
         MaxNumberOfMessages=1,
@@ -164,40 +192,26 @@ def step_4_check_response():
     msg = messages[0]
     body = json.loads(msg["Body"])
 
-    print(f"   ✅ 응답 수신!")
-    print(f"   Status: {body.get('status')}")
-    print(f"   MatchId: {body.get('matchId')}")
-    print(f"   CompletedAt: {body.get('completedAt')}")
+    print(f"\n[응답 JSON]")
+    print(json.dumps(body, ensure_ascii=False, indent=2))
 
-    mission = body.get("mission")
-    if mission:
-        print()
-        print(f"   🎯 생성된 미션:")
-        print(f"      장소: {mission.get('placeName')}")
-        print(f"      활동: {mission.get('activity')}")
-        print(f"      추천 시간: {mission.get('recommendedTime')}")
-        print(f"      설명: {mission.get('description')}")
-    else:
-        print(f"   (미션 데이터 없음 - status: {body.get('status')})")
-        if body.get("status") == "FAILED":
-            print("   에러: 응답에 mission 필드 없음")
-
-    # 응답 메시지 삭제
     sqs.delete_message(
         QueueUrl=settings.sqs_mission_response_queue,
         ReceiptHandle=msg["ReceiptHandle"],
     )
-    print("   🗑️ 응답 큐에서 삭제 완료")
+    print("\n   🗑️ 응답 큐에서 삭제 완료")
 
 
 async def main():
-    print("🚀 미션 생성 E2E 테스트 시작")
+    print("🚀 미션 생성 E2E 테스트 (서브 노드 기반)")
     print(f"   Region: {settings.aws_region}")
     print(f"   Request Queue: {settings.sqs_mission_request_queue}")
     print(f"   Response Queue: {settings.sqs_mission_response_queue}")
-    print(f"   Bedrock Model: {settings.bedrock_model_id}")
-    print(f"   Embedding Model: {settings.bedrock_embedding_model_id}")
-    print(f"   ChromaDB: {settings.chroma_persist_directory}")
+
+    # 0. 노드 인덱싱
+    if not step_0_index_nodes():
+        print("\n❌ 노드 인덱싱 실패. 테스트 중단.")
+        return
 
     # 1. 메시지 전송
     step_1_send_message()
