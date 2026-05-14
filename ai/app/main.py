@@ -24,7 +24,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.bedrock.client import BedrockClient
 from app.config import get_settings
@@ -174,6 +175,24 @@ app = FastAPI(
     description="Bedrock 기반 퀴즈/회고/일기 생성 서비스",
     lifespan=lifespan,
 )
+
+
+class RequestBodyLogMiddleware(BaseHTTPMiddleware):
+    """수신된 HTTP 요청의 바디를 로깅하는 미들웨어."""
+
+    async def dispatch(self, request: Request, call_next):
+        body = await request.body()
+        logger.info(
+            "HTTP 요청 수신: %s %s, body=%s",
+            request.method,
+            request.url.path,
+            body.decode("utf-8", errors="replace")[:2000],
+        )
+        response = await call_next(request)
+        return response
+
+
+app.add_middleware(RequestBodyLogMiddleware)
 
 app.include_router(health_router)
 app.include_router(diary_router)
