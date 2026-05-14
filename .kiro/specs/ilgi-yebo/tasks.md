@@ -131,7 +131,7 @@
     - AI 생성 일기와 일반 일기 공존 지원 (source 필드로 구분)
     - _요구사항: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-  - [ ] 3.4 DiarySessionService 구현 (AI 일기 멀티턴 대화)
+  - [x] 3.4 DiarySessionService 구현 (AI 일기 멀티턴 대화)
     - DiarySession 엔티티 생성 (id, userId, targetDate, status, generatedContent, suggestedEmotion, maxTurns, currentTurn)
     - DiaryConversationTurn 엔티티 생성 (id, sessionId, turnNumber, question, answer, askedAt, answeredAt)
     - DiarySessionRepository, DiaryConversationTurnRepository 정의
