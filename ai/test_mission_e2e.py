@@ -34,32 +34,66 @@ sqs = boto3.client("sqs", region_name=settings.aws_region)
 
 BASE_URL = "http://localhost:8000"
 
-# 테스트용 서브 노드 데이터
+# 테스트용 서브 노드 데이터 (시딩 스크립트의 데이터 중 일부)
 TEST_NODES = [
     {
-        "nodeId": "node-001",
-        "name": "용두리 벤치",
-        "typeActivity": "BENCH",
-        "description": "캠퍼스 내 자연 속 벤치, 산책하며 대화하기 좋은 곳",
-        "operatingHours": "상시 개방",
+        "nodeId": "uuid-1",
+        "source": "VENUE",
+        "name": "북악관 왼쪽 입구",
+        "typeActivity": ["CAFE", "CONVENIENCE_STORE", "RESTAURANT"],
+        "description": "북악관(N2동) 서쪽 입구, 편의점과 카페 접근 가능",
+        "operatingHours": "24시간",
     },
     {
-        "nodeId": "node-002",
-        "name": "북악관 카페",
-        "typeActivity": "CAFE",
-        "description": "북악관 1층 카페, 테이크아웃 가능",
-        "operatingHours": "월-금 08:00-21:00",
+        "nodeId": "uuid-14",
+        "source": "VENUE",
+        "name": "미래관 뒷문 (복지관방향)",
+        "typeActivity": ["OTHER"],
+        "description": "미래관에서 복지관으로 가는 입구",
+        "operatingHours": "24시간",
     },
     {
-        "nodeId": "node-003",
-        "name": "예대 매점",
-        "typeActivity": "CONVENIENCE_STORE",
-        "description": "예술대학 근처 매점, 간식과 음료 구매 가능",
-        "operatingHours": "월-금 09:00-18:00",
+        "nodeId": "uuid-15",
+        "source": "VENUE",
+        "name": "복지관 동쪽 입구",
+        "typeActivity": ["OTHER"],
+        "description": "복지관에서 미래관으로 가는 입구",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-109",
+        "source": "BUILDING_PLACE",
+        "name": "미래관 자주스",
+        "typeActivity": ["STUDY_ROOM"],
+        "description": "미래관(S2동) 4층 자율주행스튜디오, 학습과 휴식 공간",
+        "operatingHours": "월-금 09:00-21:00",
+        "buildingName": "미래관",
+        "floor": 4,
+    },
+    {
+        "nodeId": "uuid-110",
+        "source": "BUILDING_PLACE",
+        "name": "미래관 무한상상실",
+        "typeActivity": ["STUDY_ROOM"],
+        "description": "미래관(S2동) 4층 학습 공간",
+        "operatingHours": "월-금 09:00-21:00",
+        "buildingName": "미래관",
+        "floor": 4,
+    },
+    {
+        "nodeId": "uuid-104",
+        "source": "BUILDING_PLACE",
+        "name": "복지관 카페",
+        "typeActivity": ["CAFE"],
+        "description": "종합복지관(S1동) 지하1층 카페",
+        "operatingHours": "월-금 08:00-17:00",
+        "buildingName": "복지관",
+        "floor": -1,
     },
 ]
 
-# 테스트 미션 요청 메시지
+# 테스트 미션 요청: 유저A(북악관→미래관), 유저B(복지관→미래관)
+# 겹치는 노드: uuid-14(미래관 뒷문), uuid-109(자주스), uuid-110(무한상상실)
 MISSION_REQUEST = {
     "action": "GENERATE_MISSION",
     "matchId": "e2e-mission-test-001",
@@ -67,14 +101,14 @@ MISSION_REQUEST = {
     "userBId": "user-b-001",
     "timeSlot": "14:00-14:30",
     "userARoute": {
-        "fromBuilding": {"id": "bld-001", "name": "공학관"},
-        "toBuilding": {"id": "bld-002", "name": "북악관"},
-        "subNodeIds": ["node-001", "node-002", "node-003"],
+        "fromBuilding": {"id": "bld-001", "name": "북악관"},
+        "toBuilding": {"id": "bld-002", "name": "미래관"},
+        "subNodeIds": ["uuid-1", "uuid-14", "uuid-109", "uuid-110"],
     },
     "userBRoute": {
-        "fromBuilding": {"id": "bld-003", "name": "도서관"},
-        "toBuilding": {"id": "bld-002", "name": "북악관"},
-        "subNodeIds": ["node-004", "node-002", "node-003"],
+        "fromBuilding": {"id": "bld-003", "name": "복지관"},
+        "toBuilding": {"id": "bld-002", "name": "미래관"},
+        "subNodeIds": ["uuid-15", "uuid-14", "uuid-104", "uuid-109", "uuid-110"],
     },
     "requestedAt": "2026-05-14T12:00:00Z",
 }
@@ -138,7 +172,9 @@ def step_2_receive_message():
     print(f"   Action: {body['action']}")
     print(f"   MatchId: {body['matchId']}")
     print(f"   TimeSlot: {body['timeSlot']}")
+    print(f"   UserA: {body['userARoute']['fromBuilding']['name']} → {body['userARoute']['toBuilding']['name']}")
     print(f"   UserA 노드: {body['userARoute']['subNodeIds']}")
+    print(f"   UserB: {body['userBRoute']['fromBuilding']['name']} → {body['userBRoute']['toBuilding']['name']}")
     print(f"   UserB 노드: {body['userBRoute']['subNodeIds']}")
 
     sqs.delete_message(
