@@ -1,12 +1,12 @@
 """미션 생성 E2E 테스트 (서브 노드 기반).
 
-전체 흐름:
-1. 서브 노드 인덱싱 (HTTP)
-2. SQS 전송 → 핸들러 처리 (겹치는 노드 검색 → Bedrock 호출) → 응답 확인
+실제 Backend와 통신하는 것처럼 SQS를 통해 데이터를 주고받는 테스트.
+사전에 seed_venues.py로 노드 데이터가 시딩되어 있어야 함.
 
-사전 조건:
-    - AI 서비스가 실행 중이어야 함 (포트 8000)
-    - AWS 자격증명 설정 완료
+흐름:
+1. SQS 미션 요청 큐에 메시지 전송 (Backend 역할)
+2. AI 서버가 폴링하여 처리 (또는 직접 핸들러 호출)
+3. SQS 미션 응답 큐에서 결과 수신 (Backend 역할)
 
 EC2에서 실행:
     python3 test_mission_e2e.py
@@ -19,7 +19,6 @@ import json
 import time
 
 import boto3
-import requests
 
 from app.bedrock.client import BedrockClient
 from app.config import get_settings
@@ -32,68 +31,7 @@ from app.sqs.publisher import SQSPublisher
 settings = get_settings()
 sqs = boto3.client("sqs", region_name=settings.aws_region)
 
-BASE_URL = "http://localhost:8000"
-
-# 테스트용 서브 노드 데이터 (시딩 스크립트의 데이터 중 일부)
-TEST_NODES = [
-    {
-        "nodeId": "uuid-1",
-        "source": "VENUE",
-        "name": "북악관 왼쪽 입구",
-        "typeActivity": ["CAFE", "CONVENIENCE_STORE", "RESTAURANT"],
-        "description": "북악관(N2동) 서쪽 입구, 편의점과 카페 접근 가능",
-        "operatingHours": "24시간",
-    },
-    {
-        "nodeId": "uuid-14",
-        "source": "VENUE",
-        "name": "미래관 뒷문 (복지관방향)",
-        "typeActivity": ["OTHER"],
-        "description": "미래관에서 복지관으로 가는 입구",
-        "operatingHours": "24시간",
-    },
-    {
-        "nodeId": "uuid-15",
-        "source": "VENUE",
-        "name": "복지관 동쪽 입구",
-        "typeActivity": ["OTHER"],
-        "description": "복지관에서 미래관으로 가는 입구",
-        "operatingHours": "24시간",
-    },
-    {
-        "nodeId": "uuid-109",
-        "source": "BUILDING_PLACE",
-        "name": "미래관 자주스",
-        "typeActivity": ["STUDY_ROOM"],
-        "description": "미래관(S2동) 4층 자율주행스튜디오, 학습과 휴식 공간",
-        "operatingHours": "월-금 09:00-21:00",
-        "buildingName": "미래관",
-        "floor": 4,
-    },
-    {
-        "nodeId": "uuid-110",
-        "source": "BUILDING_PLACE",
-        "name": "미래관 무한상상실",
-        "typeActivity": ["STUDY_ROOM"],
-        "description": "미래관(S2동) 4층 학습 공간",
-        "operatingHours": "월-금 09:00-21:00",
-        "buildingName": "미래관",
-        "floor": 4,
-    },
-    {
-        "nodeId": "uuid-104",
-        "source": "BUILDING_PLACE",
-        "name": "복지관 카페",
-        "typeActivity": ["CAFE"],
-        "description": "종합복지관(S1동) 지하1층 카페",
-        "operatingHours": "월-금 08:00-17:00",
-        "buildingName": "복지관",
-        "floor": -1,
-    },
-]
-
-# 테스트 미션 요청: 유저A(북악관→미래관), 유저B(복지관→미래관)
-# 겹치는 노드: uuid-14(미래관 뒷문), uuid-109(자주스), uuid-110(무한상상실)
+# Backend가 보내는 미션 요청 메시지 (실제 형식 그대로)
 MISSION_REQUEST = {
     "action": "GENERATE_MISSION",
     "matchId": "e2e-mission-test-001",
@@ -114,47 +52,33 @@ MISSION_REQUEST = {
 }
 
 
-def step_0_index_nodes():
-    """0단계: 서브 노드를 ChromaDB에 인덱싱."""
+def step_1_send_request():
+    """[Backend 역할] 미션 요청을 SQS에 전송."""
     print("\n" + "=" * 60)
-    print("📍 [0단계] 서브 노드 인덱싱 (HTTP)")
+    print("� [1단계] Backend → SQS 미션 요청 전송")
     print("=" * 60)
-
-    for node in TEST_NODES:
-        response = requests.post(
-            f"{BASE_URL}/api/campus-nodes/index",
-            json=node,
-        )
-        if response.status_code == 200:
-            print(f"   ✅ {node['name']} 인덱싱 완료")
-        else:
-            print(f"   ❌ {node['name']} 인덱싱 실패: {response.status_code}")
-            print(f"      {response.text}")
-            return False
-
-    return True
-
-
-def step_1_send_message():
-    """1단계: Mission Request Queue에 메시지 전송."""
-    print("\n" + "=" * 60)
-    print("📤 [1단계] Mission Request Queue에 메시지 전송")
-    print("=" * 60)
+    print(f"   Queue: {settings.sqs_mission_request_queue}")
+    print(f"   MatchId: {MISSION_REQUEST['matchId']}")
+    print(f"   TimeSlot: {MISSION_REQUEST['timeSlot']}")
+    print(f"   UserA: {MISSION_REQUEST['userARoute']['fromBuilding']['name']} → {MISSION_REQUEST['userARoute']['toBuilding']['name']}")
+    print(f"   UserB: {MISSION_REQUEST['userBRoute']['fromBuilding']['name']} → {MISSION_REQUEST['userBRoute']['toBuilding']['name']}")
+    print(f"   UserA 노드: {MISSION_REQUEST['userARoute']['subNodeIds']}")
+    print(f"   UserB 노드: {MISSION_REQUEST['userBRoute']['subNodeIds']}")
 
     response = sqs.send_message(
         QueueUrl=settings.sqs_mission_request_queue,
         MessageBody=json.dumps(MISSION_REQUEST, ensure_ascii=False),
     )
-    print(f"   ✅ 전송 성공 - MessageId: {response['MessageId']}")
-    return response["MessageId"]
+    print(f"\n   ✅ 전송 성공 - MessageId: {response['MessageId']}")
 
 
-def step_2_receive_message():
-    """2단계: Mission Request Queue에서 메시지 수신."""
+def step_2_receive_and_process():
+    """[AI 서버 역할] SQS에서 수신 → 핸들러 처리."""
     print("\n" + "=" * 60)
-    print("📥 [2단계] Mission Request Queue에서 메시지 수신")
+    print("🧠 [2단계] AI 서버: SQS 수신 → 미션 생성")
     print("=" * 60)
 
+    # SQS에서 메시지 수신
     response = sqs.receive_message(
         QueueUrl=settings.sqs_mission_request_queue,
         MaxNumberOfMessages=1,
@@ -164,32 +88,22 @@ def step_2_receive_message():
     messages = response.get("Messages", [])
     if not messages:
         print("   ❌ 메시지 없음 (타임아웃)")
-        return None
+        return False
 
     msg = messages[0]
     body = json.loads(msg["Body"])
-    print(f"   ✅ 수신 성공 - MessageId: {msg['MessageId']}")
-    print(f"   Action: {body['action']}")
-    print(f"   MatchId: {body['matchId']}")
-    print(f"   TimeSlot: {body['timeSlot']}")
-    print(f"   UserA: {body['userARoute']['fromBuilding']['name']} → {body['userARoute']['toBuilding']['name']}")
-    print(f"   UserA 노드: {body['userARoute']['subNodeIds']}")
-    print(f"   UserB: {body['userBRoute']['fromBuilding']['name']} → {body['userBRoute']['toBuilding']['name']}")
-    print(f"   UserB 노드: {body['userBRoute']['subNodeIds']}")
+    print(f"   ✅ 메시지 수신 완료")
 
+    # 메시지 삭제
     sqs.delete_message(
         QueueUrl=settings.sqs_mission_request_queue,
         ReceiptHandle=msg["ReceiptHandle"],
     )
-    print("   🗑️ 큐에서 삭제 완료")
-    return body
 
-
-async def step_3_process_mission(message: dict):
-    """3단계: 핸들러로 미션 생성."""
-    print("\n" + "=" * 60)
-    print("🧠 [3단계] 미션 생성 처리 (노드 검색 + Bedrock 호출)")
-    print("=" * 60)
+    # 핸들러로 처리
+    print("   겹치는 노드 검색 중...")
+    print("   ChromaDB 조회 중...")
+    print("   Bedrock 호출 중...")
 
     bedrock_client = BedrockClient(settings)
     publisher = SQSPublisher(region=settings.aws_region)
@@ -198,19 +112,21 @@ async def step_3_process_mission(message: dict):
     mission_search = MissionSearch(embedding_generator, vector_store, settings)
     handler = MissionHandler(bedrock_client, publisher, mission_search, settings)
 
-    print("   겹치는 노드 검색 중...")
-    print("   Bedrock 호출 중...")
-
     start = time.time()
-    await handler.handle(message)
+    asyncio.run(_run_handler(handler, body))
     elapsed = time.time() - start
     print(f"   ✅ 처리 완료 ({elapsed:.1f}초 소요)")
+    return True
 
 
-def step_4_check_response():
-    """4단계: Mission Response Queue에서 결과 확인."""
+async def _run_handler(handler, message):
+    await handler.handle(message)
+
+
+def step_3_receive_response():
+    """[Backend 역할] SQS 응답 큐에서 미션 결과 수신."""
     print("\n" + "=" * 60)
-    print("📬 [4단계] Mission Response Queue에서 결과 확인")
+    print("� [3단계] Backend ← SQS 미션 응답 수신")
     print("=" * 60)
 
     time.sleep(2)
@@ -228,41 +144,34 @@ def step_4_check_response():
     msg = messages[0]
     body = json.loads(msg["Body"])
 
-    print(f"\n[응답 JSON]")
+    print(f"\n   [응답 JSON]")
     print(json.dumps(body, ensure_ascii=False, indent=2))
 
+    # 메시지 삭제
     sqs.delete_message(
         QueueUrl=settings.sqs_mission_response_queue,
         ReceiptHandle=msg["ReceiptHandle"],
     )
-    print("\n   🗑️ 응답 큐에서 삭제 완료")
+    print(f"\n   🗑️ 응답 큐에서 삭제 완료")
 
 
-async def main():
-    print("🚀 미션 생성 E2E 테스트 (서브 노드 기반)")
+def main():
+    print("🚀 미션 생성 E2E 테스트")
     print(f"   Region: {settings.aws_region}")
     print(f"   Request Queue: {settings.sqs_mission_request_queue}")
     print(f"   Response Queue: {settings.sqs_mission_response_queue}")
+    print(f"   Bedrock Model: {settings.bedrock_model_id}")
 
-    # 0. 노드 인덱싱
-    if not step_0_index_nodes():
-        print("\n❌ 노드 인덱싱 실패. 테스트 중단.")
+    # 1. Backend가 미션 요청 전송
+    step_1_send_request()
+
+    # 2. AI 서버가 수신 → 처리
+    if not step_2_receive_and_process():
+        print("\n❌ 테스트 실패")
         return
 
-    # 1. 메시지 전송
-    step_1_send_message()
-
-    # 2. 메시지 수신
-    message = step_2_receive_message()
-    if not message:
-        print("\n❌ 테스트 실패: 메시지를 수신하지 못했습니다.")
-        return
-
-    # 3. 미션 생성 처리
-    await step_3_process_mission(message)
-
-    # 4. 응답 확인
-    step_4_check_response()
+    # 3. Backend가 응답 수신
+    step_3_receive_response()
 
     print("\n" + "=" * 60)
     print("🎉 미션 생성 E2E 테스트 완료!")
@@ -270,4 +179,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
