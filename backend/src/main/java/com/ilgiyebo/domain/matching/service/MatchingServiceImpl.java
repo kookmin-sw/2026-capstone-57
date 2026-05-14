@@ -3,9 +3,10 @@ package com.ilgiyebo.domain.matching.service;
 import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
 import com.ilgiyebo.domain.campus.entity.CampusBuildingPlaceEntity;
 import com.ilgiyebo.domain.campus.entity.CampusPathEntity;
+import com.ilgiyebo.domain.campus.entity.CampusPathVenueEntity;
 import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
 import com.ilgiyebo.domain.campus.repository.CampusPathRepository;
-import com.ilgiyebo.domain.campus.repository.PlaceRepository;
+import com.ilgiyebo.domain.campus.repository.CampusBuildingPlaceRepository;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
@@ -60,7 +61,7 @@ public class MatchingServiceImpl implements MatchingService {
     private final BlockRepository blockRepository;
     private final CampusBuildingRepository campusBuildingRepository;
     private final CampusPathRepository campusPathRepository;
-    private final PlaceRepository placeRepository;
+    private final CampusBuildingPlaceRepository placeRepository;
     private final MatchRepository matchRepository;
     private final MissionRepository missionRepository;
     private final InteractionRepository interactionRepository;
@@ -351,10 +352,13 @@ public class MatchingServiceImpl implements MatchingService {
                         fromBuilding.get().getId(), toBuilding.get().getId());
                 if (!paths.isEmpty()) {
                     CampusPathEntity selectedPath = paths.get(0);
-                    String venueName = selectedPath.getVenue().getName();
-                    location = venueName;
-                    activity = venueName + "에서 만나기";
-                    description = overlap.fromBuilding() + " → " + overlap.toBuilding() + " 이동 중 " + venueName + "에서 " + overlap.timeRange() + " 시간대에 만남";
+                    List<CampusPathVenueEntity> pathVenues = selectedPath.getPathVenues();
+                    if (pathVenues != null && !pathVenues.isEmpty()) {
+                        String venueName = pathVenues.get(0).getVenue().getName();
+                        location = venueName;
+                        activity = venueName + "에서 만나기";
+                        description = overlap.fromBuilding() + " → " + overlap.toBuilding() + " 이동 중 " + venueName + "에서 " + overlap.timeRange() + " 시간대에 만남";
+                    }
                 }
             }
         }

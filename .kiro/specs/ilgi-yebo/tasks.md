@@ -271,7 +271,7 @@
     - **Property 20: 게임 완료 시 친밀도 부여**
     - **검증 대상: 요구사항 7.2**
 
-  - [ ] 8.2.1 캠퍼스 공간 데이터 모델 리팩토링 (RAG 미션 생성 준비)
+  - [x] 8.2.1 캠퍼스 공간 데이터 모델 리팩토링 (RAG 미션 생성 준비)
     - `PlaceType` enum을 `TypeActivity`로 rename (CAFE, CONVENIENCE_STORE, RESTAURANT, LECTURE_ROOM, STUDY_ROOM, MEETING_ROOM, ELEVATOR, BENCH, OTHER)
     - `CampusVenueEntity`에 필드 추가: `typeActivity` (List<TypeActivity> — JSON 문자열 컬럼 또는 별도 테이블), `description` (String), `operatingHours` (String)
     - `CampusBuildingPlaceEntity`의 기존 `type` (PlaceType 단일) → `typeActivity` (List<TypeActivity>)로 변경, `description` (String), `operatingHours` (String) 추가
