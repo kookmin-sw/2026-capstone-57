@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     sqs_publish_max_retries: int = 3
 
     # Conversation
-    conversation_max_turns: int = 5
+    conversation_max_turns: int = 10
     conversation_session_timeout_minutes: int = 30
 
     # RAG

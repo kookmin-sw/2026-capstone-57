@@ -65,6 +65,7 @@ class NextQuestionRequest(BaseModel):
 class GenerateRequest(BaseModel):
     """일기 생성 요청."""
 
+    sessionId: str
     userId: str
     date: str
     conversationHistory: list[ConversationTurn] = Field(default_factory=list)
@@ -75,7 +76,7 @@ class FirstQuestionResponse(BaseModel):
     """첫 질문 응답."""
 
     question: str
-    maxTurns: int = 5
+    maxTurns: int = 10
 
 
 class NextQuestionResponse(BaseModel):
@@ -84,7 +85,7 @@ class NextQuestionResponse(BaseModel):
     question: Optional[str] = None
     isConversationComplete: bool = False
     currentTurn: int
-    maxTurns: int = 5
+    maxTurns: int = 10
 
 
 class ProfileUpdate(BaseModel):
@@ -97,7 +98,9 @@ class ProfileUpdate(BaseModel):
 class GenerateResponse(BaseModel):
     """일기 생성 응답."""
 
+    sessionId: str
     compiledContent: str
+    suggestedEmotion: str
     profileUpdate: Optional[ProfileUpdate] = None
     generatedAt: datetime
 
@@ -355,7 +358,7 @@ async def generate_diary(body: GenerateRequest, request: Request):
     """대화 내용을 기반으로 일기를 생성한다.
 
     전체 대화 히스토리를 받아 일기를 컴파일하고,
-    대화 내용에서 사용자 성향(hobbies, interests)을 추출한다.
+    대화 내용에서 사용자 성향(hobbies, interests)과 감정을 추출한다.
     """
     bedrock_client = request.app.state.bedrock_client
 
@@ -376,8 +379,15 @@ async def generate_diary(body: GenerateRequest, request: Request):
                 bedrock_client, body.conversationHistory
             )
 
+            # 3. 감정 분석
+            suggested_emotion = await _analyze_emotion(
+                bedrock_client, body.conversationHistory
+            )
+
             return GenerateResponse(
+                sessionId=body.sessionId,
                 compiledContent=compiled_content,
+                suggestedEmotion=suggested_emotion,
                 profileUpdate=profile_update,
                 generatedAt=datetime.now(timezone.utc),
             )
@@ -419,3 +429,43 @@ async def _analyze_profile(
     except Exception:
         logger.warning("성향 분석 실패 (계속 진행)")
         return None
+
+
+async def _analyze_emotion(
+    bedrock_client,
+    conversation_history: list[ConversationTurn],
+) -> str:
+    """대화 내용에서 오늘의 감정을 분석한다."""
+    VALID_EMOTIONS = {"HAPPY", "SAD", "ANGRY", "ANXIOUS", "CALM", "EXCITED", "TIRED"}
+
+    conversation_text = ""
+    for turn in conversation_history:
+        conversation_text += f"Q: {turn.question}\nA: {turn.answer}\n\n"
+
+    prompt = f"""아래 대화 내용에서 사용자의 오늘 하루 전반적인 감정을 분석해주세요.
+
+[대화 내용]
+{conversation_text}
+
+[규칙]
+1. 반드시 다음 중 하나만 출력하세요: HAPPY, SAD, ANGRY, ANXIOUS, CALM, EXCITED, TIRED
+2. 다른 텍스트는 포함하지 마세요. 단어 하나만 출력하세요.
+"""
+
+    try:
+        raw_response = await bedrock_client.invoke(prompt)
+        emotion = raw_response.strip().upper()
+
+        if emotion in VALID_EMOTIONS:
+            return emotion
+
+        # 응답에서 유효한 감정 키워드 찾기
+        for e in VALID_EMOTIONS:
+            if e in emotion:
+                return e
+
+        return "CALM"
+
+    except Exception:
+        logger.warning("감정 분석 실패, 기본값 CALM 사용")
+        return "CALM"
