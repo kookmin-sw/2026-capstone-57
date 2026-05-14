@@ -406,12 +406,21 @@ export default class Level extends Phaser.Scene {
 		// this.physics.add.existing(this.door, true);
 		this.door = this.physics.add.staticSprite(
 			354,
-			225,
-			"moonlight_tileset_32x32",
-			10
+			188,
+			"closed_door"
+		);
+		this.door.setScale(0.1,0.1);
+		/* physics body 재설정 */
+		const body = this.door.body as Phaser.Physics.Arcade.StaticBody;
+
+		body.setSize(
+			this.door.displayWidth,
+			this.door.displayHeight,
+			true
 		);
 
-		this.door.setAlpha(0.5);
+		body.updateFromGameObject();
+		//this.door.setAlpha(0.5);
 		this.physics.add.overlap(this.player1, this.door, () => {
 			this.player1AtDoor = true;
 			this.checkClear();
@@ -576,8 +585,24 @@ private openDoor() {
 	}
 
 	this.doorOpen = true;
-	this.door.fillColor = 0x66ccff;
-	this.door.alpha = 1;
+	// this.door.fillColor = 0x66ccff;
+	//this.door.alpha = 1;
+	this.door = this.physics.add.staticSprite(
+			354,
+			188,
+			"door"
+		);
+	this.door.setScale(0.1,0.1); 
+	/* physics body 재설정 */
+	const body = this.door.body as Phaser.Physics.Arcade.StaticBody;
+
+	body.setSize(
+		this.door.displayWidth,
+		this.door.displayHeight,
+		true
+	);
+
+	body.updateFromGameObject();
 }
 
 private checkClear() {

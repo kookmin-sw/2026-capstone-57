@@ -51,6 +51,16 @@
                 "key": "clear_logo"
             },
             {
+                "url": "assets/closed_door.png",
+                "type": "image",
+                "key": "closed_door"
+            },
+            {
+                "url": "assets/door.png",
+                "type": "image",
+                "key": "door"
+            },
+            {
                 "url": "assets/FufuSuperDino.png",
                 "type": "image",
                 "key": "FufuSuperDino"
@@ -154,19 +164,6 @@
                 "sceneKey": "MoonlightScene",
                 "type": "scenePlugin",
                 "key": "MoonlightScene"
-            },
-            {
-                "url": "assets/open_closed_door.png",
-                "frameConfig": {
-                    "frameWidth": 800,
-                    "frameHeight": 1024,
-                    "startFrame": 0,
-                    "endFrame": -1,
-                    "spacing": 10,
-                    "margin": 100
-                },
-                "type": "spritesheet",
-                "key": "open_closed_door"
             },
             {
                 "url": "assets/pink_cloud_idle.png",
