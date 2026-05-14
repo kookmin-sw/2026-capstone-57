@@ -13,9 +13,12 @@ EC2에서 실행:
 
 from __future__ import annotations
 
+import uuid
+
 import requests
 
 BASE_URL = "http://localhost:8000"
+SESSION_ID = f"diary-test-{uuid.uuid4().hex[:8]}"
 USER_ID = "user-test-001"
 DATE = "2026-05-14"
 
@@ -75,6 +78,7 @@ def generate_diary(conversation_history: list[dict]):
     response = requests.post(
         f"{BASE_URL}/api/diary/generate",
         json={
+            "sessionId": SESSION_ID,
             "userId": USER_ID,
             "date": DATE,
             "conversationHistory": conversation_history,
