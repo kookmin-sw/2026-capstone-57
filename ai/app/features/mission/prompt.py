@@ -46,7 +46,7 @@ DEFAULT_MISSION_PROMPT_TEMPLATE = """당신은 대학생 매칭 서비스의 오
 {{
   "placeName": "선택한 장소명",
   "activity": "구체적인 활동 (예: 커피 마시면서 가벼운 대화 나누기)",
-  "recommendedTime": "추천 시간대 (예: 14:00-15:00)",
+  "recommendedTime": "시간 (예: 14:00-15:00)",
   "description": "미션 설명 (2~3문장, 해요체, 두 사용자의 맥락을 반영)"
 }}
 """
