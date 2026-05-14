@@ -7,9 +7,12 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
-@Table(name = "diary_entry")
+@Table(name = "diary_entry", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"user_id", "entry_date", "source"})
+})
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -31,6 +34,14 @@ public class DiaryEntryEntity extends BaseSchema {
     @Enumerated(EnumType.STRING)
     @Column(name = "emotion_tag")
     private EmotionTag emotionTag;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false)
+    private DiarySource source = DiarySource.MANUAL;
+
+    @Column(name = "ai_session_id", columnDefinition = "BINARY(16)")
+    private UUID aiSessionId;
 
     @Builder.Default
     @Column(name = "streak_count", nullable = false)

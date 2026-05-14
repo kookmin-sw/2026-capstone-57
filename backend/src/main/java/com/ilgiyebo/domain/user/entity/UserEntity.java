@@ -64,6 +64,16 @@ public class UserEntity extends BaseSchema {
     private List<String> idealTypes;
 
     @Builder.Default
+    @Convert(converter = JsonStringListConverter.class)
+    @Column(name = "ai_inferred_hobbies", columnDefinition = "JSON")
+    private List<String> aiInferredHobbies = new java.util.ArrayList<>();
+
+    @Builder.Default
+    @Convert(converter = JsonStringListConverter.class)
+    @Column(name = "ai_inferred_interests", columnDefinition = "JSON")
+    private List<String> aiInferredInterests = new java.util.ArrayList<>();
+
+    @Builder.Default
     @Column(name = "total_exp", nullable = false)
     private int totalExp = 0;
 
