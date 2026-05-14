@@ -24,10 +24,10 @@ DATE = "2026-05-14"
 
 # 테스트용 일정 데이터
 TODAY_SCHEDULE = [
-    {"startTime": "09:00", "endTime": "10:30", "location": "공학관", "activity": "알고리즘"},
+    {"startTime": "09:00", "endTime": "10:30", "location": "미래관", "activity": "알고리즘"},
     {"startTime": "11:00", "endTime": "12:00", "location": None, "activity": "점심시간"},
-    {"startTime": "13:00", "endTime": "14:30", "location": "북악관", "activity": "캡스톤디자인"},
-    {"startTime": "15:00", "endTime": "16:30", "location": "미래관", "activity": "자율주행스튜디오"},
+    {"startTime": "13:00", "endTime": "14:30", "location": "미래관", "activity": "캡스톤디자인"},
+    {"startTime": "15:00", "endTime": "16:30", "location": "미래관", "activity": "자율주행스튜디오에서 자습"},
 ]
 
 PREVIOUS_DIARY = "어제는 캡스톤 발표 준비를 했다. 팀원들이랑 밤늦게까지 PPT를 만들었는데 결과가 꽤 괜찮았다."
