@@ -85,7 +85,10 @@ class NodeIndexRequest(BaseModel):
     """장소 인덱싱 요청 (HTTP)."""
 
     nodeId: str
+    source: str  # "VENUE" | "BUILDING_PLACE"
     name: str
-    typeActivity: str
+    typeActivity: list[str] = Field(default_factory=list)
     description: str
     operatingHours: Optional[str] = None
+    buildingName: Optional[str] = None
+    floor: Optional[int] = None

@@ -32,35 +32,35 @@ class IndexResponse(BaseModel):
 async def index_campus_node(body: NodeIndexRequest, request: Request):
     """서브 노드를 ChromaDB에 인덱싱한다.
 
-    노드 정보를 임베딩하여 venues 컬렉션에 저장한다.
-    동일 nodeId가 이미 존재하면 덮어쓴다.
+    source에 따라 임베딩 텍스트를 다르게 구성한다:
+    - VENUE: "{name} | 외부 장소 | {description} | {typeActivity} | {operatingHours}"
+    - BUILDING_PLACE: "{name} | {buildingName} {floor}층 | {description} | {typeActivity} | {operatingHours}"
     """
     embedding_generator = request.app.state.embedding_generator
     vector_store = request.app.state.vector_store
 
     try:
-        # embeddingText 구성
-        parts = [body.name]
-        if body.description:
-            parts.append(body.description)
-        if body.typeActivity:
-            parts.append(f"유형: {body.typeActivity}")
-        if body.operatingHours:
-            parts.append(f"운영시간: {body.operatingHours}")
+        # source에 따라 임베딩 텍스트 구성
+        type_str = ", ".join(body.typeActivity) if body.typeActivity else "OTHER"
+        hours = body.operatingHours or ""
 
-        embedding_text = " | ".join(parts)
+        if body.source == "BUILDING_PLACE" and body.buildingName:
+            floor_str = f"{body.floor}층" if body.floor and body.floor >= 0 else f"지하 {abs(body.floor)}층" if body.floor else ""
+            embedding_text = f"{body.name} | {body.buildingName} {floor_str} | {body.description} | {type_str} | {hours}"
+        else:
+            embedding_text = f"{body.name} | 외부 장소 | {body.description} | {type_str} | {hours}"
 
         # 임베딩 생성
         embedding = await embedding_generator.generate(embedding_text)
 
-        # ChromaDB에 저장 (upsert 방식: 기존 삭제 후 추가)
+        # ChromaDB에 저장 (upsert: 기존 삭제 후 추가)
         try:
             await vector_store.delete_documents(
                 collection_name=COLLECTION_VENUES,
                 ids=[body.nodeId],
             )
         except Exception:
-            pass  # 존재하지 않으면 무시
+            pass
 
         await vector_store.add_documents(
             collection_name=COLLECTION_VENUES,
@@ -68,15 +68,18 @@ async def index_campus_node(body: NodeIndexRequest, request: Request):
             embeddings=[embedding],
             metadatas=[{
                 "name": body.name,
-                "type_activity": body.typeActivity,
+                "source": body.source,
+                "type_activity": ", ".join(body.typeActivity),
                 "description": body.description,
-                "operating_hours": body.operatingHours or "",
+                "operating_hours": hours,
+                "building_name": body.buildingName or "",
+                "floor": body.floor if body.floor is not None else 0,
                 "node_id": body.nodeId,
             }],
             ids=[body.nodeId],
         )
 
-        logger.info(f"노드 인덱싱 완료: {body.nodeId} ({body.name})")
+        logger.info(f"노드 인덱싱 완료: {body.nodeId} ({body.name}, source={body.source})")
 
         return IndexResponse(nodeId=body.nodeId)
 

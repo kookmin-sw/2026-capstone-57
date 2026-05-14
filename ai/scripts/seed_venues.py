@@ -1,12 +1,7 @@
-"""캠퍼스 장소 데이터 시딩 스크립트.
+"""캠퍼스 노드 데이터 시딩 스크립트.
 
-Backend DB 스키마 기준:
-- campus_building: 건물 (미래관, 북악관, ...)
-- campus_venue: 중간 거점 (용두리, 농구장, ...)
-- place: 건물 내 장소 (자주스, 과방, 편의점, ...)
-
-ChromaDB venues 컬렉션에 place + campus_venue 데이터를 시딩한다.
-building_id는 건물 이름을 snake_case로 변환하여 사용한다.
+VENUE(외부 경로 포인트) + BUILDING_PLACE(건물 내부 장소) 데이터를
+인덱싱 API를 통해 ChromaDB에 저장한다.
 
 실행:
     python3 scripts/seed_venues.py
@@ -14,212 +9,340 @@ building_id는 건물 이름을 snake_case로 변환하여 사용한다.
 
 from __future__ import annotations
 
-import asyncio
 import sys
 from pathlib import Path
 
+import requests
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.config import get_settings
-from app.rag.embeddings import EmbeddingGenerator
-from app.rag.vector_store import COLLECTION_VENUES, VectorStore
+BASE_URL = "http://localhost:8000"
 
-# 장소 타입 → 설명 매핑
-TYPE_DESC = {
-    "CAFE": "카페",
-    "CONVENIENCE_STORE": "편의점",
-    "RESTAURANT": "식당",
-    "LECTURE_ROOM": "강의실",
-    "STUDY_ROOM": "스터디룸/학습공간",
-    "MEETING_ROOM": "회의실/모임공간",
-    "ELEVATOR": "엘리베이터",
-    "BENCH": "벤치/야외공간",
-    "OTHER": "기타",
-}
-
-# 장소 타입 → 만남 적합도
-TYPE_SUITABILITY = {
-    "CAFE": 5,
-    "CONVENIENCE_STORE": 4,
-    "RESTAURANT": 4,
-    "LECTURE_ROOM": 1,
-    "STUDY_ROOM": 3,
-    "MEETING_ROOM": 3,
-    "ELEVATOR": 1,
-    "BENCH": 4,
-    "OTHER": 3,
-}
-
-# 장소 타입 → 추천 활동
-TYPE_ACTIVITIES = {
-    "CAFE": "커피, 대화, 휴식",
-    "CONVENIENCE_STORE": "간식, 음료, 대화",
-    "RESTAURANT": "식사, 대화",
-    "LECTURE_ROOM": "수업, 스터디",
-    "STUDY_ROOM": "스터디, 과제, 대화",
-    "MEETING_ROOM": "모임, 대화, 협업",
-    "ELEVATOR": "이동",
-    "BENCH": "대화, 휴식, 산책",
-    "OTHER": "대화, 휴식",
-}
-
-# ── place 데이터 (건물 내 장소) ──────────────────────────────────────────────
-# 형식: (id, building_name, name, floor, type)
-PLACE_DATA = [
-    # 미래관
-    ("place-001", "미래관", "자주스", 4, "STUDY_ROOM"),
-    ("place-002", "미래관", "무한상상실", 3, "STUDY_ROOM"),
-    ("place-003", "미래관", "과방", 3, "MEETING_ROOM"),
-    # 북악관
-    ("place-004", "북악관", "편의점", 1, "CONVENIENCE_STORE"),
-    ("place-005", "북악관", "1층 로비", 1, "OTHER"),
-    # 복지관
-    ("place-006", "복지관", "학식", -1, "RESTAURANT"),
-    ("place-007", "복지관", "카페", -1, "CAFE"),
-    ("place-008", "복지관", "K-BOB", -1, "RESTAURANT"),
-    # 예술관
-    ("place-009", "예술관", "1층 카페(편의점)", 1, "CONVENIENCE_STORE"),
-    # 공학관
-    ("place-010", "공학관", "1층 로비", 1, "OTHER"),
-    # 경영관
-    ("place-011", "경영관", "경영관", 0, "OTHER"),
-    # 성곡도서관
-    ("place-012", "성곡도서관", "1층 오픈 공간", 1, "STUDY_ROOM"),
-    ("place-013", "성곡도서관", "지하 1층 카페(해동)", -1, "CAFE"),
-    # 법학관
-    ("place-014", "법학관", "법학관", 0, "OTHER"),
+# ── VENUE (외부 경로 포인트, 서브 노드) ──────────────────────────────────────
+VENUE_NODES = [
+    {
+        "nodeId": "uuid-1",
+        "source": "VENUE",
+        "name": "북악관 왼쪽 입구",
+        "typeActivity": ["CAFE", "CONVENIENCE_STORE", "RESTAURANT"],
+        "description": "북악관(N2동) 서쪽 입구, 편의점과 카페 접근 가능",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-2",
+        "source": "VENUE",
+        "name": "북악관 오른쪽 입구",
+        "typeActivity": ["CAFE", "CONVENIENCE_STORE", "RESTAURANT"],
+        "description": "북악관(N2동) 동쪽 입구, 편의점과 카페 접근 가능",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-3",
+        "source": "VENUE",
+        "name": "북악관 앞 삼거리",
+        "typeActivity": ["OTHER"],
+        "description": "북악관(N2동) 정면에서 다른 건물로 내려가는 삼거리",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-4",
+        "source": "VENUE",
+        "name": "용두리",
+        "typeActivity": ["OTHER"],
+        "description": "용두리, 캠퍼스 내 자연 속 휴식 공간",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-5",
+        "source": "VENUE",
+        "name": "경상관-국제관 사이 계단",
+        "typeActivity": ["OTHER"],
+        "description": "북악관에서 운동장으로 내려가는 주요 계단",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-6",
+        "source": "VENUE",
+        "name": "경영관 후문",
+        "typeActivity": ["OTHER"],
+        "description": "경영관에서 본부관으로 가는 입구",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-7",
+        "source": "VENUE",
+        "name": "경영관 앞문",
+        "typeActivity": ["OTHER"],
+        "description": "경영관에서 예술관으로 가는 입구",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-8",
+        "source": "VENUE",
+        "name": "북서쪽 운동장",
+        "typeActivity": ["OTHER"],
+        "description": "경상관 앞쪽 운동장, 주차장 서문 엘리베이터 근처",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-9",
+        "source": "VENUE",
+        "name": "북동쪽 운동장",
+        "typeActivity": ["OTHER"],
+        "description": "경영관 앞쪽 운동장, 주차장 동문 엘리베이터 근처",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-10",
+        "source": "VENUE",
+        "name": "남서쪽 운동장",
+        "typeActivity": ["OTHER"],
+        "description": "정문 쪽 운동장",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-11",
+        "source": "VENUE",
+        "name": "남동쪽 운동장",
+        "typeActivity": ["OTHER"],
+        "description": "미래관 쪽 운동장",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-12",
+        "source": "VENUE",
+        "name": "예대 앞 계단",
+        "typeActivity": ["OTHER"],
+        "description": "예대에서 경영관 올라가는 계단",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-13",
+        "source": "VENUE",
+        "name": "미래관 앞문 (예대방향)",
+        "typeActivity": ["OTHER"],
+        "description": "미래관 4층, 예대쪽으로 가는 입구",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-14",
+        "source": "VENUE",
+        "name": "미래관 뒷문 (복지관방향)",
+        "typeActivity": ["OTHER"],
+        "description": "미래관에서 복지관으로 가는 입구",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-15",
+        "source": "VENUE",
+        "name": "복지관 동쪽 입구",
+        "typeActivity": ["OTHER"],
+        "description": "복지관에서 미래관으로 가는 입구",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-16",
+        "source": "VENUE",
+        "name": "복지관 서쪽 입구",
+        "typeActivity": ["OTHER"],
+        "description": "복지관에서 정문으로 가는 입구",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-17",
+        "source": "VENUE",
+        "name": "정문",
+        "typeActivity": ["OTHER"],
+        "description": "국민대학교 정문, 버스정류장 근처",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-18",
+        "source": "VENUE",
+        "name": "공학관 뒷문",
+        "typeActivity": ["OTHER"],
+        "description": "정문에서 공학관으로 가는 테니스장 옆 길",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-19",
+        "source": "VENUE",
+        "name": "공학관 가운데 입구",
+        "typeActivity": ["OTHER"],
+        "description": "공학관 가운데 입구",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-20",
+        "source": "VENUE",
+        "name": "공학관 동쪽 입구",
+        "typeActivity": ["CONVENIENCE_STORE"],
+        "description": "공학관 오른쪽 입구, 편의점 근처",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-21",
+        "source": "VENUE",
+        "name": "공학관 서쪽 입구",
+        "typeActivity": ["OTHER"],
+        "description": "공학관 왼쪽 입구, 도서관 앞",
+        "operatingHours": "24시간",
+    },
+    {
+        "nodeId": "uuid-22",
+        "source": "VENUE",
+        "name": "성곡도서관 입구",
+        "typeActivity": ["OTHER"],
+        "description": "성곡도서관 입구",
+        "operatingHours": "24시간",
+    },
 ]
 
-# ── campus_venue 데이터 (중간 거점) ──────────────────────────────────────────
-# 형식: (id, name, type, description, activities)
-VENUE_DATA = [
-    ("venue-001", "용두리", "BENCH", "캠퍼스 내 자연 속 휴식 공간으로 산책하며 대화하기 좋은 곳", "산책, 대화, 휴식"),
-    ("venue-002", "농구장", "BENCH", "농구장 주변 벤치에서 운동 후 가볍게 대화하기 좋은 공간", "운동, 대화, 휴식"),
-    ("venue-003", "운동장", "BENCH", "넓은 운동장 주변 의자에서 앉아 대화하기 좋은 야외 공간", "대화, 휴식, 산책"),
-    ("venue-004", "예대 매점", "CONVENIENCE_STORE", "예술대학 근처 매점으로 간식을 사서 가볍게 만나기 좋은 곳", "간식, 대화, 휴식"),
-    ("venue-005", "정문 버스정류장", "BENCH", "학교 정문 앞 버스정류장으로 등하교 시 가볍게 만나기 좋은 장소", "만남, 대화"),
+# ── BUILDING_PLACE (건물 내부 장소) ──────────────────────────────────────────
+BUILDING_PLACE_NODES = [
+    {
+        "nodeId": "uuid-101",
+        "source": "BUILDING_PLACE",
+        "name": "북악관 편의점",
+        "typeActivity": ["CONVENIENCE_STORE"],
+        "description": "북악관(N2동) 1층 편의점, 간식과 음료 구매 가능",
+        "operatingHours": "월-금 08:00-22:00",
+        "buildingName": "북악관",
+        "floor": 1,
+    },
+    {
+        "nodeId": "uuid-102",
+        "source": "BUILDING_PLACE",
+        "name": "북악관 카페",
+        "typeActivity": ["CAFE"],
+        "description": "북악관(N2동) 1층 카페",
+        "operatingHours": "월-금 11:00-17:00",
+        "buildingName": "북악관",
+        "floor": 1,
+    },
+    {
+        "nodeId": "uuid-103",
+        "source": "BUILDING_PLACE",
+        "name": "복지관 학식",
+        "typeActivity": ["RESTAURANT"],
+        "description": "종합복지관(S1동) 지하1층 학생식당",
+        "operatingHours": "월-금 11:00-14:00, 17:00-19:00",
+        "buildingName": "복지관",
+        "floor": -1,
+    },
+    {
+        "nodeId": "uuid-104",
+        "source": "BUILDING_PLACE",
+        "name": "복지관 카페",
+        "typeActivity": ["CAFE"],
+        "description": "종합복지관(S1동) 지하1층 카페",
+        "operatingHours": "월-금 08:00-17:00",
+        "buildingName": "복지관",
+        "floor": -1,
+    },
+    {
+        "nodeId": "uuid-105",
+        "source": "BUILDING_PLACE",
+        "name": "복지관 K-BOB",
+        "typeActivity": ["RESTAURANT"],
+        "description": "종합복지관(S1동) 지하1층 분식/간편식 매장",
+        "operatingHours": "월-금 10:00-19:00",
+        "buildingName": "복지관",
+        "floor": -1,
+    },
+    {
+        "nodeId": "uuid-106",
+        "source": "BUILDING_PLACE",
+        "name": "할리스 카페",
+        "typeActivity": ["CAFE"],
+        "description": "성곡도서관 지하 1층 할리스 카페 (해동도서관), 대화하기 좋은 공간",
+        "operatingHours": "월-금 08:00-21:00, 토 10:00-18:00",
+        "buildingName": "성곡도서관",
+        "floor": -1,
+    },
+    {
+        "nodeId": "uuid-107",
+        "source": "BUILDING_PLACE",
+        "name": "이마트24 (공학관)",
+        "typeActivity": ["CONVENIENCE_STORE"],
+        "description": "공학관(W1동) 편의점",
+        "operatingHours": "24시간",
+        "buildingName": "공학관",
+        "floor": 1,
+    },
+    {
+        "nodeId": "uuid-108",
+        "source": "BUILDING_PLACE",
+        "name": "예대 매점",
+        "typeActivity": ["CONVENIENCE_STORE", "CAFE"],
+        "description": "예술대학 근처 매점, 간식과 음료 구매 가능",
+        "operatingHours": "월-금 09:00-18:00",
+        "buildingName": "예술대학",
+        "floor": 1,
+    },
+    {
+        "nodeId": "uuid-109",
+        "source": "BUILDING_PLACE",
+        "name": "미래관 자주스",
+        "typeActivity": ["STUDY_ROOM"],
+        "description": "미래관(S2동) 4층 자율주행스튜디오, 학습과 휴식 공간",
+        "operatingHours": "월-금 09:00-21:00",
+        "buildingName": "미래관",
+        "floor": 4,
+    },
+    {
+        "nodeId": "uuid-110",
+        "source": "BUILDING_PLACE",
+        "name": "미래관 무한상상실",
+        "typeActivity": ["STUDY_ROOM"],
+        "description": "미래관(S2동) 4층 학습 공간",
+        "operatingHours": "월-금 09:00-21:00",
+        "buildingName": "미래관",
+        "floor": 4,
+    },
 ]
 
 
-def _build_embedding_text(
-    name: str,
-    building_name: str,
-    floor: int,
-    place_type: str,
-    description: str = "",
-    activities: str = "",
-) -> str:
-    """embeddingText 구성: '장소명 | 설명 | 유형 | 만남적합도 | 위치 | 추천활동'"""
-    type_desc = TYPE_DESC.get(place_type, "기타")
-    suitability = TYPE_SUITABILITY.get(place_type, 3)
-    acts = activities or TYPE_ACTIVITIES.get(place_type, "대화, 휴식")
-    desc = description or f"{building_name} {floor}층에 위치한 {type_desc}"
-    floor_str = f"{floor}층" if floor >= 0 else f"지하 {abs(floor)}층"
+def seed_nodes():
+    """인덱싱 API를 통해 모든 노드를 ChromaDB에 시딩한다."""
+    all_nodes = VENUE_NODES + BUILDING_PLACE_NODES
+    total = len(all_nodes)
 
-    return f"{name} | {desc} | {type_desc} | 만남적합도:{suitability} | {building_name} {floor_str} | {acts}"
-
-
-def _building_to_id(building_name: str) -> str:
-    """건물 이름 → building_id 변환."""
-    mapping = {
-        "미래관": "building-mirae",
-        "북악관": "building-bukak",
-        "복지관": "building-welfare",
-        "예술관": "building-arts",
-        "공학관": "building-engineering",
-        "경영관": "building-business",
-        "성곡도서관": "building-library",
-        "법학관": "building-law",
-    }
-    return mapping.get(building_name, f"building-{building_name}")
-
-
-async def seed_venues() -> None:
-    """ChromaDB venues 컬렉션에 장소 데이터를 시딩한다."""
-    settings = get_settings()
-    embedding_generator = EmbeddingGenerator(settings)
-    vector_store = VectorStore(settings)
-
-    total = len(PLACE_DATA) + len(VENUE_DATA)
-    print("🏫 캠퍼스 장소 데이터 시딩 시작")
-    print(f"   ChromaDB 경로: {settings.chroma_persist_directory}")
-    print(f"   임베딩 모델: {settings.bedrock_embedding_model_id}")
-    print(f"   장소(place) 수: {len(PLACE_DATA)}개")
-    print(f"   거점(venue) 수: {len(VENUE_DATA)}개")
+    print("🏫 캠퍼스 노드 데이터 시딩 시작")
+    print(f"   서버: {BASE_URL}")
+    print(f"   VENUE 노드: {len(VENUE_NODES)}개")
+    print(f"   BUILDING_PLACE 노드: {len(BUILDING_PLACE_NODES)}개")
     print(f"   총: {total}개")
     print()
 
-    existing_count = await vector_store.count(COLLECTION_VENUES)
-    print(f"   기존 venues 컬렉션 문서 수: {existing_count}개")
+    success = 0
+    failed = 0
 
-    ids: list[str] = []
-    documents: list[str] = []
-    metadatas: list[dict] = []
-    embeddings: list[list[float]] = []
+    for i, node in enumerate(all_nodes, 1):
+        name = node["name"]
+        source = node["source"]
+        print(f"   [{i}/{total}] [{source}] {name}...", end=" ")
 
-    print("\n📐 임베딩 생성 중...")
-    idx = 1
+        try:
+            response = requests.post(
+                f"{BASE_URL}/api/campus-nodes/index",
+                json=node,
+                timeout=30,
+            )
+            if response.status_code == 200:
+                print("✅")
+                success += 1
+            else:
+                print(f"❌ ({response.status_code}: {response.text[:100]})")
+                failed += 1
+        except Exception as e:
+            print(f"❌ (에러: {e})")
+            failed += 1
 
-    # place 데이터 처리
-    for place_id, building_name, name, floor, place_type in PLACE_DATA:
-        embedding_text = _build_embedding_text(name, building_name, floor, place_type)
-        print(f"   [{idx}/{total}] {building_name} - {name}...", end=" ")
-
-        embedding = await embedding_generator.generate(embedding_text)
-        embeddings.append(embedding)
-        ids.append(place_id)
-        documents.append(embedding_text)
-        metadatas.append({
-            "type": place_type.lower(),
-            "meeting_suitability": TYPE_SUITABILITY.get(place_type, 3),
-            "building_id": _building_to_id(building_name),
-            "building_name": building_name,
-            "floor": floor,
-            "place_name": name,
-            "source": "place",
-        })
-        print(f"✅ (dim={len(embedding)})")
-        idx += 1
-
-    # campus_venue 데이터 처리
-    for venue_id, name, venue_type, description, activities in VENUE_DATA:
-        embedding_text = _build_embedding_text(
-            name, "캠퍼스", 0, venue_type, description, activities
-        )
-        print(f"   [{idx}/{total}] 거점 - {name}...", end=" ")
-
-        embedding = await embedding_generator.generate(embedding_text)
-        embeddings.append(embedding)
-        ids.append(venue_id)
-        documents.append(embedding_text)
-        metadatas.append({
-            "type": venue_type.lower(),
-            "meeting_suitability": TYPE_SUITABILITY.get(venue_type, 3),
-            "building_id": "campus-outdoor",
-            "building_name": "캠퍼스",
-            "floor": 0,
-            "place_name": name,
-            "source": "campus_venue",
-        })
-        print(f"✅ (dim={len(embedding)})")
-        idx += 1
-
-    # ChromaDB에 저장
-    print(f"\n💾 ChromaDB venues 컬렉션에 저장 중...")
-    await vector_store.add_documents(
-        collection_name=COLLECTION_VENUES,
-        documents=documents,
-        embeddings=embeddings,
-        metadatas=metadatas,
-        ids=ids,
-    )
-
-    final_count = await vector_store.count(COLLECTION_VENUES)
-    print(f"   ✅ 저장 완료! 총 문서 수: {final_count}개")
-    print("\n" + "=" * 60)
-    print("🎉 캠퍼스 장소 데이터 시딩 완료!")
-    print("=" * 60)
+    print(f"\n{'=' * 60}")
+    print(f"🎉 시딩 완료! 성공: {success}개, 실패: {failed}개")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":
-    asyncio.run(seed_venues())
+    seed_nodes()
