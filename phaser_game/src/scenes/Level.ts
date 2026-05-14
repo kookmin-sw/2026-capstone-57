@@ -240,11 +240,19 @@ export default class Level extends Phaser.Scene {
 		/* MOVING PLATFORMS */
 		/* ---------------------------------------------------------------------- */
 
-		this.platform1 = this.add.rectangle(141, 241, 32, 32, 0xd9d9d9);
-		this.physics.add.existing(this.platform1, true);
+		this.platform1 = this.physics.add.staticSprite(
+			141,
+			241,
+			"moonlight_tileset_32x32",
+			5
+		);
 
-		this.platform2 = this.add.rectangle(323, 367, 32, 32, 0xd9d9d9);
-		this.physics.add.existing(this.platform2, true);
+		this.platform2 = this.physics.add.staticSprite(
+			323,
+			367,
+			"moonlight_tileset_32x32",
+			5
+		);
 
 		this.platform1BaseY = this.platform1.y;
 		this.platform2BaseY = this.platform2.y;
@@ -481,7 +489,7 @@ export default class Level extends Phaser.Scene {
 }
 
 private moveStaticPlatform(
-	platform: Phaser.GameObjects.Rectangle,
+	platform: Phaser.Physics.Arcade.Sprite,
 	targetY: number
 ) {
 
