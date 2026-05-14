@@ -155,9 +155,10 @@ def main():
     result = generate_retro(conversation_history)
     if result:
         print(f"\n✅ 회고글 생성 완료!")
-        print(f"   생성 시각: {result.get('generatedAt')}")
         print(f"\n{'─' * 60}")
-        print(result["compiledContent"])
+        print("[응답 JSON]")
+        import json
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         print(f"{'─' * 60}")
 
 

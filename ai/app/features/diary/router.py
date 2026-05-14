@@ -87,10 +87,18 @@ class NextQuestionResponse(BaseModel):
     maxTurns: int = 5
 
 
+class ProfileUpdate(BaseModel):
+    """성향 업데이트 정보."""
+
+    hobbies: list[str] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
+
+
 class GenerateResponse(BaseModel):
     """일기 생성 응답."""
 
     compiledContent: str
+    profileUpdate: Optional[ProfileUpdate] = None
     generatedAt: datetime
 
 
@@ -202,6 +210,30 @@ def _build_generate_prompt(
 4. 3~5문단 분량으로 작성하세요.
 5. 친근하고 자연스러운 문체를 사용하세요 (해요체 X, 반말 일기체).
 6. 대화 형식이 아닌 일기 형식으로 작성하세요.
+"""
+
+
+def _build_profile_analysis_prompt(
+    conversation_history: list[ConversationTurn],
+) -> str:
+    """성향 분석 프롬프트."""
+    conversation_text = ""
+    for turn in conversation_history:
+        conversation_text += f"Q: {turn.question}\nA: {turn.answer}\n\n"
+
+    return f"""아래 대화 내용에서 사용자의 취미(hobbies)와 관심사(interests)를 추출해주세요.
+
+[대화 내용]
+{conversation_text}
+
+[규칙]
+1. 대화에서 명시적으로 언급되거나 강하게 암시된 것만 추출하세요.
+2. 각 항목은 짧은 키워드로 (2~4글자 권장).
+3. 각 리스트는 최대 5개까지만.
+4. 추출할 내용이 없으면 빈 리스트로.
+5. 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.
+
+{{"hobbies": ["취미1", "취미2"], "interests": ["관심사1", "관심사2"]}}
 """
 
 
@@ -317,7 +349,8 @@ async def next_question(body: NextQuestionRequest, request: Request):
 async def generate_diary(body: GenerateRequest, request: Request):
     """대화 내용을 기반으로 일기를 생성한다.
 
-    전체 대화 히스토리를 받아 일기를 컴파일한다.
+    전체 대화 히스토리를 받아 일기를 컴파일하고,
+    대화 내용에서 사용자 성향(hobbies, interests)을 추출한다.
     """
     bedrock_client = request.app.state.bedrock_client
 
@@ -326,15 +359,21 @@ async def generate_diary(body: GenerateRequest, request: Request):
             if not body.conversationHistory:
                 raise HTTPException(status_code=400, detail="대화 내역이 없습니다")
 
+            # 1. 일기 생성
             prompt = _build_generate_prompt(
                 schedule=body.todaySchedule,
                 conversation_history=body.conversationHistory,
             )
-
             compiled_content = await bedrock_client.invoke(prompt)
+
+            # 2. 성향 분석
+            profile_update = await _analyze_profile(
+                bedrock_client, body.conversationHistory
+            )
 
             return GenerateResponse(
                 compiledContent=compiled_content,
+                profileUpdate=profile_update,
                 generatedAt=datetime.now(timezone.utc),
             )
 
@@ -343,3 +382,35 @@ async def generate_diary(body: GenerateRequest, request: Request):
         except Exception as exc:
             logger.exception("일기 생성 실패")
             raise HTTPException(status_code=500, detail=str(exc))
+
+
+async def _analyze_profile(
+    bedrock_client,
+    conversation_history: list[ConversationTurn],
+) -> Optional[ProfileUpdate]:
+    """대화 내용에서 성향을 분석한다."""
+    import json as _json
+
+    try:
+        prompt = _build_profile_analysis_prompt(conversation_history)
+        raw_response = await bedrock_client.invoke(prompt)
+
+        # JSON 추출
+        text = raw_response.strip()
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start == -1 or end == 0:
+            return None
+
+        data = _json.loads(text[start:end])
+        hobbies = data.get("hobbies", [])
+        interests = data.get("interests", [])
+
+        if not hobbies and not interests:
+            return None
+
+        return ProfileUpdate(hobbies=hobbies, interests=interests)
+
+    except Exception:
+        logger.warning("성향 분석 실패 (계속 진행)")
+        return None
