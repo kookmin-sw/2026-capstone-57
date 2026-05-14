@@ -57,6 +57,7 @@ public interface DiaryAiClient {
     ) {}
 
     record DiaryContentInput(
+            String sessionId,
             String userId,
             String targetDate,
             List<ConversationTurn> conversationHistory,
@@ -71,6 +72,12 @@ public interface DiaryAiClient {
 
     record GeneratedDiaryResult(
             String generatedContent,
-            EmotionTag suggestedEmotion
+            EmotionTag suggestedEmotion,
+            ProfileUpdate profileUpdate
+    ) {}
+
+    record ProfileUpdate(
+            List<String> hobbies,
+            List<String> interests
     ) {}
 }

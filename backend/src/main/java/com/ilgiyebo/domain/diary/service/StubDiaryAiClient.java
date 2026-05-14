@@ -40,6 +40,11 @@ public class StubDiaryAiClient implements DiaryAiClient {
             content.append(turn.answer()).append("\n\n");
         }
 
-        return new GeneratedDiaryResult(content.toString().trim(), EmotionTag.CALM);
+        ProfileUpdate profileUpdate = new ProfileUpdate(
+                java.util.List.of("일기 작성"),
+                java.util.List.of("자기 성찰")
+        );
+
+        return new GeneratedDiaryResult(content.toString().trim(), EmotionTag.CALM, profileUpdate);
     }
 }

@@ -69,6 +69,7 @@ class HttpDiaryAiClientTest {
     @DisplayName("DiaryContentInput을 올바른 JSON으로 직렬화한다")
     void serializeDiaryContentInput() throws Exception {
         DiaryAiClient.DiaryContentInput input = new DiaryAiClient.DiaryContentInput(
+                "session-456",
                 "user-123",
                 "2025-05-14",
                 List.of(

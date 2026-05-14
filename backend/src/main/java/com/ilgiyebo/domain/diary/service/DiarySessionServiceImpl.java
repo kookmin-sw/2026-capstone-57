@@ -27,6 +27,7 @@ import java.util.UUID;
 public class DiarySessionServiceImpl implements DiarySessionService {
 
     private static final int DEFAULT_MAX_TURNS = 5;
+    private static final int MAX_AI_INFERRED_ITEMS = 20;
 
     private final DiarySessionRepository diarySessionRepository;
     private final DiaryConversationTurnRepository conversationTurnRepository;
@@ -203,6 +204,7 @@ public class DiarySessionServiceImpl implements DiarySessionService {
         List<PlanEntryResponse> todayPlan = plannerService.getPlanEntries(userId, session.getTargetDate());
 
         DiaryAiClient.DiaryContentInput aiInput = new DiaryAiClient.DiaryContentInput(
+                sessionId.toString(),
                 userId.toString(),
                 session.getTargetDate().toString(),
                 history,
@@ -216,6 +218,13 @@ public class DiarySessionServiceImpl implements DiarySessionService {
         );
 
         DiaryAiClient.GeneratedDiaryResult aiResult = diaryAiClient.generateDiaryContent(aiInput);
+
+        // AI 추론 프로필 데이터를 사용자 엔티티에 병합 (중복 제거, 최대 20개 제한)
+        if (aiResult.profileUpdate() != null) {
+            UserEntity user = findUserOrThrow(userId);
+            mergeAiInferredProfile(user, aiResult.profileUpdate());
+            userRepository.save(user);
+        }
 
         // 세션 상태 업데이트
         session.setGeneratedContent(aiResult.generatedContent());
@@ -331,5 +340,35 @@ public class DiarySessionServiceImpl implements DiarySessionService {
     private UserEntity findUserOrThrow(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(DiarySessionException.USER_NOT_FOUND::toException);
+    }
+
+    /**
+     * AI가 추론한 취미/관심사를 사용자의 aiInferred 필드에 병합한다.
+     * 최신 항목을 앞에 배치하고, 중복을 제거한 뒤 최대 20개까지만 유지한다.
+     */
+    private void mergeAiInferredProfile(UserEntity user, DiaryAiClient.ProfileUpdate profileUpdate) {
+        if (profileUpdate.hobbies() != null && !profileUpdate.hobbies().isEmpty()) {
+            List<String> current = user.getAiInferredHobbies() != null
+                    ? user.getAiInferredHobbies()
+                    : List.of();
+            // 새 항목을 앞에 넣고, 기존 항목을 뒤에 붙여서 중복 제거
+            java.util.LinkedHashSet<String> merged = new java.util.LinkedHashSet<>(profileUpdate.hobbies());
+            merged.addAll(current);
+            user.setAiInferredHobbies(merged.stream().limit(MAX_AI_INFERRED_ITEMS).toList());
+        }
+
+        if (profileUpdate.interests() != null && !profileUpdate.interests().isEmpty()) {
+            List<String> current = user.getAiInferredInterests() != null
+                    ? user.getAiInferredInterests()
+                    : List.of();
+            java.util.LinkedHashSet<String> merged = new java.util.LinkedHashSet<>(profileUpdate.interests());
+            merged.addAll(current);
+            user.setAiInferredInterests(merged.stream().limit(MAX_AI_INFERRED_ITEMS).toList());
+        }
+
+        log.debug("AI 추론 프로필 업데이트: userId={}, hobbies={}, interests={}",
+                user.getId(),
+                user.getAiInferredHobbies() != null ? user.getAiInferredHobbies().size() : 0,
+                user.getAiInferredInterests() != null ? user.getAiInferredInterests().size() : 0);
     }
 }

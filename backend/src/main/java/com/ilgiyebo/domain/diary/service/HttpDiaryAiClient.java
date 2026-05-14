@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ilgiyebo.common.config.AiServerProperties;
 import com.ilgiyebo.domain.diary.entity.EmotionTag;
-import kong.unirest.core.HttpResponse;
-import kong.unirest.core.Unirest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -24,11 +26,20 @@ import java.util.List;
  * <p>타임아웃 시 최대 3회 재시도한다.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class HttpDiaryAiClient implements DiaryAiClient {
 
     private final AiServerProperties aiServerProperties;
     private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
+
+    public HttpDiaryAiClient(AiServerProperties aiServerProperties, ObjectMapper objectMapper) {
+        this.aiServerProperties = aiServerProperties;
+        this.objectMapper = objectMapper;
+        this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(Duration.ofMillis(aiServerProperties.getTimeoutMs()))
+                .build();
+    }
 
     @Override
     public String generateFirstQuestion(FirstQuestionInput input) {
@@ -81,6 +92,7 @@ public class HttpDiaryAiClient implements DiaryAiClient {
         String url = aiServerProperties.getBaseUrl() + "/api/diary/generate";
 
         DiaryGenerateRequest request = new DiaryGenerateRequest(
+                input.sessionId(),
                 input.userId(),
                 input.targetDate(),
                 input.conversationHistory() != null
@@ -106,7 +118,10 @@ public class HttpDiaryAiClient implements DiaryAiClient {
             }
         }
 
-        return new GeneratedDiaryResult(response.generatedContent(), suggestedEmotion);
+        return new GeneratedDiaryResult(response.generatedContent(), suggestedEmotion,
+                response.profileUpdate() != null
+                        ? new ProfileUpdate(response.profileUpdate().hobbies(), response.profileUpdate().interests())
+                        : null);
     }
 
     // --- Private helpers ---
@@ -118,32 +133,37 @@ public class HttpDiaryAiClient implements DiaryAiClient {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 String jsonBody = objectMapper.writeValueAsString(requestBody);
+                byte[] bodyBytes = jsonBody.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
-                log.debug("AI 서버 요청: url={}, attempt={}/{}", url, attempt, maxRetries);
+                log.info("AI 서버 요청: url={}, attempt={}/{}, bodyLength={}, body={}", url, attempt, maxRetries, bodyBytes.length, jsonBody);
 
-                HttpResponse<String> response = Unirest.post(url)
-                        .header("Content-Type", "application/json")
+                HttpRequest httpRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header("Content-Type", "application/json; charset=utf-8")
                         .header("Accept", "application/json")
-                        .body(jsonBody)
-                        .asString();
+                        .timeout(Duration.ofMillis(aiServerProperties.getTimeoutMs()))
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(bodyBytes))
+                        .build();
 
-                if (!response.isSuccess()) {
-                    String errorBody = response.getBody();
+                HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() >= 400) {
+                    String errorBody = response.body();
                     log.warn("AI 서버 응답 오류: url={}, status={}, body={}, attempt={}/{}",
-                            url, response.getStatus(), errorBody, attempt, maxRetries);
+                            url, response.statusCode(), errorBody, attempt, maxRetries);
 
                     if (attempt < maxRetries) {
                         lastException = new AiServerException(
-                                "AI 서버 응답 오류: status=" + response.getStatus());
+                                "AI 서버 응답 오류: status=" + response.statusCode());
                         continue;
                     }
                     throw new AiServerException(
-                            "AI 서버 요청 실패 (최대 재시도 초과): status=" + response.getStatus()
+                            "AI 서버 요청 실패 (최대 재시도 초과): status=" + response.statusCode()
                                     + ", body=" + errorBody);
                 }
 
-                T result = objectMapper.readValue(response.getBody(), responseType);
-                log.debug("AI 서버 응답 성공: url={}", url);
+                log.info("AI 서버 응답 성공: url={}, body={}", url, response.body());
+                T result = objectMapper.readValue(response.body(), responseType);
                 return result;
 
             } catch (AiServerException e) {
@@ -180,6 +200,7 @@ public class HttpDiaryAiClient implements DiaryAiClient {
     ) {}
 
     private record DiaryGenerateRequest(
+            @JsonProperty("sessionId") String sessionId,
             @JsonProperty("userId") String userId,
             @JsonProperty("date") String date,
             @JsonProperty("conversationHistory") List<ConversationItem> conversationHistory,
@@ -205,13 +226,19 @@ public class HttpDiaryAiClient implements DiaryAiClient {
 
     private record NextQuestionResponse(
             @JsonProperty("isConversationComplete") boolean isConversationComplete,
-            @JsonProperty("nextQuestion") String nextQuestion,
+            @JsonProperty("question") String nextQuestion,
             @JsonProperty("completionReason") String completionReason
     ) {}
 
     private record DiaryGenerateResponse(
-            @JsonProperty("generatedContent") String generatedContent,
-            @JsonProperty("suggestedEmotion") String suggestedEmotion
+            @JsonProperty("compiledContent") String generatedContent,
+            @JsonProperty("suggestedEmotion") String suggestedEmotion,
+            @JsonProperty("profileUpdate") ProfileUpdateResponse profileUpdate
+    ) {}
+
+    private record ProfileUpdateResponse(
+            @JsonProperty("hobbies") List<String> hobbies,
+            @JsonProperty("interests") List<String> interests
     ) {}
 
     // --- Exception ---

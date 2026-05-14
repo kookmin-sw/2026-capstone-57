@@ -5,7 +5,6 @@ import com.ilgiyebo.common.config.AiServerProperties;
 import com.ilgiyebo.domain.diary.service.DiaryAiClient;
 import com.ilgiyebo.domain.diary.service.HttpDiaryAiClient;
 import com.ilgiyebo.domain.diary.service.StubDiaryAiClient;
-import kong.unirest.core.Unirest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,11 +23,6 @@ public class DiaryAiClientConfig {
     public DiaryAiClient diaryAiClient(AiServerProperties aiServerProperties, ObjectMapper objectMapper) {
         if (aiServerProperties.isConfigured()) {
             log.info("AI 서버 일기 클라이언트 활성화: baseUrl={}", aiServerProperties.getBaseUrl());
-
-            // Unirest 글로벌 타임아웃 설정
-            Unirest.config()
-                    .connectTimeout(aiServerProperties.getTimeoutMs());
-
             return new HttpDiaryAiClient(aiServerProperties, objectMapper);
         }
 
