@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import requests
 
-BASE_URL = "http://localhost:8081"
+BASE_URL = "http://localhost:8000"
 USER_ID = "user-test-001"
 
 # 테스트용 만남 정보
