@@ -1,44 +1,44 @@
-import { PhaserGame } from './game/PhaserGame';
-import { parseGameParams } from './utils/parseGameParams';
+import Phaser from "phaser";
+import Level from "./scenes/Level";
+import Preload from "./scenes/Preload";
 
-export { parseGameParams } from './utils/parseGameParams';
-export type { ParseResult } from './utils/parseGameParams';
-export type { GameParams } from './game/types/gameTypes';
+class Boot extends Phaser.Scene {
+  constructor() {
+    super("Boot");
+  }
 
-export function showError(message: string): void {
-  const container = document.getElementById('game-container');
-  if (container) {
-    container.innerHTML = `
-      <div style="
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        height: 100%;
-        color: #FFFFFF;
-        font-family: sans-serif;
-        font-size: 1.2rem;
-        text-align: center;
-        padding: 2rem;
-        background-color: #1B2838;
-      ">
-        <p>${message}</p>
-      </div>
-    `;
+  preload() {
+    this.load.pack("pack", "assets/preload-asset-pack.json");
+  }
+
+  create() {
+    this.scene.start("Preload");
   }
 }
 
-function boot(): void {
-  const result = parseGameParams();
-  if (!result.params) {
-    showError(result.error!);
-    return;
-  }
+window.addEventListener("load", function () {
+  new Phaser.Game({
+    width: 390,
+    height: 844,
+    backgroundColor: "#2f2f2f",
+    parent: "game-container",
 
-  const game = new PhaserGame();
+    pixelArt: true,
+    antialias: false,
 
-  // Store game params on the game registry for later use by scenes/systems
-  game.registry.set('gameParams', result.params);
-}
+    physics: {
+      default: "arcade",
+      arcade: {
+        gravity: { y: 800 },
+        debug: true
+      }
+    },
 
-boot();
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+
+    scene: [Boot, Preload, Level]
+  });
+});

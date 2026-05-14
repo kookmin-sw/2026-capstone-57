@@ -1,33 +1,17 @@
-<!DOCTYPE html>
-<html lang="ko">
-  <head>
+<!doctype html>
+<html lang="en">
+<head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>별빛 길 열기 - Starlight Path Opening</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      html, body {
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background-color: #1B2838;
-      }
-      #game-container {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-    </style>
-  </head>
-  <body>
-    <script>var global = globalThis;</script>
-    <div id="game-container"></div>
+    <link rel="stylesheet" href="/style.css">
+    <title>Phaser - Template</title>
+</head>
+
+<body>
+    <div id="app">
+        <div id="game-container"></div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
-  </body>
+</body>
 </html>
