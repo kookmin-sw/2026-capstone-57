@@ -36,28 +36,31 @@ sqs = boto3.client("sqs", region_name=settings.aws_region)
 
 # 테스트 메시지
 MISSION_REQUEST = {
-    "action": "GENERATE_MISSION",
-    "matchId": "e2e-mission-test-001",
-    "requesterId": "user-requester-001",
-    "targetUserId": "user-target-001",
-    "intersectionInfo": {
-        "timeSlots": ["14:00-15:00", "16:00-17:00"],
-        "buildingIds": ["미래관"],
-        "dayOfWeek": 3,
+  "action": "GENERATE_MISSION",
+  "matchId": "uuid",
+  "requesterId": "uuid",
+  "targetUserId": "uuid",
+  "intersectionInfo": {
+    "timeSlots": ["14:00-15:00", "16:00-17:00"],
+    "buildingIds": ["미래관", "북악관"],
+    "venueIds": ["venue-yongduri"],
+    "dayOfWeek": 3
+  },
+  "userProfiles": [
+    {
+      "userId": "uuid",
+      "interests": ["커피", "독서"],
+      "personalityType": ["INFP"],
+      "hobbies": ["산책", "게임"]
     },
-    "userProfiles": [
-        {
-            "userId": "user-requester-001",
-            "interests": ["커피", "독서", "산책"],
-            "personalityType": ["INFP"],
-        },
-        {
-            "userId": "user-target-001",
-            "interests": ["게임", "운동", "음악"],
-            "personalityType": ["ENTP"],
-        },
-    ],
-    "requestedAt": "2024-05-08T12:00:00Z",
+    {
+      "userId": "uuid",
+      "interests": ["운동", "음악"],
+      "personalityType": ["ENTP"],
+      "hobbies": ["농구", "코딩"]
+    }
+  ],
+  "requestedAt": "2026-05-14T12:00:00Z"
 }
 
 
