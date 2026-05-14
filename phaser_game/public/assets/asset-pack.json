@@ -213,6 +213,11 @@
                 "url": "assets/preload_background.png",
                 "type": "image",
                 "key": "preload_background"
+            },
+            {
+                "url": "assets/tutorial.png",
+                "type": "image",
+                "key": "tutorial"
             }
         ]
     },

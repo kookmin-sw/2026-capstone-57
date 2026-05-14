@@ -48,7 +48,7 @@ export default class Level extends Phaser.Scene {
 
 		this.level = level;
 		this.groundLayer = groundLayer;
-
+		
 		this.events.emit("scene-awake");
 	}
 
@@ -72,6 +72,10 @@ export default class Level extends Phaser.Scene {
 
 	private switch1Pressed = false;
 	private switch2Pressed = false;
+
+	private tutorialOverlay!: Phaser.GameObjects.Image;
+	private tutorialShown = true;
+
 	/* START-USER-CODE */
 
 	private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -121,6 +125,25 @@ export default class Level extends Phaser.Scene {
 			.setInteractive()
 			.setScale(0.1,0.1);
 
+		/* ---------------------------------------------------------------------- */
+		/* TUTORIAL OVERLAY */
+		/* ---------------------------------------------------------------------- */
+
+		this.tutorialOverlay = this.add.image(
+			195,
+			422,
+			"tutorial"
+		);
+
+		this.tutorialOverlay.setDepth(1000);
+		this.tutorialOverlay.setDisplaySize(390, 720);
+		this.tutorialOverlay.setInteractive();
+
+		this.tutorialOverlay.on("pointerdown", () => {
+
+			this.tutorialOverlay.setVisible(false);
+			this.tutorialShown = false;
+		});
 		//터치 이벤트
 		/* ---------------------------------------------------------------------- */
 		/* TOUCH EVENTS */
@@ -203,11 +226,11 @@ export default class Level extends Phaser.Scene {
 
 		this.groundLayer.setCollisionByExclusion([-1]);
 
-		this.groundLayer.renderDebug(this.add.graphics(), {
-			tileColor: null,
-			collidingTileColor: new Phaser.Display.Color(255, 0, 0, 80),
-			faceColor: new Phaser.Display.Color(0, 255, 0, 255)
-		});
+		// this.groundLayer.renderDebug(this.add.graphics(), {
+		// 	tileColor: null,
+		// 	collidingTileColor: new Phaser.Display.Color(255, 0, 0, 80),
+		// 	faceColor: new Phaser.Display.Color(0, 255, 0, 255)
+		// });
 
 		/* ---------------------------------------------------------------------- */
 		/* PLAYER PHYSICS */
@@ -270,6 +293,12 @@ export default class Level extends Phaser.Scene {
 
 		coinPositions.forEach(pos => {
 
+			// const coin = this.coins.create(
+			// 	pos.x,
+			// 	pos.y,
+			// 	"moonlight_tileset_32x32",
+			// 	9
+			// ) as Phaser.Physics.Arcade.Image;
 			const coin = this.coins.create(
 				pos.x,
 				pos.y,
@@ -409,6 +438,10 @@ export default class Level extends Phaser.Scene {
 			188,
 			"closed_door"
 		);
+		this.door.setDepth(1);
+
+		this.player1.setDepth(10);
+		this.player2.setDepth(10);
 		this.door.setScale(0.1,0.1);
 		/* physics body 재설정 */
 		const body = this.door.body as Phaser.Physics.Arcade.StaticBody;
@@ -432,10 +465,14 @@ export default class Level extends Phaser.Scene {
 		});
 
 		this.player2.play("pink-idle");
+		
 	}
 
 	update() {
-
+		//튜토리얼 중 이동방지
+		if (this.tutorialShown) {
+			return;
+		}
 		const body1 = this.player1.body as Phaser.Physics.Arcade.Body;
 		const body2 = this.player2.body as Phaser.Physics.Arcade.Body;
 
@@ -593,6 +630,10 @@ private openDoor() {
 			"door"
 		);
 	this.door.setScale(0.1,0.1); 
+			this.door.setDepth(1);
+
+		this.player1.setDepth(10);
+		this.player2.setDepth(10);
 	/* physics body 재설정 */
 	const body = this.door.body as Phaser.Physics.Arcade.StaticBody;
 
