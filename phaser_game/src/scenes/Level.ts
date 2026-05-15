@@ -550,6 +550,27 @@ export default class Level extends Phaser.Scene {
 				this.hideReconnectOverlay();
 			});
 
+			// Listen for game cleared event
+			this.events.on('network-game-cleared', (data: { score: number; clearTimeMs: number; intimacyPoints: number }) => {
+				this.clearLogo.setVisible(true);
+				this.backButton.setVisible(true);
+
+				// 뒤로가기 버튼에 클리어 데이터 전달 로직 추가
+				this.backButton.removeAllListeners('pointerdown');
+				this.backButton.on('pointerdown', () => {
+					// TODO: React 임베딩 시 CustomEvent 대신 props 콜백으로 변경
+					// React에서 window.addEventListener('game-cleared', (e) => { e.detail로 결과 모달 표시 })
+					window.dispatchEvent(new CustomEvent('game-cleared', {
+						detail: {
+							score: data.score,
+							clearTimeMs: data.clearTimeMs,
+							intimacyPoints: data.intimacyPoints,
+						}
+					}));
+					window.history.back();
+				});
+			});
+
 			// Skip tutorial overlay in online mode
 			this.tutorialOverlay.setVisible(false);
 			this.tutorialShown = false;

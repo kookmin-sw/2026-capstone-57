@@ -33,7 +33,7 @@ public class RelayServiceImpl implements RelayService {
      */
     private final Map<UUID, RelayGameState> relayStates = new ConcurrentHashMap<>();
 
-    private static final double DOOR_PROXIMITY_THRESHOLD = 50.0;
+    private static final double DOOR_PROXIMITY_THRESHOLD = 80.0;
 
     @Override
     public void relayPosition(UUID sessionId, UUID senderId, PositionUpdateData position) {

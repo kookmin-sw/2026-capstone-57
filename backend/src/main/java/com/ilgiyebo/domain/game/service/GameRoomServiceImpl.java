@@ -354,7 +354,7 @@ public class GameRoomServiceImpl implements GameRoomService {
         );
 
         List<DoorArea> doors = List.of(
-                new DoorArea(600, 400, 80, 280)       // Door in the middle
+                new DoorArea(354, 188, 32, 64)       // Door matching client Level.ts position
         );
 
         GoalArea goal = new GoalArea(580, 300, 120, 80);

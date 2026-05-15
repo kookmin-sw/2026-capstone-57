@@ -99,6 +99,7 @@ public class GameSessionServiceImpl implements GameSessionService {
         int intimacyPoints = scoreEngine.calculateIntimacyPoints(score, clearTimeMs);
 
         session.setStatus(GameSessionStatus.COMPLETED);
+        session.setFailReason(null);
         session.setScore(score);
         session.setClearTimeMs(clearTimeMs);
         session.setIntimacyPoints(intimacyPoints);

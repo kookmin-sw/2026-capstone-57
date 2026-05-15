@@ -347,12 +347,11 @@ export class NetworkGameManager {
   };
 
   private onGameCleared = (payload: GameClearedPayload): void => {
-    // Pause physics and show clear UI
+    // Pause physics and show clear UI in Level scene
     this.scene.physics.pause();
 
-    // Transition to Result scene with clear data
-    this.scene.scene.start('Result', {
-      type: 'cleared',
+    // Emit event to Level scene to show clear logo and back button
+    this.scene.events.emit('network-game-cleared', {
       score: payload.score,
       clearTimeMs: payload.clearTimeMs,
       intimacyPoints: payload.intimacyPoints,
