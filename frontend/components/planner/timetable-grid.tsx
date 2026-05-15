@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { X, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AddEntryDrawer, type AddEntryFormData } from "./add-entry-drawer"
 import type { TimetableEntry, DayOfWeek } from "@/types/planner"
@@ -23,6 +23,8 @@ const HALF_HOUR_SLOTS = Array.from({ length: 23 }, (_, i) => {
   return { hour, minute, label: `${hour}:${minute === 0 ? "00" : "30"}` }
 })
 
+const TOTAL_HOURS = HALF_HOUR_SLOTS.length * 0.5 // 11.5 hours (9:00 ~ 20:30)
+
 const DAYS: DayOfWeek[] = [1, 2, 3, 4, 5]
 
 function parseTime(time: string): number {
@@ -36,12 +38,13 @@ function slotToTime(slotIndex: number): string {
   return `${hour.toString().padStart(2, "0")}:${minute === 0 ? "00" : "30"}`
 }
 
+// % 기반으로 변경 - 동적 높이에도 정확히 배치
 function getEntryStyle(entry: TimetableEntry) {
   const startHour = parseTime(entry.startTime)
   const endHour = parseTime(entry.endTime)
-  const top = (startHour - 9) * 48
-  const height = (endHour - startHour) * 48
-  return { top: `${top}px`, height: `${height}px` }
+  const topPct = ((startHour - 9) / TOTAL_HOURS) * 100
+  const heightPct = ((endHour - startHour) / TOTAL_HOURS) * 100
+  return { top: `${topPct}%`, height: `${heightPct}%` }
 }
 
 export function TimetableGrid({
@@ -51,7 +54,6 @@ export function TimetableGrid({
   onDeleteEntry,
   className,
 }: TimetableGridProps) {
-  // Click-based selection: first click sets start, second click sets end (same day)
   const [firstClick, setFirstClick] = useState<{ day: DayOfWeek; slot: number } | null>(null)
   const [selection, setSelection] = useState<{
     day: DayOfWeek
@@ -63,7 +65,6 @@ export function TimetableGrid({
   const [initialStartTime, setInitialStartTime] = useState("")
   const [initialEndTime, setInitialEndTime] = useState("")
 
-  // Edit mode
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null)
 
@@ -79,18 +80,14 @@ export function TimetableGrid({
     }
   })
 
-  // --- Click handler ---
   const handleSlotClick = (day: DayOfWeek, slotIndex: number) => {
     if (!firstClick) {
-      // First click: set start point
       setFirstClick({ day, slot: slotIndex })
       setSelection(null)
     } else if (firstClick.day !== day) {
-      // Different day: reset, this becomes new first click
       setFirstClick({ day, slot: slotIndex })
       setSelection(null)
     } else {
-      // Same day, second click: create range
       const startSlot = Math.min(firstClick.slot, slotIndex)
       const endSlot = Math.max(firstClick.slot, slotIndex)
       setSelection({ day, startSlot, endSlot })
@@ -98,7 +95,6 @@ export function TimetableGrid({
     }
   }
 
-  // --- Highlight helpers ---
   const isSlotFirstClick = (day: DayOfWeek, slotIndex: number) => {
     return firstClick?.day === day && firstClick?.slot === slotIndex
   }
@@ -139,94 +135,91 @@ export function TimetableGrid({
 
   return (
     <>
-      <Card className={cn("overflow-hidden h-full flex flex-col", className)}>
-        <CardHeader className="pb-2 shrink-0">
-          <CardTitle className="text-base">주간 시간표</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            시작 시간과 종료 시간을 탭하여 선택하세요
-          </p>
-        </CardHeader>
+      {/* ✅ Card가 부모 높이를 꽉 채우도록 h-full 유지 */}
+      <Card className={cn("overflow-hidden flex flex-col h-full", className)}>
         <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="min-w-[360px] select-none">
-              {/* Header */}
-              <div className="grid grid-cols-[40px_repeat(5,1fr)] border-b border-border sticky top-0 bg-card z-10">
-                <div className="p-1 text-center text-xs text-muted-foreground" />
-                {DAYS.map((day) => (
-                  <div
-                    key={day}
-                    className="p-1.5 text-center text-xs font-medium text-foreground border-l border-border"
-                  >
-                    {DAY_LABELS[day]}
-                  </div>
-                ))}
-              </div>
 
-              {/* Grid */}
-              <div className="grid grid-cols-[40px_repeat(5,1fr)]">
-                {/* Time labels - positioned at hour boundary lines */}
-                <div className="relative pt-0.5">
-                  {HALF_HOUR_SLOTS.map((slot, index) => (
-                    <div
-                      key={index}
-                      className="h-6 relative"
-                    >
-                      {/* Show hour label at top of even slots (9:00, 10:00...) */}
-                      {index % 2 === 0 && (
-                        <span className="absolute top-[-1px] right-1.5 text-[10px] font-medium text-foreground leading-none">
-                          {slot.hour}:00
-                        </span>
-                      )}
-                    </div>
-                  ))}
+          {/* ✅ 스크롤 제거, flex-col로 전체 높이 사용 */}
+          <div className="flex-1 overflow-hidden flex flex-col min-w-[360px] select-none">
+
+            {/* Header - sticky */}
+            <div className="grid grid-cols-[40px_repeat(5,1fr)] border-b border-border bg-card z-10 shrink-0">
+              <div className="p-1 text-center text-xs text-muted-foreground" />
+              {DAYS.map((day) => (
+                <div
+                  key={day}
+                  className="p-1.5 text-center text-xs font-medium text-foreground border-l border-border"
+                >
+                  {DAY_LABELS[day]}
                 </div>
+              ))}
+            </div>
 
-                {/* Day columns */}
-                {DAYS.map((day) => (
-                  <div key={day} className="relative border-l border-border" data-day-column={day}>
-                    {HALF_HOUR_SLOTS.map((_slot, slotIndex) => (
-                      <div
-                        key={slotIndex}
-                        className={cn(
-                          "h-6 transition-colors cursor-pointer",
-                          slotIndex % 2 === 1 ? "border-b border-border" : "border-b border-dashed border-border/80",
-                          isSlotFirstClick(day, slotIndex) && "bg-primary/30",
-                          isSlotInSelection(day, slotIndex) && "bg-primary/15"
-                        )}
-                        onClick={() => handleSlotClick(day, slotIndex)}
-                      />
-                    ))}
+            {/* ✅ Grid 영역 - flex-1로 남은 공간 전부 사용 */}
+            <div className="grid grid-cols-[40px_repeat(5,1fr)] flex-1">
 
-                    {entriesByDay[day]?.map((entry) => {
-                      const style = getEntryStyle(entry)
-                      const colorClass = courseColors.get(entry.courseName) || COURSE_COLORS[0]
-                      return (
-                        <div
-                          key={entry.id}
-                          className={cn(
-                            "absolute left-0.5 right-0.5 rounded-md border p-1.5 cursor-pointer",
-                            "overflow-hidden transition-shadow hover:shadow-md",
-                            colorClass
-                          )}
-                          style={style}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditingEntry(entry)
-                            setEditDialogOpen(true)
-                          }}
-                        >
-                          <p className="text-[11px] font-semibold leading-tight break-words">
-                            {entry.courseName}
-                          </p>
-                          <p className="text-[10px] opacity-70 leading-tight mt-0.5 break-words">
-                            {entry.location}
-                          </p>
-                        </div>
-                      )
-                    })}
+              {/* ✅ 시간 레이블 컬럼 - flex-col로 슬롯 균등 배분 */}
+              <div className="relative flex flex-col pt-0.5">
+                {HALF_HOUR_SLOTS.map((slot, index) => (
+                  <div key={index} className="flex-1 relative">
+                    {index % 2 === 0 && (
+                      <span className="absolute top-[-1px] right-1.5 text-[10px] font-medium text-foreground leading-none">
+                        {slot.hour}:00
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
+
+              {/* ✅ 요일 컬럼 - flex-col로 슬롯 균등 배분 */}
+              {DAYS.map((day) => (
+                <div key={day} className="relative border-l border-border flex flex-col" data-day-column={day}>
+                  {HALF_HOUR_SLOTS.map((_slot, slotIndex) => (
+                    <div
+                      key={slotIndex}
+                      className={cn(
+                        // ✅ h-6 → flex-1 로 변경
+                        "flex-1 transition-colors cursor-pointer",
+                        slotIndex % 2 === 1
+                          ? "border-b border-border"
+                          : "border-b border-dashed border-border/80",
+                        isSlotFirstClick(day, slotIndex) && "bg-primary/30",
+                        isSlotInSelection(day, slotIndex) && "bg-primary/15"
+                      )}
+                      onClick={() => handleSlotClick(day, slotIndex)}
+                    />
+                  ))}
+
+                  {/* 수업 엔트리 - % 기반 위치로 동적 높이에 대응 */}
+                  {entriesByDay[day]?.map((entry) => {
+                    const style = getEntryStyle(entry)
+                    const colorClass = courseColors.get(entry.courseName) || COURSE_COLORS[0]
+                    return (
+                      <div
+                        key={entry.id}
+                        className={cn(
+                          "absolute left-0.5 right-0.5 rounded-md border p-1.5 cursor-pointer",
+                          "overflow-hidden transition-shadow hover:shadow-md",
+                          colorClass
+                        )}
+                        style={style}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingEntry(entry)
+                          setEditDialogOpen(true)
+                        }}
+                      >
+                        <p className="text-[11px] font-semibold leading-tight break-words">
+                          {entry.courseName}
+                        </p>
+                        <p className="text-[10px] opacity-70 leading-tight mt-0.5 break-words">
+                          {entry.location}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -272,7 +265,6 @@ export function TimetableGrid({
         onSubmit={handleSubmit}
       />
 
-      {/* Edit Entry Drawer */}
       <AddEntryDrawer
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
