@@ -107,7 +107,16 @@ class MissionHandler:
             )
             if overlapping_ids:
                 logger.info("공통 건물 place 없음, 겹치는 서브 노드로 폴백")
-                nodes = await self._mission_search.search_by_node_ids(overlapping_ids)
+                all_nodes = await self._mission_search.search_by_node_ids(overlapping_ids)
+                # 미션 장소로 부적합한 노드 제외 (입구, 계단, 삼거리)
+                excluded_types = {"ENTRANCE", "STAIRWAY", "INTERSECTION"}
+                nodes = [
+                    n for n in all_nodes
+                    if n.type_activity not in excluded_types
+                ]
+                # 적합한 노드가 없으면 전체 포함 (AI가 판단)
+                if not nodes:
+                    nodes = all_nodes
 
         # 3. 둘 다 없으면 실패
         if not nodes:

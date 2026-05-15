@@ -76,7 +76,7 @@ class FirstQuestionResponse(BaseModel):
     """첫 질문 응답."""
 
     question: str
-    maxTurns: int = 10
+    maxTurns: int = 5
 
 
 class NextQuestionResponse(BaseModel):
@@ -85,7 +85,7 @@ class NextQuestionResponse(BaseModel):
     question: Optional[str] = None
     isConversationComplete: bool = False
     currentTurn: int
-    maxTurns: int = 10
+    maxTurns: int = 5
 
 
 class ProfileUpdate(BaseModel):
@@ -185,8 +185,7 @@ def _build_next_question_system_prompt(
 5. 이미 물어본 시간대나 주제는 반복하지 마세요.
 6. 친근하고 부담 없는 반말 해요체를 사용하세요.
 7. 현재 {current_turn}/{max_turns} 턴입니다.
-8. 최소 5턴은 진행하세요. 5턴 미만에서는 절대 [COMPLETE]를 출력하지 마세요.
-9. 5턴 이상이고 사용자가 충분히 풍부한 답변을 했다고 판단되면, 질문 대신 정확히 "[COMPLETE]"만 출력하세요.
+8. [COMPLETE]는 출력하지 마세요. 질문만 생성하세요.
 """
 
 
@@ -217,6 +216,7 @@ def _build_generate_prompt(
 4. 3~5문단 분량으로 작성하세요.
 5. 친근하고 자연스러운 문체를 사용하세요 (해요체 X, 반말 일기체).
 6. 대화 형식이 아닌 일기 형식으로 작성하세요.
+7. 맨 앞에 날짜를 넣지 마세요. 본문만 작성하세요.
 """
 
 
@@ -310,6 +310,30 @@ async def next_question(body: NextQuestionRequest, request: Request):
                     maxTurns=max_turns,
                 )
 
+            # 마지막 턴(5번째)이면 마무리 멘트 생성
+            if current_turn == max_turns - 1:
+                closing_prompt = """이전 대화를 바탕으로 사용자의 하루를 따뜻하게 마무리해주는 한마디를 해주세요.
+예시: "오늘 하루도 수고했어! 푹 쉬고 내일도 좋은 하루 보내자 😊"
+1문장으로 짧고 따뜻하게 작성하세요. 질문하지 마세요."""
+
+                messages = []
+                for turn in body.conversationHistory:
+                    messages.append({"role": "assistant", "content": turn.question})
+                    messages.append({"role": "user", "content": turn.answer})
+                messages.append({"role": "user", "content": closing_prompt})
+
+                response = await bedrock_client.invoke_with_messages(
+                    system_prompt="당신은 대학생의 일기 작성을 도와주는 따뜻한 AI 친구입니다.",
+                    messages=messages,
+                )
+
+                return NextQuestionResponse(
+                    question=response.strip(),
+                    isConversationComplete=True,
+                    currentTurn=current_turn,
+                    maxTurns=max_turns,
+                )
+
             system_prompt = _build_next_question_system_prompt(
                 schedule=body.todaySchedule,
                 max_turns=max_turns,
@@ -325,22 +349,13 @@ async def next_question(body: NextQuestionRequest, request: Request):
             # 후속 질문 요청 추가
             messages.append({
                 "role": "user",
-                "content": "다음 질문을 해주세요. 충분하다고 판단되면 [COMPLETE]만 출력하세요.",
+                "content": "다음 질문을 해주세요.",
             })
 
             response = await bedrock_client.invoke_with_messages(
                 system_prompt=system_prompt,
                 messages=messages,
             )
-
-            # AI가 완료 판단한 경우
-            if "[COMPLETE]" in response:
-                return NextQuestionResponse(
-                    question=None,
-                    isConversationComplete=True,
-                    currentTurn=current_turn,
-                    maxTurns=max_turns,
-                )
 
             return NextQuestionResponse(
                 question=response.strip(),
