@@ -2,11 +2,6 @@ package com.ilgiyebo.domain.matching.service;
 
 import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
 import com.ilgiyebo.domain.campus.repository.CampusPathRepository;
-import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
-import com.ilgiyebo.domain.interaction.entity.StageStatus;
-import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
-import com.ilgiyebo.domain.matching.entity.MatchEntity;
-import com.ilgiyebo.domain.matching.entity.MatchStatus;
 import com.ilgiyebo.domain.user.entity.ScheduleEntity;
 import com.ilgiyebo.domain.matching.entity.SlotEntity;
 import com.ilgiyebo.domain.matching.entity.SlotPriority;
@@ -23,9 +18,6 @@ import com.ilgiyebo.domain.matching.repository.MatchRepository;
 import com.ilgiyebo.domain.user.repository.ScheduleRepository;
 import com.ilgiyebo.domain.matching.repository.SlotRepository;
 import com.ilgiyebo.domain.user.repository.UserRepository;
-import com.ilgiyebo.domain.interaction.dto.QuizGenerateRequestMessage;
-import com.ilgiyebo.domain.interaction.service.QuizRequestPublisher;
-import com.ilgiyebo.domain.mission.service.MissionService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +45,7 @@ public class MatchingServiceImpl implements MatchingService {
     private final BlockRepository blockRepository;
     private final CampusPathRepository campusPathRepository;
     private final MatchRepository matchRepository;
-    private final InteractionRepository interactionRepository;
-    private final QuizRequestPublisher quizRequestPublisher;
-    private final MissionService missionService;
+    private final MatchingTransactionHelper matchingTransactionHelper;
 
     @Override
     @Transactional(readOnly = true)
@@ -148,7 +138,6 @@ public class MatchingServiceImpl implements MatchingService {
     }
 
     @Override
-    @Transactional
     public BatchMatchingResultDto executeBatchMatching() {
         LocalDate today = LocalDate.now();
         LocalDate cycleStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -156,8 +145,8 @@ public class MatchingServiceImpl implements MatchingService {
 
         log.info("배치 매칭 시작: cycleStart={}, cycleEnd={}", cycleStart, cycleEnd);
 
-        // 1. 빈 슬롯 조회
-        List<SlotEntity> emptySlots = slotRepository.findByStatus(SlotStatus.EMPTY);
+        // 1. 빈 슬롯 조회 (읽기 전용 트랜잭션)
+        List<SlotEntity> emptySlots = matchingTransactionHelper.findEmptySlots();
         if (emptySlots.isEmpty()) {
             log.info("빈 슬롯이 없어 배치 매칭을 종료합니다.");
             return new BatchMatchingResultDto(0, 0, 0, 0, List.of());
@@ -165,25 +154,22 @@ public class MatchingServiceImpl implements MatchingService {
 
         log.info("빈 슬롯 수: {}", emptySlots.size());
 
-        // 2. 사용자별 빈 슬롯 그룹핑
-        Map<UUID, List<SlotEntity>> slotsByUser = emptySlots.stream()
-                .collect(Collectors.groupingBy(slot -> slot.getUser().getId()));
+        // 2. 사용자별 빈 슬롯 ID 그룹핑 (엔티티 대신 ID로 관리)
+        Map<UUID, List<UUID>> slotIdsByUser = emptySlots.stream()
+                .collect(Collectors.groupingBy(
+                        slot -> slot.getUser().getId(),
+                        Collectors.mapping(SlotEntity::getId, Collectors.toList())
+                ));
 
         // 3. 매칭 대상 사용자 목록 (시간표가 있는 사용자만)
-        Set<UUID> candidateUsers = new HashSet<>();
-        for (UUID userId : slotsByUser.keySet()) {
-            List<ScheduleEntity> schedules = scheduleRepository.findAllByUserId(userId);
-            if (!schedules.isEmpty()) {
-                candidateUsers.add(userId);
-            }
-        }
+        Set<UUID> candidateUsers = matchingTransactionHelper.filterCandidateUsers(slotIdsByUser.keySet());
 
         if (candidateUsers.size() < 2) {
             log.info("매칭 가능한 사용자가 2명 미만입니다. candidateUsers={}", candidateUsers.size());
             return new BatchMatchingResultDto(emptySlots.size(), 0, 0, 0, List.of());
         }
 
-        // 4. 매칭 실행
+        // 4. 매칭 실행 (개별 매칭마다 별도 트랜잭션)
         Set<UUID> matchedSlots = new HashSet<>();
         int matchesCreated = 0;
         List<String> failedSlots = new ArrayList<>();
@@ -192,167 +178,61 @@ public class MatchingServiceImpl implements MatchingService {
 
         for (int i = 0; i < userList.size(); i++) {
             UUID userA = userList.get(i);
-            List<SlotEntity> userASlots = slotsByUser.get(userA);
-            if (userASlots == null) continue;
+            List<UUID> userASlotIds = slotIdsByUser.get(userA);
+            if (userASlotIds == null) continue;
 
-            for (SlotEntity slotA : userASlots) {
-                if (matchedSlots.contains(slotA.getId())) continue;
+            for (UUID slotAId : userASlotIds) {
+                if (matchedSlots.contains(slotAId)) continue;
 
                 boolean matched = false;
                 for (int j = i + 1; j < userList.size(); j++) {
                     UUID userB = userList.get(j);
-                    List<SlotEntity> userBSlots = slotsByUser.get(userB);
-                    if (userBSlots == null) continue;
+                    List<UUID> userBSlotIds = slotIdsByUser.get(userB);
+                    if (userBSlotIds == null) continue;
 
                     // 차단 관계 확인
-                    if (isBlocked(userA, userB)) continue;
+                    if (matchingTransactionHelper.isBlocked(userA, userB)) continue;
 
-                    for (SlotEntity slotB : userBSlots) {
-                        if (matchedSlots.contains(slotB.getId())) continue;
+                    for (UUID slotBId : userBSlotIds) {
+                        if (matchedSlots.contains(slotBId)) continue;
 
                         // 동선 겹침 계산
-                        RouteOverlapDto overlap = calculateRouteOverlap(userA, userB);
+                        RouteOverlapDto overlap = matchingTransactionHelper.calculateRouteOverlap(userA, userB);
                         if (!overlap.hasOverlap()) continue;
 
-                        // 겹치는 동선 중 하나를 선택
-                        OverlapLocationDto selectedOverlap = overlap.overlappingLocations().get(0);
+                        // 개별 매칭을 독립 트랜잭션으로 실행
+                        try {
+                            UUID matchId = matchingTransactionHelper.createSingleMatch(
+                                    userA, userB, slotAId, slotBId, cycleStart, cycleEnd);
 
-                        // 매칭 성사
-                        MatchEntity match = createMatch(userA, userB, slotA, slotB, cycleStart, cycleEnd);
+                            // DB 커밋 완료 후 SQS 발행 (실패해도 매칭은 유지)
+                            matchingTransactionHelper.publishPostMatchEvents(matchId, userA, userB);
 
-                        // 상호작용 생성
-                        createInteraction(match.getId());
+                            matchedSlots.add(slotAId);
+                            matchedSlots.add(slotBId);
+                            matchesCreated++;
+                            matched = true;
 
-                        // 미션 생성 요청 (SQS 발행 → AI 서버에서 RAG 기반 생성)
-                        requestMissionGenerationSafe(match.getId());
-
-                        // 퀴즈 사전 생성 (양쪽 사용자에 대해 SQS 요청 발행)
-                        preGenerateQuiz(match.getId(), userA, userB);
-
-                        // 슬롯 상태 업데이트
-                        slotA.setStatus(SlotStatus.ACTIVE);
-                        slotA.setCurrentMatch(match);
-                        slotRepository.save(slotA);
-
-                        slotB.setStatus(SlotStatus.ACTIVE);
-                        slotB.setCurrentMatch(match);
-                        slotRepository.save(slotB);
-
-                        matchedSlots.add(slotA.getId());
-                        matchedSlots.add(slotB.getId());
-                        matchesCreated++;
-                        matched = true;
-
-                        log.info("매칭 성사: userA={}, userB={}, matchId={}, overlap={}",
-                                userA, userB, match.getId(), selectedOverlap);
+                            log.info("매칭 성사: userA={}, userB={}, slotA={}, slotB={}, matchId={}",
+                                    userA, userB, slotAId, slotBId, matchId);
+                        } catch (Exception e) {
+                            log.error("개별 매칭 생성 실패: userA={}, userB={}, slotA={}, slotB={}",
+                                    userA, userB, slotAId, slotBId, e);
+                            failedSlots.add(slotAId.toString());
+                        }
                         break;
                     }
                     if (matched) break;
                 }
 
-                if (!matched) {
-                    failedSlots.add(slotA.getId().toString());
+                if (!matched && !failedSlots.contains(slotAId.toString())) {
+                    failedSlots.add(slotAId.toString());
                 }
             }
         }
 
         log.info("배치 매칭 완료: totalProcessed={}, matchesCreated={}", emptySlots.size(), matchesCreated);
         return new BatchMatchingResultDto(emptySlots.size(), matchesCreated, 0, matchesCreated, failedSlots);
-    }
-
-    /**
-     * 매칭 엔티티를 생성하고 저장한다.
-     */
-    private MatchEntity createMatch(UUID userAId, UUID userBId, SlotEntity slotA, SlotEntity slotB,
-                                    LocalDate cycleStart, LocalDate cycleEnd) {
-        UserEntity userA = userRepository.findById(userAId)
-                .orElseThrow(MatchingException.USER_NOT_FOUND::toException);
-        UserEntity userB = userRepository.findById(userBId)
-                .orElseThrow(MatchingException.USER_NOT_FOUND::toException);
-
-        MatchEntity match = MatchEntity.builder()
-                .userA(userA)
-                .userB(userB)
-                .slotA(slotA)
-                .slotB(slotB)
-                .cycleStartDate(cycleStart)
-                .cycleEndDate(cycleEnd)
-                .status(MatchStatus.ACTIVE)
-                .isQuickMatch(false)
-                .build();
-        return matchRepository.save(match);
-    }
-
-    /**
-     * 매칭에 대한 상호작용 엔티티를 생성한다.
-     */
-    private void createInteraction(UUID matchId) {
-        MatchEntity matchRef = matchRepository.getReferenceById(matchId);
-        InteractionEntity interaction = InteractionEntity.builder()
-                .match(matchRef)
-                .currentStage(1)
-                .stageStatus(StageStatus.IN_PROGRESS)
-                .quizCompletedBy(List.of())
-                .missionConfirmedBy(List.of())
-                .reviewCompletedBy(List.of())
-                .build();
-        interactionRepository.save(interaction);
-    }
-
-    /**
-     * 매칭 성사 시 미션 생성을 SQS로 요청한다.
-     * 미션 생성 실패는 매칭 성사를 막지 않는다.
-     */
-    private void requestMissionGenerationSafe(UUID matchId) {
-        try {
-            missionService.requestMissionGeneration(matchId);
-        } catch (Exception e) {
-            // 미션 생성 요청 실패는 매칭 성사를 막지 않음
-            log.warn("미션 생성 요청 실패 (매칭은 유지): matchId={}", matchId, e);
-        }
-    }
-
-    /**
-     * 매칭 성사 시 양쪽 사용자에 대해 퀴즈 생성을 SQS로 사전 요청한다.
-     * 사용자가 1단계(퀴즈)에 진입할 때 이미 퀴즈가 준비되어 있어 대기 없이 즉시 제공된다.
-     */
-    private void preGenerateQuiz(UUID matchId, UUID userA, UUID userB) {
-        try {
-            // userA를 위한 퀴즈 (userB 프로필 기반)
-            UserEntity partnerB = userRepository.findById(userB).orElse(null);
-            if (partnerB != null) {
-                QuizGenerateRequestMessage.TargetProfile profileB = QuizGenerateRequestMessage.TargetProfile.builder()
-                        .name(partnerB.getName())
-                        .nickname(partnerB.getNickname())
-                        .university(partnerB.getUniversity())
-                        .major(partnerB.getMajor())
-                        .hobbies(partnerB.getHobbies())
-                        .interests(partnerB.getInterests())
-                        .personalityType(partnerB.getPersonalityType() != null ? partnerB.getPersonalityType().name() : null)
-                        .build();
-                quizRequestPublisher.requestQuizGeneration(matchId, userA, userB, profileB);
-            }
-
-            // userB를 위한 퀴즈 (userA 프로필 기반)
-            UserEntity partnerA = userRepository.findById(userA).orElse(null);
-            if (partnerA != null) {
-                QuizGenerateRequestMessage.TargetProfile profileA = QuizGenerateRequestMessage.TargetProfile.builder()
-                        .name(partnerA.getName())
-                        .nickname(partnerA.getNickname())
-                        .university(partnerA.getUniversity())
-                        .major(partnerA.getMajor())
-                        .hobbies(partnerA.getHobbies())
-                        .interests(partnerA.getInterests())
-                        .personalityType(partnerA.getPersonalityType() != null ? partnerA.getPersonalityType().name() : null)
-                        .build();
-                quizRequestPublisher.requestQuizGeneration(matchId, userB, userA, profileA);
-            }
-
-            log.info("퀴즈 사전 생성 요청 완료: matchId={}, userA={}, userB={}", matchId, userA, userB);
-        } catch (Exception e) {
-            // 퀴즈 사전 생성 실패는 매칭 성사를 막지 않음 (사용자가 직접 요청 시 재시도 가능)
-            log.warn("퀴즈 사전 생성 요청 실패 (매칭은 유지): matchId={}", matchId, e);
-        }
     }
 
     /**
