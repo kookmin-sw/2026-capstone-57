@@ -3,6 +3,7 @@ package com.ilgiyebo.domain.chat.service;
 import com.ilgiyebo.domain.chat.dto.SessionEndedEvent;
 import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionStatus;
+import com.ilgiyebo.domain.chat.entity.IcebreakerQuestion;
 import com.ilgiyebo.domain.chat.exception.ChatException;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
@@ -69,6 +70,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
                 .status(ChatSessionStatus.ACTIVE)
                 .tokenLimit(chatTokenLimit)
                 .usedTokens(0)
+                .icebreakerQuestion(IcebreakerQuestion.random().getQuestion())
                 .build();
 
         ChatSessionEntity savedSession = chatSessionRepository.save(session);

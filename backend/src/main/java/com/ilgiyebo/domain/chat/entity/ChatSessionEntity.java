@@ -44,4 +44,7 @@ public class ChatSessionEntity extends BaseSchema {
     @Builder.Default
     @Column(name = "used_tokens", nullable = false)
     private int usedTokens = 0;
+
+    @Column(name = "icebreaker_question")
+    private String icebreakerQuestion;
 }
