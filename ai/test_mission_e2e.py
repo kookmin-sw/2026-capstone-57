@@ -39,14 +39,14 @@ MISSION_REQUEST = {
     "userBId": "user-b-001",
     "timeSlot": "14:00-14:30",
     "userARoute": {
-        "fromBuilding": {"id": "bld-001", "name": "북악관"},
-        "toBuilding": {"id": "bld-002", "name": "미래관"},
-        "subNodeIds": ["uuid-1", "uuid-14", "uuid-109", "uuid-110"],
+        "fromBuilding": {"id": "bld-001", "name": "미래관"},
+        "toBuilding": {"id": "bld-002", "name": "북악관"},
+        "subNodeIds": ["uuid-13", "uuid-12", "uuid-7", "uuid-6", "uuid-5", "uuid-2"],
     },
     "userBRoute": {
-        "fromBuilding": {"id": "bld-003", "name": "복지관"},
-        "toBuilding": {"id": "bld-002", "name": "미래관"},
-        "subNodeIds": ["uuid-15", "uuid-14", "uuid-104", "uuid-109", "uuid-110"],
+        "fromBuilding": {"id": "bld-001", "name": "미래관"},
+        "toBuilding": {"id": "bld-002", "name": "북악관"},
+        "subNodeIds": ["uuid-14", "uuid-11", "uuid-10", "uuid-8", "uuid-4", "uuid-3", "uuid-1"],
     },
     "requestedAt": "2026-05-14T12:00:00Z",
 }
