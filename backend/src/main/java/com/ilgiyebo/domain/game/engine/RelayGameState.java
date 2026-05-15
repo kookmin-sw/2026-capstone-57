@@ -1,5 +1,6 @@
 package com.ilgiyebo.domain.game.engine;
 
+import com.ilgiyebo.domain.game.dto.request.PositionUpdateData;
 import lombok.Getter;
 import lombok.Setter;
 

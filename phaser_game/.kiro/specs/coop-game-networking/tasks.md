@@ -50,7 +50,7 @@
     - Use fast-check with random event sequence generator
     - **Validates: Requirements 1.6**
 
-- [-] 3. Server relay - RelayService 구현
+- [x] 3. Server relay - RelayService 구현
   - [x] 3.1 Create RelayGameState and PositionUpdateData models
     - Create `backend/.../game/engine/RelayGameState.java` with collected coins set, switch states, door open status, total coins, timing, last positions
     - Create `backend/.../game/dto/request/PositionUpdateData.java` record
@@ -60,7 +60,7 @@
     - Create `SwitchStateEvent.java`, `DoorOpenedEvent.java`, `GameClearedEvent.java`, `GameOverEvent.java`
     - Create `PlayerDisconnectedEvent.java`, `PlayerReconnectedEvent.java`
     - _Requirements: 4.1, 5.3, 6.3, 7.1, 8.4, 8.5_
-  - [-] 3.3 Implement RelayService interface and RelayServiceImpl
+  - [x] 3.3 Implement RelayService interface and RelayServiceImpl
     - Create `backend/.../game/service/RelayService.java` interface
     - Create `backend/.../game/service/RelayServiceImpl.java`
     - Implement `relayPosition()`: forward position data to partner without modification
@@ -70,7 +70,7 @@
     - Implement `handleClearRequest()`: validate both players near door, broadcast GAME_CLEARED
     - Discard POSITION_UPDATE when session not in PLAYING state
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7_
-  - [ ] 3.4 Update GameController for relay message types
+  - [x] 3.4 Update GameController for relay message types
     - Modify `GameActionMessage.java` to add `payload` field (Map or JsonNode)
     - Add cases for `POSITION_UPDATE`, `COIN_COLLECTED`, `SWITCH_PRESSED`, `SWITCH_RELEASED`, `CLEAR_REQUEST` in GameController
     - Route new message types to RelayService

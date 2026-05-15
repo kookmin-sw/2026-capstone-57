@@ -182,7 +182,7 @@ public class GameRoomServiceImpl implements GameRoomService {
 
         // Broadcast GAME_STARTED with initial state
         GameStartedEvent event = new GameStartedEvent(
-                "GAME_STARTED", gameState.toSnapshot());
+                "GAME_STARTED", gameState.toSnapshot(), MapDataDto.from(room.getMapData()));
         messagingTemplate.convertAndSend(gameTopic(room.getSessionId()), event);
     }
 
@@ -204,7 +204,7 @@ public class GameRoomServiceImpl implements GameRoomService {
 
         // Broadcast GAME_STARTED with fresh state
         GameStartedEvent event = new GameStartedEvent(
-                "GAME_STARTED", gameState.toSnapshot());
+                "GAME_STARTED", gameState.toSnapshot(), MapDataDto.from(room.getMapData()));
         messagingTemplate.convertAndSend(gameTopic(room.getSessionId()), event);
     }
 
