@@ -75,9 +75,10 @@ public class GameRoomServiceImpl implements GameRoomService {
             throw GameException.NOT_GAME_PARTICIPANT.toException();
         }
 
-        // 이미 PLAYING 상태면 재접속 처리: 바로 GAME_STARTED 재전송
-        if (room.getStatus().get() == GameRoomStatus.PLAYING) {
-            log.info("재접속 감지 (PLAYING 상태): sessionId={}, userId={}", sessionId, userId);
+        // 이미 PLAYING 또는 PAUSED 상태면 재접속 처리: 바로 GAME_STARTED 재전송
+        GameRoomStatus currentStatus = room.getStatus().get();
+        if (currentStatus == GameRoomStatus.PLAYING || currentStatus == GameRoomStatus.PAUSED) {
+            log.info("재접속 감지 ({} 상태): sessionId={}, userId={}", currentStatus, sessionId, userId);
             room.getConnectedUsers().add(userId);
 
             // PAUSED 상태였으면 PLAYING으로 복구
