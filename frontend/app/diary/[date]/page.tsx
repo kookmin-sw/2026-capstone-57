@@ -1,7 +1,7 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation"
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import { ArrowLeft, Edit3, Sparkles } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { Card, CardContent } from "@/components/ui/card"
@@ -17,6 +17,7 @@ import {
   answerDiaryQuestion,
   generateDiary,
   confirmDiary,
+  cancelDiarySession,
   type DiaryEntryResponse,
   type DiarySessionResponse,
   type GeneratedDiaryPreview,
@@ -57,13 +58,32 @@ export default function DiaryDetailPage() {
   const [chatHistory, setChatHistory] = useState<{ question: string; answer: string }[]>([])
   const [aiLoading, setAiLoading] = useState(false)
 
+  // AI generating state
+  const [generating, setGenerating] = useState(false)
+
   // Compiled state
   const [compiledContent, setCompiledContent] = useState("")
   const [suggestedEmotion, setSuggestedEmotion] = useState<EmotionTag>("CALM")
 
+  // Auto scroll ref
+  const chatEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
   // Manual write state
   const [manualContent, setManualContent] = useState("")
   const [manualEmotion, setManualEmotion] = useState<EmotionTag>("CALM")
+
+  // Auto scroll to bottom when chat updates
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [chatHistory, currentQuestion, aiLoading])
+
+  // Keep focus on input after AI responds
+  useEffect(() => {
+    if (!aiLoading && !generating && session) {
+      inputRef.current?.focus()
+    }
+  }, [aiLoading, generating])
 
   useEffect(() => {
     if (isFutureDate(dateStr)) {
@@ -90,15 +110,56 @@ export default function DiaryDetailPage() {
         })
         setViewState("view")
       } else {
-        setViewState("chat")
         // 활성 세션이 있는지 확인
         try {
           const activeSession = await getActiveSession(dateStr)
           setSession(activeSession)
-          setCurrentQuestion(activeSession.currentQuestion || "")
           setChatHistory(activeSession.conversationHistory || [])
+
+          if (activeSession.status === "GENERATED") {
+            // 이미 생성됨 → 캐시에서 가져오기 시도
+            const cached = localStorage.getItem(`diary_generated_${dateStr}`)
+            if (cached) {
+              const { content, emotion } = JSON.parse(cached)
+              setCompiledContent(content)
+              setSuggestedEmotion(emotion)
+            } else {
+              // 캐시 없으면 대화 내역 답변으로 대체
+              const answers = (activeSession.conversationHistory || []).map(h => h.answer).filter(Boolean)
+              setCompiledContent(answers.join("\n\n") || "일기가 생성되었습니다.")
+              setSuggestedEmotion("CALM")
+            }
+            setViewState("compiled")
+          } else if (activeSession.status === "READY_TO_GENERATE") {
+            // 대화 완료, 생성 대기 → 생성 시작
+            setViewState("chat")
+            setCurrentQuestion("")
+            setGenerating(true)
+            try {
+              const preview = await generateDiary(activeSession.sessionId)
+              setCompiledContent(preview.generatedContent)
+              setSuggestedEmotion(preview.suggestedEmotion)
+              setViewState("compiled")
+            } catch {
+              // 생성 실패 시 대화 내역으로 대체
+              const answers = (activeSession.conversationHistory || []).map(h => h.answer).filter(Boolean)
+              setCompiledContent(answers.join("\n\n"))
+              setViewState("compiled")
+            } finally {
+              setGenerating(false)
+            }
+          } else if (activeSession.status === "COMPLETED") {
+            // 이미 확정됨 → 일기 목록 다시 로드
+            setViewState("chat")
+            setSession(null)
+          } else {
+            // IN_PROGRESS → 대화 계속
+            setViewState("chat")
+            setCurrentQuestion(activeSession.currentQuestion || "")
+          }
         } catch {
-          // 세션 없으면 새로 시작
+          // 세션 없으면 새로 시작 가능
+          setViewState("chat")
         }
       }
     } catch (err) {
@@ -127,15 +188,27 @@ export default function DiaryDetailPage() {
       const answer = answerInput.trim()
       setChatHistory((prev) => [...prev, { question: currentQuestion, answer }])
       setAnswerInput("")
+      setCurrentQuestion("") // 질문 비우기 → "..." 표시
 
       const result = await answerDiaryQuestion(session.sessionId, answer)
 
       if (result.isCompleted) {
         // 대화 완료 → 일기 생성
-        const preview = await generateDiary(session.sessionId)
-        setCompiledContent(preview.generatedContent)
-        setSuggestedEmotion(preview.suggestedEmotion)
-        setViewState("compiled")
+        setCurrentQuestion("")
+        setGenerating(true)
+        try {
+          const preview = await generateDiary(session.sessionId)
+          setCompiledContent(preview.generatedContent)
+          setSuggestedEmotion(preview.suggestedEmotion)
+          // 생성 결과를 로컬에 캐시 (재진입 시 사용)
+          localStorage.setItem(`diary_generated_${dateStr}`, JSON.stringify({
+            content: preview.generatedContent,
+            emotion: preview.suggestedEmotion,
+          }))
+          setViewState("compiled")
+        } finally {
+          setGenerating(false)
+        }
       } else {
         setCurrentQuestion(result.nextQuestion || "")
       }
@@ -153,6 +226,7 @@ export default function DiaryDetailPage() {
       } else {
         await createDiary({ content, emotionTag: emotion, date: dateStr, source: "MANUAL" })
       }
+      localStorage.removeItem(`diary_generated_${dateStr}`)
       router.push("/diary")
     } catch (err) {
       console.error("일기 저장 실패:", err)
@@ -243,7 +317,18 @@ export default function DiaryDetailPage() {
     return (
       <AppShell title="일기 완성">
         <div className="p-4 space-y-4">
-          <button onClick={() => setViewState("chat")} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+          <button onClick={async () => {
+            // 기존 세션 취소 후 새로 시작
+            if (session) {
+              try { await cancelDiarySession(session.sessionId) } catch {}
+            }
+            setSession(null)
+            setChatHistory([])
+            setCurrentQuestion("")
+            setCompiledContent("")
+            localStorage.removeItem(`diary_generated_${dateStr}`)
+            setViewState("chat")
+          }} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">다시 대화하기</span>
           </button>
@@ -333,25 +418,45 @@ export default function DiaryDetailPage() {
                   </div>
                 </div>
               ))}
-              {currentQuestion && (
+              {currentQuestion && currentQuestion.trim() !== "" && (
                 <div className="bg-secondary/50 rounded-xl p-3">
                   <p className="text-xs text-muted-foreground">Q.</p>
                   <p className="text-sm">{currentQuestion}</p>
                 </div>
               )}
+              {!currentQuestion && aiLoading && !generating && (
+                <div className="bg-secondary/50 rounded-xl p-3">
+                  <p className="text-xs text-muted-foreground">Q.</p>
+                  <div className="flex items-center gap-1 pt-1">
+                    <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:300ms]" />
+                  </div>
+                </div>
+              )}
+              {generating && (
+                <div className="flex items-center justify-center py-6">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-muted-foreground">AI가 일기 생성중입니다...</p>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
             </div>
 
             {/* Input */}
             <div className="shrink-0 flex gap-2">
               <input
+                ref={inputRef}
                 value={answerInput}
                 onChange={(e) => setAnswerInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAnswerQuestion() } }}
                 placeholder="답변을 입력하세요..."
                 className="flex-1 px-3 py-2 rounded-xl border border-border/50 text-sm outline-none focus:border-primary/50"
-                disabled={aiLoading}
+                disabled={aiLoading || generating}
               />
-              <Button size="sm" onClick={handleAnswerQuestion} disabled={!answerInput.trim() || aiLoading} className="h-9 px-4 rounded-xl">
+              <Button size="sm" onClick={handleAnswerQuestion} disabled={!answerInput.trim() || aiLoading || generating} className="h-9 px-4 rounded-xl">
                 {aiLoading ? "..." : "전송"}
               </Button>
             </div>

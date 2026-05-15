@@ -22,7 +22,7 @@ export interface SignupRequest {
   gender: "MALE" | "FEMALE" | "OTHER"
   hobbies?: string[]
   interests?: string[]
-  personalityTypes?: string[]
+  personalityType?: string
   idealTypes?: string[]
 }
 

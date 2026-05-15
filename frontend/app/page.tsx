@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { SectionHeader } from "@/components/section-header"
-import { HintNotificationBanner } from "@/components/home/hint-notification-banner"
 import { WeatherStatusCard } from "@/components/home/weather-status-card"
 import { SlotPreviewCard } from "@/components/home/slot-preview-card"
 import { PlannerReminderCard } from "@/components/home/planner-reminder-card"
@@ -33,6 +33,7 @@ function toSlot(dto: SlotResponseDto, index: number): Slot {
 }
 
 export default function HomePage() {
+  const router = useRouter()
   const [slots, setSlots] = useState<Slot[]>([])
   const [userName, setUserName] = useState("")
   const [todayEntryCount, setTodayEntryCount] = useState(0)
@@ -100,9 +101,6 @@ export default function HomePage() {
   return (
     <AppShell noScroll>
       <div className="px-4 py-3 space-y-4">
-        {/* Hint Question Notification Banner */}
-        <HintNotificationBanner />
-
         {/* Greeting & Weather Card */}
         <WeatherStatusCard userName={userName || "사용자"} />
 
@@ -111,7 +109,7 @@ export default function HomePage() {
           <SectionHeader
             title="오늘의 예보"
             subtitle="함께할 사람을 찾고 있어요"
-            action={{ label: "더보기" }}
+            action={{ label: "더보기", onClick: () => router.push("/slots") }}
             className="mb-2"
           />
           {loading ? (
@@ -133,7 +131,7 @@ export default function HomePage() {
         <section>
           <SectionHeader
             title="다가오는 일정"
-            action={{ label: "캘린더" }}
+            action={{ label: "캘린더", onClick: () => router.push("/planner") }}
             className="mb-3"
           />
           <PlannerReminderCard

@@ -1,20 +1,13 @@
 import { apiFetch } from "./client"
 
-export interface LocalTime {
-  hour: number
-  minute: number
-  second: number
-  nano: number
-}
-
 export type PlanEntryType = "CLASS" | "FREE" | "ACTIVITY"
 export type PlanEntrySource = "MANUAL" | "SCHEDULE_AUTO" | "SCHEDULE_OVERRIDE"
 
 export interface PlanEntryResponse {
   id: string
-  date: string // "YYYY-MM-DD"
-  startTime: string // "HH:mm:ss" from server
-  endTime: string // "HH:mm:ss" from server
+  date: string
+  startTime: any // LocalTime object or string from server
+  endTime: any
   location: string
   name: string
   type: PlanEntryType
@@ -23,26 +16,27 @@ export interface PlanEntryResponse {
 }
 
 export interface PlanEntryRequest {
-  date: string // "YYYY-MM-DD"
-  startTime: string // "HH:mm:ss"
-  endTime: string // "HH:mm:ss"
+  date: string
+  startTime: string // "HH:mm"
+  endTime: string // "HH:mm"
   location?: string
   name?: string
   type: PlanEntryType
 }
 
-// 시간 문자열 "HH:mm" → "HH:mm:ss" (서버 형식)
+// 시간 문자열 "HH:mm" → "HH:mm" (서버 형식)
 export function toLocalTime(timeStr: string): string {
-  return timeStr.length === 5 ? `${timeStr}:00` : timeStr
+  return timeStr.substring(0, 5)
 }
 
-// 서버 응답 "HH:mm:ss" → "HH:mm" 표시용
-export function fromLocalTime(lt: string | any): string {
-  if (typeof lt === "string") {
-    return lt.substring(0, 5)
+// 서버 응답 → "HH:mm" 표시용
+export function fromLocalTime(lt: any): string {
+  if (!lt) return ""
+  if (typeof lt === "string") return lt.substring(0, 5)
+  if (typeof lt === "object" && lt.hour !== undefined) {
+    return `${String(lt.hour).padStart(2, "0")}:${String(lt.minute).padStart(2, "0")}`
   }
-  // fallback: 객체 형태인 경우
-  return `${String(lt.hour).padStart(2, "0")}:${String(lt.minute).padStart(2, "0")}`
+  return ""
 }
 
 // 날짜를 "YYYY-MM-DD" 형식으로 변환
@@ -56,6 +50,11 @@ export function formatDate(date: Date): string {
 /** 특정 날짜의 일정 목록 조회 */
 export function getPlanEntries(date: string) {
   return apiFetch<PlanEntryResponse[]>(`/api/planner?date=${date}`)
+}
+
+/** 주간 일정 목록 조회 (한번에) */
+export function getWeeklyPlanEntries(weekStart: string) {
+  return apiFetch<PlanEntryResponse[]>(`/api/planner/weekly?weekStart=${weekStart}`)
 }
 
 /** 일정 생성 */

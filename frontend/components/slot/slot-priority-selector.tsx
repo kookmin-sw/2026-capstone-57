@@ -1,7 +1,13 @@
 "use client"
 
-import { Heart, Sparkles, Star, X } from "lucide-react"
+import { Heart, Sparkles, Star } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import type { SlotPriority } from "@/types/slot"
 import { PRIORITY_LABELS } from "@/types/slot"
 
@@ -12,7 +18,7 @@ interface SlotPrioritySelectorProps {
   onClose: () => void
 }
 
-const priorities: { 
+const priorities: {
   value: SlotPriority
   icon: React.ReactNode
   description: string
@@ -44,90 +50,61 @@ export function SlotPrioritySelector({
   onSelect,
   onClose,
 }: SlotPrioritySelectorProps) {
-  if (!isOpen) return null
-
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
-        onClick={onClose}
-      />
-      
-      {/* Bottom Sheet */}
-      <div className={cn(
-        "fixed bottom-0 left-0 right-0 z-50",
-        "bg-card rounded-t-3xl shadow-xl",
-        "animate-in slide-in-from-bottom duration-300",
-        "max-w-[430px] mx-auto"
-      )}>
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 rounded-full bg-border" />
-        </div>
+    <Drawer open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DrawerContent>
+        <div className="mx-auto w-full max-w-md px-5 pb-8">
+          <DrawerHeader className="px-0">
+            <DrawerTitle>매칭 우선순위 설정</DrawerTitle>
+          </DrawerHeader>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pb-4">
-          <h3 className="text-lg font-semibold text-foreground">
-            매칭 우선순위 설정
-          </h3>
-          <button 
-            onClick={onClose}
-            className="p-1 rounded-full hover:bg-muted transition-colors"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
-
-        {/* Options */}
-        <div className="px-5 pb-8 space-y-2">
-          {priorities.map((priority) => (
-            <button
-              key={priority.value}
-              onClick={() => onSelect(priority.value)}
-              className={cn(
-                "w-full flex items-center gap-4 p-4 rounded-2xl transition-all",
-                "border-2",
-                currentPriority === priority.value
-                  ? "border-primary bg-primary/5"
-                  : "border-transparent bg-muted/50 hover:bg-muted"
-              )}
-            >
-              <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center",
-                currentPriority === priority.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              )}>
-                {priority.icon}
-              </div>
-              <div className="flex-1 text-left">
-                <p className={cn(
-                  "font-medium",
+          <div className="space-y-2">
+            {priorities.map((priority) => (
+              <button
+                key={priority.value}
+                onClick={() => onSelect(priority.value)}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 rounded-2xl transition-all",
+                  "border-2",
                   currentPriority === priority.value
-                    ? "text-primary"
-                    : "text-foreground"
+                    ? "border-primary bg-primary/5"
+                    : "border-transparent bg-muted/50 hover:bg-muted"
+                )}
+              >
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center",
+                  currentPriority === priority.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
                 )}>
-                  {PRIORITY_LABELS[priority.value]}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {priority.description}
-                </p>
-                <p className="text-xs text-muted-foreground/70 mt-0.5">
-                  예: {priority.examples}
-                </p>
-              </div>
-              {currentPriority === priority.value && (
-                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                  <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
+                  {priority.icon}
                 </div>
-              )}
-            </button>
-          ))}
+                <div className="flex-1 text-left">
+                  <p className={cn(
+                    "font-medium",
+                    currentPriority === priority.value ? "text-primary" : "text-foreground"
+                  )}>
+                    {PRIORITY_LABELS[priority.value]}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {priority.description}
+                  </p>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    예: {priority.examples}
+                  </p>
+                </div>
+                {currentPriority === priority.value && (
+                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-    </>
+      </DrawerContent>
+    </Drawer>
   )
 }

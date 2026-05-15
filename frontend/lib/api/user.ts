@@ -1,4 +1,5 @@
 import { apiFetch } from "./client"
+import type { ProfileOptionDto } from "./profile-options"
 
 export type Gender = "MALE" | "FEMALE" | "OTHER"
 
@@ -10,10 +11,10 @@ export interface UserProfileDto {
   major: string
   birthDate: string
   gender: Gender
-  hobbies: string[]
-  interests: string[]
-  personalityTypes: string[]
-  idealTypes: string[]
+  hobbies: ProfileOptionDto[]
+  interests: ProfileOptionDto[]
+  personalityType: ProfileOptionDto | null
+  idealTypes: ProfileOptionDto[]
   totalExp: number
   currentLevel: number
 }
@@ -26,7 +27,7 @@ export interface ProfileSetup {
   gender: Gender
   hobbies?: string[]
   interests?: string[]
-  personalityTypes?: string[]
+  personalityType?: string
   idealTypes?: string[]
 }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
-import { SlotList, sampleLockedSlots } from "@/components/slot/slot-list"
+import { SlotList } from "@/components/slot/slot-list"
 import { getSlots, updateSlotPriority, unlockSlot, type SlotResponseDto } from "@/lib/api/slots"
 import type { Slot, SlotPriority, LockedSlot } from "@/types/slot"
 
@@ -94,10 +94,8 @@ export default function SlotsPage() {
         ) : (
           <SlotList
             slots={slots}
-            lockedSlots={sampleLockedSlots}
             onPriorityChange={handlePriorityChange}
             onSlotClick={handleSlotClick}
-            onUnlockSlot={handleUnlockSlot}
           />
         )}
 

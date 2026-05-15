@@ -9,7 +9,9 @@ import { TimetableGrid } from "@/components/planner/timetable-grid"
 import { AddEntryDrawer, type AddEntryFormData } from "@/components/planner/add-entry-drawer"
 import {
   getPlanEntries,
+  getWeeklyPlanEntries,
   createPlanEntry,
+  updatePlanEntry,
   deletePlanEntry,
   formatDate,
   fromLocalTime,
@@ -56,6 +58,10 @@ export default function PlannerPage() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [dailyDrawerOpen, setDailyDrawerOpen] = useState(false)
 
+  // Edit mode for daily view
+  const [dailyEditOpen, setDailyEditOpen] = useState(false)
+  const [editingDailyEntry, setEditingDailyEntry] = useState<PlanEntry | null>(null)
+
   // API data
   const [dailyEntries, setDailyEntries] = useState<PlanEntry[]>([])
   const [weeklyEntries, setWeeklyEntries] = useState<TimetableEntry[]>([])
@@ -80,17 +86,7 @@ export default function PlannerPage() {
   const loadWeeklyEntries = useCallback(async () => {
     try {
       setLoading(true)
-      const day = selectedDate.getDay()
-      const monday = new Date(selectedDate)
-      monday.setDate(selectedDate.getDate() - (day === 0 ? 6 : day - 1))
-
-      const allEntries: PlanEntryResponse[] = []
-      for (let i = 0; i < 5; i++) {
-        const d = new Date(monday)
-        d.setDate(monday.getDate() + i)
-        const data = await getPlanEntries(formatDate(d))
-        allEntries.push(...data)
-      }
+      const allEntries = await getWeeklyPlanEntries(formatDate(selectedDate))
       setWeeklyEntries(allEntries.map(toTimetableEntry))
     } catch (err) {
       console.error("주간 일정 조회 실패:", err)
@@ -248,7 +244,10 @@ export default function PlannerPage() {
                 date={selectedDate}
                 entries={dailyEntries}
                 onAddEntry={() => setDailyDrawerOpen(true)}
-                onEditEntry={() => {}}
+                onEditEntry={(entry) => {
+                  setEditingDailyEntry(entry)
+                  setDailyEditOpen(true)
+                }}
               />
             ) : (
               <TimetableGrid
@@ -268,6 +267,47 @@ export default function PlannerPage() {
         open={dailyDrawerOpen}
         onOpenChange={setDailyDrawerOpen}
         onSubmit={handleDailyAddEntry}
+      />
+
+      {/* Daily Edit Entry Drawer */}
+      <AddEntryDrawer
+        open={dailyEditOpen}
+        onOpenChange={setDailyEditOpen}
+        editMode
+        initialData={editingDailyEntry ? {
+          courseName: editingDailyEntry.activity,
+          location: editingDailyEntry.location,
+          startTime: editingDailyEntry.startTime,
+          endTime: editingDailyEntry.endTime,
+          type: editingDailyEntry.type,
+        } : null}
+        onSubmit={async (data) => {
+          if (!editingDailyEntry) return
+          try {
+            await updatePlanEntry(editingDailyEntry.id, {
+              date: formatDate(selectedDate),
+              startTime: toLocalTime(data.startTime),
+              endTime: toLocalTime(data.endTime),
+              location: data.location || undefined,
+              name: data.courseName || undefined,
+              type: data.type,
+            })
+            loadDailyEntries()
+          } catch (err) {
+            console.error("일정 수정 실패:", err)
+          }
+          setEditingDailyEntry(null)
+        }}
+        onDelete={async () => {
+          if (!editingDailyEntry) return
+          try {
+            await deletePlanEntry(editingDailyEntry.id)
+            loadDailyEntries()
+          } catch (err) {
+            console.error("일정 삭제 실패:", err)
+          }
+          setEditingDailyEntry(null)
+        }}
       />
     </>
   )

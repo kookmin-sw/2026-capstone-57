@@ -44,7 +44,10 @@ interface AddEntryDrawerProps {
   onOpenChange: (open: boolean) => void
   initialStartTime?: string
   initialEndTime?: string
+  initialData?: AddEntryFormData | null
+  editMode?: boolean
   onSubmit: (data: AddEntryFormData) => void
+  onDelete?: () => void
 }
 
 export function AddEntryDrawer({
@@ -52,7 +55,10 @@ export function AddEntryDrawer({
   onOpenChange,
   initialStartTime = "",
   initialEndTime = "",
+  initialData = null,
+  editMode = false,
   onSubmit,
+  onDelete,
 }: AddEntryDrawerProps) {
   const [formData, setFormData] = useState<AddEntryFormData>({
     courseName: "",
@@ -64,15 +70,19 @@ export function AddEntryDrawer({
 
   useEffect(() => {
     if (open) {
-      setFormData({
-        courseName: "",
-        location: "",
-        startTime: initialStartTime,
-        endTime: initialEndTime,
-        type: "CLASS",
-      })
+      if (initialData) {
+        setFormData(initialData)
+      } else {
+        setFormData({
+          courseName: "",
+          location: "",
+          startTime: initialStartTime,
+          endTime: initialEndTime,
+          type: "CLASS",
+        })
+      }
     }
-  }, [open, initialStartTime, initialEndTime])
+  }, [open, initialStartTime, initialEndTime, initialData])
 
   const handleSubmit = () => {
     if (!formData.courseName.trim()) return
@@ -85,7 +95,7 @@ export function AddEntryDrawer({
       <DrawerContent>
         <div className="mx-auto w-full max-w-md px-4 pb-6">
           <DrawerHeader className="px-0">
-            <DrawerTitle>일정 추가</DrawerTitle>
+            <DrawerTitle>{editMode ? "일정 수정" : "일정 추가"}</DrawerTitle>
           </DrawerHeader>
 
           <div className="space-y-5">
@@ -195,8 +205,17 @@ export function AddEntryDrawer({
               disabled={!formData.courseName.trim()}
               className="w-full h-12 text-base font-medium"
             >
-              추가
+              {editMode ? "수정" : "추가"}
             </Button>
+            {editMode && onDelete && (
+              <Button
+                variant="destructive"
+                onClick={() => { onDelete(); onOpenChange(false) }}
+                className="w-full h-11 text-base"
+              >
+                삭제
+              </Button>
+            )}
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}

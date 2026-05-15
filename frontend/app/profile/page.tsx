@@ -173,7 +173,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tags */}
-        {(profile.hobbies.length > 0 || profile.personalityTypes.length > 0) && (
+        {(profile.hobbies.length > 0 || profile.personalityType) && (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
               {profile.hobbies.length > 0 && (
@@ -182,27 +182,22 @@ export default function ProfilePage() {
                   <div className="flex flex-wrap gap-1.5">
                     {profile.hobbies.map((hobby) => (
                       <span
-                        key={hobby}
+                        key={hobby.code}
                         className="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs"
                       >
-                        #{hobby}
+                        #{hobby.label}
                       </span>
                     ))}
                   </div>
                 </>
               )}
-              {profile.personalityTypes.length > 0 && (
+              {profile.personalityType && (
                 <>
                   <h3 className="text-xs font-medium text-muted-foreground mt-3 mb-2">성격 키워드</h3>
                   <div className="flex flex-wrap gap-1.5">
-                    {profile.personalityTypes.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs">
+                      {profile.personalityType.label}
+                    </span>
                   </div>
                 </>
               )}
@@ -213,6 +208,11 @@ export default function ProfilePage() {
         {/* Menu */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-2">
+            <MenuItem
+              icon={<Calendar className="w-4 h-4" />}
+              label="시간표 등록"
+              onClick={() => window.location.href = "/profile/schedule"}
+            />
             <MenuItem icon={<Bell className="w-4 h-4" />} label="알림 설정" />
             <MenuItem icon={<Shield className="w-4 h-4" />} label="개인정보 및 보안" />
             <MenuItem icon={<Settings className="w-4 h-4" />} label="앱 설정" />

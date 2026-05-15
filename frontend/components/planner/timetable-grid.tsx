@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState } from "react"
 import { X, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,14 +17,13 @@ interface TimetableGridProps {
   className?: string
 }
 
-// 30분 단위 슬롯: 9:00 ~ 20:30 (23개 슬롯)
 const HALF_HOUR_SLOTS = Array.from({ length: 23 }, (_, i) => {
   const hour = Math.floor(i / 2) + 9
   const minute = (i % 2) * 30
   return { hour, minute, label: `${hour}:${minute === 0 ? "00" : "30"}` }
 })
 
-const DAYS: DayOfWeek[] = [1, 2, 3, 4, 5] // Mon to Fri
+const DAYS: DayOfWeek[] = [1, 2, 3, 4, 5]
 
 function parseTime(time: string): number {
   const [hour, minute] = time.split(":").map(Number)
@@ -52,11 +51,8 @@ export function TimetableGrid({
   onDeleteEntry,
   className,
 }: TimetableGridProps) {
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragDay, setDragDay] = useState<DayOfWeek | null>(null)
-  const [dragStart, setDragStart] = useState<number | null>(null)
-  const [dragEnd, setDragEnd] = useState<number | null>(null)
-
+  // Click-based selection: first click sets start, second click sets end (same day)
+  const [firstClick, setFirstClick] = useState<{ day: DayOfWeek; slot: number } | null>(null)
   const [selection, setSelection] = useState<{
     day: DayOfWeek
     startSlot: number
@@ -67,7 +63,9 @@ export function TimetableGrid({
   const [initialStartTime, setInitialStartTime] = useState("")
   const [initialEndTime, setInitialEndTime] = useState("")
 
-  const gridRef = useRef<HTMLDivElement>(null)
+  // Edit mode
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null)
 
   const entriesByDay = DAYS.reduce((acc, day) => {
     acc[day] = entries.filter((e) => e.dayOfWeek === day)
@@ -77,93 +75,32 @@ export function TimetableGrid({
   const courseColors = new Map<string, string>()
   entries.forEach((entry) => {
     if (!courseColors.has(entry.courseName)) {
-      courseColors.set(
-        entry.courseName,
-        COURSE_COLORS[courseColors.size % COURSE_COLORS.length]
-      )
+      courseColors.set(entry.courseName, COURSE_COLORS[courseColors.size % COURSE_COLORS.length])
     }
   })
 
-  // --- Drag handlers ---
-
-  const startDrag = useCallback((day: DayOfWeek, slotIndex: number) => {
-    setIsDragging(true)
-    setDragDay(day)
-    setDragStart(slotIndex)
-    setDragEnd(slotIndex)
-    setSelection(null)
-  }, [])
-
-  const moveDrag = useCallback(
-    (day: DayOfWeek, slotIndex: number) => {
-      if (isDragging && day === dragDay) {
-        setDragEnd(slotIndex)
-      }
-    },
-    [isDragging, dragDay]
-  )
-
-  const endDrag = useCallback(() => {
-    if (isDragging && dragDay !== null && dragStart !== null && dragEnd !== null) {
-      const startSlot = Math.min(dragStart, dragEnd)
-      const endSlot = Math.max(dragStart, dragEnd)
-      setSelection({ day: dragDay, startSlot, endSlot })
+  // --- Click handler ---
+  const handleSlotClick = (day: DayOfWeek, slotIndex: number) => {
+    if (!firstClick) {
+      // First click: set start point
+      setFirstClick({ day, slot: slotIndex })
+      setSelection(null)
+    } else if (firstClick.day !== day) {
+      // Different day: reset, this becomes new first click
+      setFirstClick({ day, slot: slotIndex })
+      setSelection(null)
+    } else {
+      // Same day, second click: create range
+      const startSlot = Math.min(firstClick.slot, slotIndex)
+      const endSlot = Math.max(firstClick.slot, slotIndex)
+      setSelection({ day, startSlot, endSlot })
+      setFirstClick(null)
     }
-    setIsDragging(false)
-    setDragDay(null)
-    setDragStart(null)
-    setDragEnd(null)
-  }, [isDragging, dragDay, dragStart, dragEnd])
+  }
 
-  const getSlotFromTouch = useCallback(
-    (touch: React.Touch, day: DayOfWeek) => {
-      if (!gridRef.current) return null
-      const dayColumns = gridRef.current.querySelectorAll("[data-day-column]")
-      const dayCol = Array.from(dayColumns).find(
-        (el) => el.getAttribute("data-day-column") === String(day)
-      )
-      if (!dayCol) return null
-      const rect = dayCol.getBoundingClientRect()
-      const y = touch.clientY - rect.top
-      return Math.max(0, Math.min(22, Math.floor(y / 24)))
-    },
-    []
-  )
-
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent, day: DayOfWeek, slotIndex: number) => {
-      e.preventDefault()
-      startDrag(day, slotIndex)
-    },
-    [startDrag]
-  )
-
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent, day: DayOfWeek) => {
-      if (!isDragging || dragDay !== day) return
-      e.preventDefault()
-      const touch = e.touches[0]
-      const slotIndex = getSlotFromTouch(touch, day)
-      if (slotIndex !== null) setDragEnd(slotIndex)
-    },
-    [isDragging, dragDay, getSlotFromTouch]
-  )
-
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      e.preventDefault()
-      endDrag()
-    },
-    [endDrag]
-  )
-
-  const isSlotInDragRange = (day: DayOfWeek, slotIndex: number) => {
-    if (isDragging && dragDay === day && dragStart !== null && dragEnd !== null) {
-      const min = Math.min(dragStart, dragEnd)
-      const max = Math.max(dragStart, dragEnd)
-      return slotIndex >= min && slotIndex <= max
-    }
-    return false
+  // --- Highlight helpers ---
+  const isSlotFirstClick = (day: DayOfWeek, slotIndex: number) => {
+    return firstClick?.day === day && firstClick?.slot === slotIndex
   }
 
   const isSlotInSelection = (day: DayOfWeek, slotIndex: number) => {
@@ -197,6 +134,7 @@ export function TimetableGrid({
 
   const cancelSelection = () => {
     setSelection(null)
+    setFirstClick(null)
   }
 
   return (
@@ -205,17 +143,12 @@ export function TimetableGrid({
         <CardHeader className="pb-2 shrink-0">
           <CardTitle className="text-base">주간 시간표</CardTitle>
           <p className="text-xs text-muted-foreground">
-            빈 칸을 드래그하여 시간을 선택하세요
+            시작 시간과 종료 시간을 탭하여 선택하세요
           </p>
         </CardHeader>
         <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
-            <div
-              className="min-w-[360px] select-none"
-              ref={gridRef}
-              onMouseUp={endDrag}
-              onMouseLeave={() => { if (isDragging) endDrag() }}
-            >
+            <div className="min-w-[360px] select-none">
               {/* Header */}
               <div className="grid grid-cols-[40px_repeat(5,1fr)] border-b border-border sticky top-0 bg-card z-10">
                 <div className="p-1 text-center text-xs text-muted-foreground" />
@@ -231,21 +164,17 @@ export function TimetableGrid({
 
               {/* Grid */}
               <div className="grid grid-cols-[40px_repeat(5,1fr)]">
-                {/* Time labels */}
-                <div className="relative">
+                {/* Time labels - positioned at hour boundary lines */}
+                <div className="relative pt-0.5">
                   {HALF_HOUR_SLOTS.map((slot, index) => (
                     <div
                       key={index}
-                      className={cn(
-                        "h-6 flex items-start justify-center pt-0.5",
-                        index % 2 === 0
-                          ? "border-b border-border"
-                          : "border-b border-border/30"
-                      )}
+                      className="h-6 relative"
                     >
+                      {/* Show hour label at top of even slots (9:00, 10:00...) */}
                       {index % 2 === 0 && (
-                        <span className="text-[9px] text-muted-foreground leading-none">
-                          {slot.hour}:{slot.minute === 0 ? "00" : "30"}
+                        <span className="absolute top-[-1px] right-1.5 text-[10px] font-medium text-foreground leading-none">
+                          {slot.hour}:00
                         </span>
                       )}
                     </div>
@@ -254,27 +183,17 @@ export function TimetableGrid({
 
                 {/* Day columns */}
                 {DAYS.map((day) => (
-                  <div
-                    key={day}
-                    className="relative border-l border-border"
-                    data-day-column={day}
-                  >
+                  <div key={day} className="relative border-l border-border" data-day-column={day}>
                     {HALF_HOUR_SLOTS.map((_slot, slotIndex) => (
                       <div
                         key={slotIndex}
                         className={cn(
-                          "h-6 transition-colors",
-                          slotIndex % 2 === 0
-                            ? "border-b border-border"
-                            : "border-b border-border/30",
-                          isSlotInDragRange(day, slotIndex) && "bg-primary/25",
-                          isSlotInSelection(day, slotIndex) && !isDragging && "bg-primary/15"
+                          "h-6 transition-colors cursor-pointer",
+                          slotIndex % 2 === 1 ? "border-b border-border" : "border-b border-dashed border-border/80",
+                          isSlotFirstClick(day, slotIndex) && "bg-primary/30",
+                          isSlotInSelection(day, slotIndex) && "bg-primary/15"
                         )}
-                        onMouseDown={(e) => { e.preventDefault(); startDrag(day, slotIndex) }}
-                        onMouseEnter={() => moveDrag(day, slotIndex)}
-                        onTouchStart={(e) => handleTouchStart(e, day, slotIndex)}
-                        onTouchMove={(e) => handleTouchMove(e, day)}
-                        onTouchEnd={handleTouchEnd}
+                        onClick={() => handleSlotClick(day, slotIndex)}
                       />
                     ))}
 
@@ -285,27 +204,23 @@ export function TimetableGrid({
                         <div
                           key={entry.id}
                           className={cn(
-                            "absolute left-0.5 right-0.5 rounded-md border p-1 cursor-pointer",
+                            "absolute left-0.5 right-0.5 rounded-md border p-1.5 cursor-pointer",
                             "overflow-hidden transition-shadow hover:shadow-md",
                             colorClass
                           )}
                           style={style}
-                          onClick={(e) => { e.stopPropagation(); onEditEntry?.(entry) }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingEntry(entry)
+                            setEditDialogOpen(true)
+                          }}
                         >
-                          <div className="flex items-start justify-between gap-0.5">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[9px] font-medium truncate">{entry.courseName}</p>
-                              <p className="text-[8px] opacity-75 truncate">{entry.location}</p>
-                            </div>
-                            {onDeleteEntry && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); onDeleteEntry(entry.id) }}
-                                className="p-0.5 rounded hover:bg-black/10 shrink-0"
-                              >
-                                <X className="w-2.5 h-2.5" />
-                              </button>
-                            )}
-                          </div>
+                          <p className="text-[11px] font-semibold leading-tight break-words">
+                            {entry.courseName}
+                          </p>
+                          <p className="text-[10px] opacity-70 leading-tight mt-0.5 break-words">
+                            {entry.location}
+                          </p>
                         </div>
                       )
                     })}
@@ -315,13 +230,24 @@ export function TimetableGrid({
             </div>
           </div>
 
-          {/* Selection action bar */}
-          {selection && !isDragging && (
+          {/* First click indicator */}
+          {firstClick && !selection && (
             <div className="shrink-0 border-t border-border bg-card p-3 flex items-center justify-between gap-2">
               <div className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">
-                  {DAY_LABELS[selection.day]}
-                </span>{" "}
+                <span className="font-medium text-foreground">{DAY_LABELS[firstClick.day]}</span>{" "}
+                {slotToTime(firstClick.slot)} 선택됨 — 종료 시간을 탭하세요
+              </div>
+              <Button variant="ghost" size="sm" onClick={cancelSelection} className="text-xs">
+                취소
+              </Button>
+            </div>
+          )}
+
+          {/* Selection action bar */}
+          {selection && (
+            <div className="shrink-0 border-t border-border bg-card p-3 flex items-center justify-between gap-2">
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{DAY_LABELS[selection.day]}</span>{" "}
                 {slotToTime(selection.startSlot)} ~ {slotToTime(selection.endSlot + 1)}
               </div>
               <div className="flex gap-2">
@@ -344,6 +270,32 @@ export function TimetableGrid({
         initialStartTime={initialStartTime}
         initialEndTime={initialEndTime}
         onSubmit={handleSubmit}
+      />
+
+      {/* Edit Entry Drawer */}
+      <AddEntryDrawer
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        editMode
+        initialData={editingEntry ? {
+          courseName: editingEntry.courseName,
+          location: editingEntry.location,
+          startTime: editingEntry.startTime,
+          endTime: editingEntry.endTime,
+          type: editingEntry.type,
+        } : null}
+        onSubmit={(data) => {
+          if (editingEntry) {
+            onEditEntry?.({ ...editingEntry, ...data, courseName: data.courseName, location: data.location, startTime: data.startTime, endTime: data.endTime, type: data.type })
+          }
+          setEditingEntry(null)
+        }}
+        onDelete={() => {
+          if (editingEntry) {
+            onDeleteEntry?.(editingEntry.id)
+          }
+          setEditingEntry(null)
+        }}
       />
     </>
   )

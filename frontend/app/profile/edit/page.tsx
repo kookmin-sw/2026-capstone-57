@@ -56,16 +56,21 @@ export default function ProfileEditPage() {
         setBirthDate(profile.birthDate || "")
         setGender(profile.gender || "MALE")
 
-        setSelectedHobbies(profile.hobbies || [])
-        setSelectedInterests(profile.interests || [])
-        setSelectedPersonality(profile.personalityTypes || [])
-        setSelectedIdealTypes(profile.idealTypes || [])
+        setSelectedHobbies(profile.hobbies?.map(h => h.code) || [])
+        setSelectedInterests(profile.interests?.map(i => i.code) || [])
+        setSelectedPersonality(profile.personalityType ? [profile.personalityType.code] : [])
+        setSelectedIdealTypes(profile.idealTypes?.map(i => i.code) || [])
 
         // 서버 옵션 + 기존 선택값 합치기 (기존 선택값이 옵션에 없을 수 있으므로)
-        setHobbyOptions(mergeOptions(options.hobbies, profile.hobbies))
-        setInterestOptions(mergeOptions(options.interests, profile.interests))
-        setPersonalityOptions(mergeOptions(options.personalityTypes, profile.personalityTypes))
-        setIdealTypeOptions(mergeOptions(options.idealTypes, profile.idealTypes))
+        const existingHobbyCodes = profile.hobbies?.map(h => h.code) || []
+        const existingInterestCodes = profile.interests?.map(i => i.code) || []
+        const existingPersonalityCodes = profile.personalityType ? [profile.personalityType.code] : []
+        const existingIdealTypeCodes = profile.idealTypes?.map(i => i.code) || []
+
+        setHobbyOptions(mergeOptions(options.hobbies, existingHobbyCodes, profile.hobbies))
+        setInterestOptions(mergeOptions(options.interests, existingInterestCodes, profile.interests))
+        setPersonalityOptions(mergeOptions(options.personalityTypes, existingPersonalityCodes, profile.personalityType ? [profile.personalityType] : []))
+        setIdealTypeOptions(mergeOptions(options.idealTypes, existingIdealTypeCodes, profile.idealTypes))
       } catch (err) {
         console.error("프로필 로드 실패:", err)
       } finally {
@@ -75,14 +80,16 @@ export default function ProfileEditPage() {
     load()
   }, [])
 
-  // 기존 선택값이 옵션 리스트에 없으면 추가 (label은 code를 한글화 시도)
-  function mergeOptions(serverOptions: ProfileOptionDto[], existing: string[]): ProfileOptionDto[] {
-    const codeToLabel = new Map(serverOptions.map((o) => [o.code, o.label]))
+  // 기존 선택값이 옵션 리스트에 없으면 추가
+  function mergeOptions(serverOptions: ProfileOptionDto[], existingCodes: string[], existingOptions?: ProfileOptionDto[]): ProfileOptionDto[] {
     const codes = new Set(serverOptions.map((o) => o.code))
-    const extra = (existing || [])
-      .filter((code) => !codes.has(code))
-      .map((code) => ({ code, label: codeToLabel.get(code) || formatCode(code) }))
-    return [...extra, ...serverOptions]
+    const extra = (existingOptions || [])
+      .filter((opt) => !codes.has(opt.code))
+    // existingCodes에 있지만 existingOptions에도 serverOptions에도 없는 경우
+    const extraFromCodes = existingCodes
+      .filter((code) => !codes.has(code) && !extra.find(e => e.code === code))
+      .map((code) => ({ code, label: formatCode(code) }))
+    return [...extra, ...extraFromCodes, ...serverOptions]
   }
 
   // CODE_LIKE_THIS → 보기 좋게 변환
@@ -97,10 +104,16 @@ export default function ProfileEditPage() {
   const reloadOptions = async () => {
     try {
       const options = await getProfileOptions()
-      setHobbyOptions(mergeOptions(options.hobbies, selectedHobbies))
-      setInterestOptions(mergeOptions(options.interests, selectedInterests))
-      setPersonalityOptions(mergeOptions(options.personalityTypes, selectedPersonality))
-      setIdealTypeOptions(mergeOptions(options.idealTypes, selectedIdealTypes))
+      // 현재 옵션 리스트에서 선택된 항목의 label을 보존
+      const selectedHobbyOpts = hobbyOptions.filter(o => selectedHobbies.includes(o.code))
+      const selectedInterestOpts = interestOptions.filter(o => selectedInterests.includes(o.code))
+      const selectedPersonalityOpts = personalityOptions.filter(o => selectedPersonality.includes(o.code))
+      const selectedIdealTypeOpts = idealTypeOptions.filter(o => selectedIdealTypes.includes(o.code))
+
+      setHobbyOptions(mergeOptions(options.hobbies, selectedHobbies, selectedHobbyOpts))
+      setInterestOptions(mergeOptions(options.interests, selectedInterests, selectedInterestOpts))
+      setPersonalityOptions(mergeOptions(options.personalityTypes, selectedPersonality, selectedPersonalityOpts))
+      setIdealTypeOptions(mergeOptions(options.idealTypes, selectedIdealTypes, selectedIdealTypeOpts))
     } catch (err) {
       console.error("옵션 새로고침 실패:", err)
     }
@@ -119,23 +132,21 @@ export default function ProfileEditPage() {
     }
   }
 
-  // 선택된 항목을 맨 앞에 정렬
+  // 선택된 항목을 맨 앞에 가나다순 정렬
   function sortOptions(options: ProfileOptionDto[], selected: string[]): ProfileOptionDto[] {
     return [...options].sort((a, b) => {
       const aSelected = selected.includes(a.code) ? 0 : 1
       const bSelected = selected.includes(b.code) ? 0 : 1
-      return aSelected - bSelected
+      if (aSelected !== bSelected) return aSelected - bSelected
+      // 같은 그룹 내에서는 label 가나다순
+      if (aSelected === 0) return a.label.localeCompare(b.label, "ko")
+      return 0
     })
   }
 
   const handleSave = async () => {
     if (!nickname || !name || !major || !birthDate) {
       setError("필수 항목을 모두 입력해주세요")
-      return
-    }
-    if (selectedHobbies.length === 0 || selectedInterests.length === 0 ||
-        selectedPersonality.length === 0 || selectedIdealTypes.length === 0) {
-      setError("각 취향 항목에서 최소 1개 이상 선택해주세요")
       return
     }
     try {
@@ -147,10 +158,10 @@ export default function ProfileEditPage() {
         major,
         birthDate,
         gender,
-        hobbies: selectedHobbies,
-        interests: selectedInterests,
-        personalityTypes: selectedPersonality,
-        idealTypes: selectedIdealTypes,
+        hobbies: selectedHobbies.length > 0 ? selectedHobbies : undefined,
+        interests: selectedInterests.length > 0 ? selectedInterests : undefined,
+        personalityType: selectedPersonality.length > 0 ? selectedPersonality[0] : undefined,
+        idealTypes: selectedIdealTypes.length > 0 ? selectedIdealTypes : undefined,
       })
       router.push("/profile")
     } catch (err) {
@@ -237,7 +248,7 @@ export default function ProfileEditPage() {
             {/* Hobbies */}
             <div className="mb-4">
               <Label className="text-xs text-muted-foreground">취미 (최대 5개)</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2 min-h-[108px] max-h-[108px] overflow-hidden content-start">
                 {sortOptions(hobbyOptions, selectedHobbies).map((opt) => (
                   <button
                     key={opt.code}
@@ -258,7 +269,7 @@ export default function ProfileEditPage() {
             {/* Interests */}
             <div className="mb-4">
               <Label className="text-xs text-muted-foreground">관심사 (최대 5개)</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2 min-h-[108px] max-h-[108px] overflow-hidden content-start">
                 {sortOptions(interestOptions, selectedInterests).map((opt) => (
                   <button
                     key={opt.code}
@@ -278,12 +289,12 @@ export default function ProfileEditPage() {
 
             {/* Personality */}
             <div className="mb-4">
-              <Label className="text-xs text-muted-foreground">성격 (최대 5개)</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <Label className="text-xs text-muted-foreground">성격 (1개 선택)</Label>
+              <div className="flex flex-wrap gap-2 mt-2 min-h-[108px] max-h-[108px] overflow-hidden content-start">
                 {sortOptions(personalityOptions, selectedPersonality).map((opt) => (
                   <button
                     key={opt.code}
-                    onClick={() => toggleSelection(opt.code, selectedPersonality, setSelectedPersonality)}
+                    onClick={() => setSelectedPersonality([opt.code])}
                     className={cn(
                       "px-3 py-1.5 rounded-full text-xs border transition-colors",
                       selectedPersonality.includes(opt.code)
@@ -300,7 +311,7 @@ export default function ProfileEditPage() {
             {/* Ideal Types */}
             <div className="mb-4">
               <Label className="text-xs text-muted-foreground">이상형 (최대 5개)</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2 min-h-[108px] max-h-[108px] overflow-hidden content-start">
                 {sortOptions(idealTypeOptions, selectedIdealTypes).map((opt) => (
                   <button
                     key={opt.code}
@@ -325,3 +336,5 @@ export default function ProfileEditPage() {
     </div>
   )
 }
+
+
