@@ -109,3 +109,44 @@ class MissionSearch:
             len(user_a_node_ids), len(user_b_node_ids), len(overlapping),
         )
         return overlapping
+
+    async def search_by_building_name(
+        self,
+        building_name: str,
+    ) -> list[NodeSearchResult]:
+        """건물 이름으로 해당 건물의 BUILDING_PLACE를 검색한다.
+
+        Args:
+            building_name: 건물 이름 (예: "북악관").
+
+        Returns:
+            해당 건물의 NodeSearchResult 리스트.
+        """
+        collection = self._vector_store._get_collection(COLLECTION_VENUES)
+
+        results = await asyncio.to_thread(
+            collection.get,
+            where={"building_name": building_name},
+            include=["documents", "metadatas"],
+        )
+
+        search_results: list[NodeSearchResult] = []
+
+        if results and results["ids"]:
+            ids = results["ids"]
+            documents = results["documents"] if results["documents"] else [""] * len(ids)
+            metadatas = results["metadatas"] if results["metadatas"] else [{}] * len(ids)
+
+            for node_id, doc, meta in zip(ids, documents, metadatas):
+                search_results.append(
+                    NodeSearchResult(
+                        node_id=node_id,
+                        name=meta.get("name", ""),
+                        type_activity=meta.get("type_activity", ""),
+                        description=meta.get("description", ""),
+                        operating_hours=meta.get("operating_hours", ""),
+                    )
+                )
+
+        logger.info("건물 '%s' place 검색 완료: %d개", building_name, len(search_results))
+        return search_results

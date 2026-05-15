@@ -83,27 +83,40 @@ class MissionHandler:
     async def _generate_mission(
         self, request: MissionRequestMessage
     ) -> MissionResponseMessage:
-        """미션 생성 핵심 로직."""
+        """미션 생성 핵심 로직.
 
-        # 1. 겹치는 노드 ID 추출
-        overlapping_ids = self._mission_search.find_overlapping_nodes(
-            request.userARoute.subNodeIds,
-            request.userBRoute.subNodeIds,
-        )
+        우선순위:
+        1. 공통 건물(도착지/출발지 동일) → 해당 건물 place 추천
+        2. place 없으면 → 겹치는 서브 노드(venue) 추천
+        3. 둘 다 없으면 → FAILED
+        """
 
-        if not overlapping_ids:
-            return self._build_failed_response(request, "겹치는 동선 노드가 없습니다")
+        # 1. 공통 건물 확인 (출발지/도착지 비교)
+        common_building = self._find_common_building(request)
+        nodes = []
 
-        # 2. ChromaDB에서 노드 상세 정보 검색
-        nodes = await self._mission_search.search_by_node_ids(overlapping_ids)
+        if common_building:
+            logger.info(f"공통 건물 발견: '{common_building}', place 검색")
+            nodes = await self._mission_search.search_by_building_name(common_building)
 
+        # 2. place 없으면 겹치는 서브 노드(venue) 검색
         if not nodes:
-            return self._build_failed_response(request, "노드 상세 정보를 찾을 수 없습니다")
+            overlapping_ids = self._mission_search.find_overlapping_nodes(
+                request.userARoute.subNodeIds,
+                request.userBRoute.subNodeIds,
+            )
+            if overlapping_ids:
+                logger.info("공통 건물 place 없음, 겹치는 서브 노드로 폴백")
+                nodes = await self._mission_search.search_by_node_ids(overlapping_ids)
 
-        # 3. 프롬프트 증강
+        # 3. 둘 다 없으면 실패
+        if not nodes:
+            return self._build_failed_response(request, "미션 장소를 찾을 수 없습니다")
+
+        # 4. 프롬프트 증강
         prompt = build_mission_prompt(nodes=nodes, request=request)
 
-        # 4. Bedrock 호출 (1회 재시도)
+        # 5. Bedrock 호출 (1회 재시도)
         raw_response = await self._invoke_bedrock(prompt)
         if raw_response is None:
             logger.info("미션 생성 재시도 (1회)")
@@ -112,7 +125,7 @@ class MissionHandler:
         if raw_response is None:
             return self._build_failed_response(request, "Bedrock 호출 실패")
 
-        # 5. 응답 파싱
+        # 6. 응답 파싱
         mission = self._try_parse(raw_response)
         if mission is None:
             return self._build_failed_response(request, "미션 응답 파싱 실패")
@@ -124,6 +137,30 @@ class MissionHandler:
             mission=mission,
             completedAt=datetime.now(timezone.utc),
         )
+
+    def _find_common_building(self, request: MissionRequestMessage) -> str | None:
+        """두 사용자의 공통 건물(출발지/도착지)을 찾는다.
+
+        우선순위: 도착지 동일 > 출발지 동일 > 한쪽 도착지 = 다른쪽 출발지
+        """
+        a_from = request.userARoute.fromBuilding.name
+        a_to = request.userARoute.toBuilding.name
+        b_from = request.userBRoute.fromBuilding.name
+        b_to = request.userBRoute.toBuilding.name
+
+        # 도착지 동일
+        if a_to == b_to:
+            return a_to
+        # 출발지 동일
+        if a_from == b_from:
+            return a_from
+        # 교차 (A 도착 = B 출발 또는 반대)
+        if a_to == b_from:
+            return a_to
+        if b_to == a_from:
+            return b_to
+
+        return None
 
     async def _invoke_bedrock(self, prompt: str) -> str | None:
         """Bedrock API 호출. 실패 시 None 반환."""
