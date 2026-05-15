@@ -122,8 +122,8 @@
     - Use fast-check with `fc.float({min:0, max:1})` and two random coordinates
     - **Validates: Requirements 4.2**
 
-- [ ] 6. Client scenes - Lobby Scene 구현
-  - [ ] 6.1 Implement Lobby scene
+- [x] 6. Client scenes - Lobby Scene 구현
+  - [x] 6.1 Implement Lobby scene
     - Create `phaser_game/src/scenes/Lobby.ts` extending Phaser.Scene
     - Extract `sessionId` and `token` from URL query parameters
     - If sessionId is missing, show "세션 연결 실패" error text (do NOT fall back to local mode from Lobby)
