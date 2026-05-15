@@ -1,52 +1,105 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
-import { SlotList, sampleSlots, sampleLockedSlots } from "@/components/slot/slot-list"
+import { SlotList, sampleLockedSlots } from "@/components/slot/slot-list"
+import { getSlots, updateSlotPriority, unlockSlot, type SlotResponseDto } from "@/lib/api/slots"
 import type { Slot, SlotPriority, LockedSlot } from "@/types/slot"
 
-export default function SlotsPage() {
-  const [slots, setSlots] = useState<Slot[]>(sampleSlots)
-
-  const handlePriorityChange = (slotId: string, priority: SlotPriority) => {
-    setSlots((prev) =>
-      prev.map((slot) =>
-        slot.id === slotId ? { ...slot, priority } : slot
-      )
-    )
-    // TODO: API call to update priority
-    // PUT /api/slots/{slotId}/priority/{priority}
+// API 응답 → 프론트 Slot 타입 변환
+function toSlot(dto: SlotResponseDto, index: number): Slot {
+  return {
+    id: dto.id,
+    userId: dto.userId,
+    slotNumber: index + 1,
+    priority: dto.priority,
+    currentMatchId: dto.currentMatchId,
+    isQuickMatch: dto.isQuickMatch,
+    status: dto.status,
+    matchedUser: dto.matchedUser
+      ? {
+          id: dto.matchedUser.userId,
+          nickname: dto.matchedUser.nickname,
+          profileEmoji: dto.matchedUser.nickname.charAt(0),
+        }
+      : null,
+    currentStage: undefined,
+    stageProgress: undefined,
+    daysRemaining: undefined,
   }
+}
 
-  const handleSlotClick = (slot: Slot) => {
-    if (slot.status === "ACTIVE") {
-      // TODO: Navigate to interaction page
-      console.log("[v0] Navigating to slot interaction:", slot.id)
+export default function SlotsPage() {
+  const router = useRouter()
+  const [slots, setSlots] = useState<Slot[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadSlots = async () => {
+    try {
+      setLoading(true)
+      const data = await getSlots()
+      setSlots(data.map(toSlot))
+    } catch (err) {
+      console.error("슬롯 조회 실패:", err)
+      setSlots([])
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleUnlockSlot = (lockedSlot: LockedSlot) => {
-    // TODO: API call to unlock new slot
-    // POST /api/slots/unlock
-    if (lockedSlot.currentLevel >= lockedSlot.requiredLevel) {
-      alert("슬롯이 해금되었습니다!")
-    } else {
+  useEffect(() => {
+    loadSlots()
+  }, [])
+
+  const handlePriorityChange = async (slotId: string, priority: SlotPriority) => {
+    try {
+      await updateSlotPriority(slotId, priority)
+      setSlots((prev) =>
+        prev.map((slot) =>
+          slot.id === slotId ? { ...slot, priority } : slot
+        )
+      )
+    } catch (err) {
+      console.error("우선순위 변경 실패:", err)
+    }
+  }
+
+  const handleSlotClick = (slot: Slot) => {
+    if (slot.status === "ACTIVE" && slot.currentMatchId) {
+      router.push(`/match/${slot.currentMatchId}`)
+    }
+  }
+
+  const handleUnlockSlot = async (lockedSlot: LockedSlot) => {
+    if (lockedSlot.currentLevel < lockedSlot.requiredLevel) {
       alert(`레벨 ${lockedSlot.requiredLevel}이 필요합니다. 현재 레벨: ${lockedSlot.currentLevel}`)
+      return
+    }
+    try {
+      await unlockSlot()
+      loadSlots()
+    } catch (err) {
+      console.error("슬롯 해금 실패:", err)
     }
   }
 
   return (
     <AppShell title="내 슬롯" showBackButton>
       <div className="px-4 py-4">
-
-        {/* Slot List */}
-        <SlotList
-          slots={slots}
-          lockedSlots={sampleLockedSlots}
-          onPriorityChange={handlePriorityChange}
-          onSlotClick={handleSlotClick}
-          onUnlockSlot={handleUnlockSlot}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-sm text-muted-foreground">로딩 중...</p>
+          </div>
+        ) : (
+          <SlotList
+            slots={slots}
+            lockedSlots={sampleLockedSlots}
+            onPriorityChange={handlePriorityChange}
+            onSlotClick={handleSlotClick}
+            onUnlockSlot={handleUnlockSlot}
+          />
+        )}
 
         {/* Info Card */}
         <div className="mt-6 p-4 rounded-2xl bg-muted/50 border border-border">

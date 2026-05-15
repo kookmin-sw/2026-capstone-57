@@ -1,120 +1,112 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ChevronLeft, ChevronRight, Calendar, Grid3X3 } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
 import { DailyTimeline } from "@/components/planner/daily-timeline"
 import { TimetableGrid } from "@/components/planner/timetable-grid"
 import { AddEntryDrawer, type AddEntryFormData } from "@/components/planner/add-entry-drawer"
-import type { PlanEntry, TimetableEntry } from "@/types/planner"
+import {
+  getPlanEntries,
+  createPlanEntry,
+  deletePlanEntry,
+  formatDate,
+  fromLocalTime,
+  toLocalTime,
+  type PlanEntryResponse,
+} from "@/lib/api/planner"
+import type { PlanEntry, TimetableEntry, DayOfWeek } from "@/types/planner"
 import { cn } from "@/lib/utils"
 
 type ViewMode = "daily" | "weekly"
 
-// Sample data
-const sampleTimetable: TimetableEntry[] = [
-  {
-    id: "1",
-    userId: "user-1",
-    dayOfWeek: 1,
-    startTime: "09:00",
-    endTime: "10:30",
-    location: "공학관 401",
-    courseName: "데이터베이스",
-    type: "CLASS",
-  },
-  {
-    id: "2",
-    userId: "user-1",
-    dayOfWeek: 1,
-    startTime: "13:00",
-    endTime: "14:30",
-    location: "인문관 201",
-    courseName: "심리학개론",
-    type: "CLASS",
-  },
-  {
-    id: "3",
-    userId: "user-1",
-    dayOfWeek: 2,
-    startTime: "10:30",
-    endTime: "12:00",
-    location: "경영관 302",
-    courseName: "마케팅원론",
-    type: "CLASS",
-  },
-  {
-    id: "4",
-    userId: "user-1",
-    dayOfWeek: 3,
-    startTime: "09:00",
-    endTime: "10:30",
-    location: "공학관 401",
-    courseName: "데이터베이스",
-    type: "CLASS",
-  },
-  {
-    id: "5",
-    userId: "user-1",
-    dayOfWeek: 4,
-    startTime: "14:00",
-    endTime: "15:30",
-    location: "도서관 세미나실",
-    courseName: "캡스톤디자인",
-    type: "CLASS",
-  },
-  {
-    id: "6",
-    userId: "user-1",
-    dayOfWeek: 5,
-    startTime: "11:00",
-    endTime: "12:30",
-    location: "학생회관",
-    courseName: "창업실습",
-    type: "ACTIVITY",
-  },
-]
+// PlanEntryResponse → PlanEntry (일간 뷰용) 변환
+function toPlanEntry(entry: PlanEntryResponse): PlanEntry {
+  return {
+    id: entry.id,
+    startTime: fromLocalTime(entry.startTime),
+    endTime: fromLocalTime(entry.endTime),
+    location: entry.location || "",
+    activity: entry.name || "",
+    type: entry.type,
+  }
+}
 
-const sampleDailyEntries: PlanEntry[] = [
-  {
-    id: "1",
-    startTime: "09:00",
-    endTime: "10:30",
-    location: "공학관 401",
-    activity: "데이터베이스 수업",
-    type: "CLASS",
-  },
-  {
-    id: "2",
-    startTime: "12:00",
-    endTime: "13:00",
-    location: "학생식당",
-    activity: "점심 식사",
-    type: "FREE",
-  },
-  {
-    id: "3",
-    startTime: "13:00",
-    endTime: "14:30",
-    location: "인문관 201",
-    activity: "심리학개론 수업",
-    type: "CLASS",
-  },
-  {
-    id: "4",
-    startTime: "15:00",
-    endTime: "17:00",
-    location: "도서관",
-    activity: "스터디 모임",
-    type: "ACTIVITY",
-  },
-]
+// PlanEntryResponse → TimetableEntry (주간 뷰용) 변환
+function toTimetableEntry(entry: PlanEntryResponse): TimetableEntry {
+  const date = new Date(entry.date + "T00:00:00")
+  // getDay(): 0=일, 1=월, ... 6=토
+  const dayOfWeek = date.getDay() as DayOfWeek
+
+  return {
+    id: entry.id,
+    userId: "",
+    dayOfWeek,
+    startTime: fromLocalTime(entry.startTime),
+    endTime: fromLocalTime(entry.endTime),
+    location: entry.location || "",
+    courseName: entry.name || "",
+    type: entry.type,
+  }
+}
 
 export default function PlannerPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("daily")
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [dailyDrawerOpen, setDailyDrawerOpen] = useState(false)
+
+  // API data
+  const [dailyEntries, setDailyEntries] = useState<PlanEntry[]>([])
+  const [weeklyEntries, setWeeklyEntries] = useState<TimetableEntry[]>([])
+  const [loading, setLoading] = useState(false)
+
+  // 일간 데이터 로드
+  const loadDailyEntries = useCallback(async () => {
+    try {
+      setLoading(true)
+      const dateStr = formatDate(selectedDate)
+      const data = await getPlanEntries(dateStr)
+      setDailyEntries(data.map(toPlanEntry))
+    } catch (err) {
+      console.error("일정 조회 실패:", err)
+      setDailyEntries([])
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedDate])
+
+  // 주간 데이터 로드 (선택된 날짜가 포함된 주의 월~금)
+  const loadWeeklyEntries = useCallback(async () => {
+    try {
+      setLoading(true)
+      const day = selectedDate.getDay()
+      const monday = new Date(selectedDate)
+      monday.setDate(selectedDate.getDate() - (day === 0 ? 6 : day - 1))
+
+      const allEntries: PlanEntryResponse[] = []
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(monday)
+        d.setDate(monday.getDate() + i)
+        const data = await getPlanEntries(formatDate(d))
+        allEntries.push(...data)
+      }
+      setWeeklyEntries(allEntries.map(toTimetableEntry))
+    } catch (err) {
+      console.error("주간 일정 조회 실패:", err)
+      setWeeklyEntries([])
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedDate])
+
+  useEffect(() => {
+    if (viewMode === "daily") {
+      loadDailyEntries()
+    } else {
+      loadWeeklyEntries()
+    }
+  }, [viewMode, loadDailyEntries, loadWeeklyEntries])
 
   const goToPrevDay = () => {
     const prev = new Date(selectedDate)
@@ -132,14 +124,60 @@ export default function PlannerPage() {
     setSelectedDate(new Date())
   }
 
-  const handleAddEntry = (entry: Omit<TimetableEntry, "id" | "userId">) => {
-    // TODO: API 연동
-    console.log("주간 일정 추가:", entry)
+  // 주간 뷰에서 일정 추가
+  const handleAddEntry = async (entry: Omit<TimetableEntry, "id" | "userId">) => {
+    try {
+      // dayOfWeek로 날짜 계산
+      const day = selectedDate.getDay()
+      const monday = new Date(selectedDate)
+      monday.setDate(selectedDate.getDate() - (day === 0 ? 6 : day - 1))
+      const targetDate = new Date(monday)
+      // dayOfWeek: 1=월, 2=화, ... 5=금
+      targetDate.setDate(monday.getDate() + (entry.dayOfWeek - 1))
+
+      await createPlanEntry({
+        date: formatDate(targetDate),
+        startTime: toLocalTime(entry.startTime),
+        endTime: toLocalTime(entry.endTime),
+        location: entry.location,
+        name: entry.courseName,
+        type: entry.type,
+      })
+      loadWeeklyEntries()
+    } catch (err) {
+      console.error("일정 추가 실패:", err)
+    }
   }
 
-  const handleDailyAddEntry = (data: AddEntryFormData) => {
-    // TODO: API 연동
-    console.log("일간 일정 추가:", data)
+  // 일간 뷰에서 일정 추가
+  const handleDailyAddEntry = async (data: AddEntryFormData) => {
+    try {
+      await createPlanEntry({
+        date: formatDate(selectedDate),
+        startTime: toLocalTime(data.startTime),
+        endTime: toLocalTime(data.endTime),
+        location: data.location,
+        name: data.courseName,
+        type: data.type,
+      })
+      loadDailyEntries()
+    } catch (err) {
+      console.error("일정 추가 실패:", err)
+    }
+  }
+
+  // 일정 삭제
+  const handleDeleteEntry = async (entryId: string) => {
+    try {
+      await deletePlanEntry(entryId)
+      if (viewMode === "daily") {
+        loadDailyEntries()
+      } else {
+        loadWeeklyEntries()
+      }
+    } catch (err) {
+      console.error("일정 삭제 실패:", err)
+    }
   }
 
   return (
@@ -202,16 +240,16 @@ export default function PlannerPage() {
             {viewMode === "daily" ? (
               <DailyTimeline
                 date={selectedDate}
-                entries={sampleDailyEntries}
+                entries={dailyEntries}
                 onAddEntry={() => setDailyDrawerOpen(true)}
                 onEditEntry={() => {}}
               />
             ) : (
               <TimetableGrid
-                entries={sampleTimetable}
+                entries={weeklyEntries}
                 onAddEntry={handleAddEntry}
                 onEditEntry={() => {}}
-                onDeleteEntry={() => {}}
+                onDeleteEntry={handleDeleteEntry}
                 className="h-full"
               />
             )}
