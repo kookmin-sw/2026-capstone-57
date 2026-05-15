@@ -1,0 +1,336 @@
+{
+    "id": "b685c081-ee5f-4b67-b583-415922c9e2c4",
+    "sceneType": "SCENE",
+    "settings": {
+        "exportClass": true,
+        "autoImport": true,
+        "preloadPackFiles": [],
+        "createMethodName": "editorCreate",
+        "sceneKey": "Level",
+        "compilerOutputLanguage": "TYPE_SCRIPT",
+        "borderWidth": 390,
+        "borderHeight": 844
+    },
+    "displayList": [
+        {
+            "type": "Image",
+            "id": "e4ac9c03-095e-4409-914a-bca19c28d471",
+            "label": "game_bg4",
+            "texture": {
+                "key": "game_bg4"
+            },
+            "x": 198,
+            "y": 350,
+            "scaleX": 0.5058780246943825,
+            "scaleY": 0.5502273107896416
+        },
+        {
+            "type": "TilemapLayer",
+            "id": "81d947ac-de22-461f-a1ae-9fae8f7aa5b9",
+            "label": "ground_1",
+            "x": -15,
+            "y": -129,
+            "tilemapId": "3e973529-2e20-4cf6-bde2-d6aa5ba36cd9",
+            "layerName": "Ground",
+            "tilesets": [
+                "moonlight_tileset_32x32"
+            ]
+        },
+        {
+            "type": "Image",
+            "id": "8fa266ee-4d65-4bd0-b9c1-541162c5d516",
+            "label": "game_bg",
+            "texture": {
+                "key": "game_bg4"
+            },
+            "x": 846,
+            "y": 859,
+            "scaleX": 0.5058780246943825,
+            "scaleY": 0.5502273107896416,
+            "originX": 1,
+            "originY": 1
+        },
+        {
+            "type": "Image",
+            "id": "f86614db-14f0-4d35-968c-463e453f0275",
+            "label": "game_bg_1",
+            "texture": {
+                "key": "game_bg4"
+            },
+            "x": -237,
+            "y": 351,
+            "scaleX": 0.5058780246943825,
+            "scaleY": 0.5502273107896416
+        },
+        {
+            "type": "ArcadeSprite",
+            "id": "d4413236-b79a-4c6d-9dd4-2d60ca0415d6",
+            "label": "player1",
+            "useGameObjectName": true,
+            "texture": {
+                "key": "blue_cloud_idle",
+                "frame": 0
+            },
+            "x": 30,
+            "y": 542,
+            "body.velocity.x": 1,
+            "body.width": 32,
+            "body.height": 30
+        },
+        {
+            "type": "ArcadeSprite",
+            "id": "4c420ca6-b093-48f4-a094-1759a5cacbe3",
+            "label": "player2",
+            "useGameObjectName": true,
+            "texture": {
+                "key": "pink_cloud_idle",
+                "frame": 0
+            },
+            "x": 102,
+            "y": 646,
+            "body.width": 32,
+            "body.height": 30,
+            "body.offset.x": 20,
+            "body.offset.y": -30
+        },
+        {
+            "type": "Image",
+            "id": "aca9771e-60b3-4a6b-a9e9-de0a36c2e662",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 209,
+            "y": 656,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "75ecb402-d38a-435a-8c81-c8bfb586c474",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 329,
+            "y": 657,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "4ea3a4fd-f68a-4e4c-8bc9-843bc7eb09c3",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 265,
+            "y": 657,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "ce03d3e7-f7a4-49db-8665-008a86b0b1f1",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 161,
+            "y": 593,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "2dcd80e6-b7e8-470d-9c29-dc6687e4df22",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 193,
+            "y": 560,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "fde924cd-ae5a-4a75-a926-62e509969adf",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 226,
+            "y": 528,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "89ce3013-0271-45f5-aaf8-2b1e3ac7a8ae",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 258,
+            "y": 495,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "2d1f8354-5545-4608-a37a-35e66f2daad6",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 321,
+            "y": 463,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "dfe5298e-9729-4a66-a398-f42e2c7a502a",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 67,
+            "y": 329,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "93b69e32-807f-4648-9790-29d5512063ee",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 98,
+            "y": 329,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "f204a17a-f539-4d69-8fe6-5c7cb9a7271a",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 258,
+            "y": 205,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "81c411f1-6ebc-4a7e-a98d-333353e848cc",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 32,
+            "y": 205,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        },
+        {
+            "type": "Image",
+            "id": "59ea10b6-bfd1-4154-bc0f-cef0e6de4baa",
+            "label": "moon_coin",
+            "texture": {
+                "key": "moon_32x32_optimized"
+            },
+            "x": 65,
+            "y": 205,
+            "ArcadeComponent.active": true,
+            "allowGravity": false,
+            "immovable": true,
+            "body.width": 32,
+            "body.height": 32
+        }
+    ],
+    "plainObjects": [
+        {
+            "id": "cb26c845-205c-4527-af58-dfadf86f9560",
+            "type": "Tilemap",
+            "label": "level02",
+            "key": "level02",
+            "tilesets": [
+                {
+                    "name": "moonlight_tileset_32x32",
+                    "imageKey": "moonlight_tileset_32x32"
+                }
+            ]
+        },
+        {
+            "id": "3e973529-2e20-4cf6-bde2-d6aa5ba36cd9",
+            "type": "Tilemap",
+            "label": "level",
+            "key": "level02",
+            "tilesets": [
+                {
+                    "name": "moonlight_tileset_32x32",
+                    "imageKey": "moonlight_tileset_32x32"
+                }
+            ]
+        },
+        {
+            "id": "350cfe78-2be1-45d3-a82a-78ecf4e08c64",
+            "type": "Tilemap",
+            "label": "level_1",
+            "key": "level02",
+            "tilesets": [
+                {
+                    "name": "moonlight_tileset_32x32",
+                    "imageKey": "moonlight_tileset_32x32"
+                }
+            ]
+        }
+    ],
+    "meta": {
+        "app": "Phaser Editor - Scene Editor",
+        "url": "https://phaser.io/editor",
+        "contentType": "phasereditor2d.core.scene.SceneContentType",
+        "version": 5
+    }
+}
