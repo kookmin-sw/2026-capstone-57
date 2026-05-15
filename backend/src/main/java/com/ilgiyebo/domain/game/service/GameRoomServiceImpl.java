@@ -32,6 +32,13 @@ public class GameRoomServiceImpl implements GameRoomService {
     @Override
     public void registerParticipant(UUID sessionId, UUID userId) {
         GameSessionEntity session = findSession(sessionId);
+
+        // 이미 종료된 세션은 참가 불가
+        GameSessionStatus status = session.getStatus();
+        if (status == GameSessionStatus.COMPLETED || status == GameSessionStatus.FAILED || status == GameSessionStatus.EXPIRED) {
+            throw GameException.GAME_SESSION_NOT_ACTIVE.toException();
+        }
+
         MatchEntity match = findMatch(session.getMatchId());
 
         // Validate userId is userA or userB
@@ -45,6 +52,7 @@ public class GameRoomServiceImpl implements GameRoomService {
         GameRoom room = roomStore.get(sessionId).orElseGet(() -> {
             MapData mapData = createDefaultMap();
             GameRoom newRoom = new GameRoom(sessionId, session.getMatchId(), userAId, userBId, mapData);
+            newRoom.setRelayMode(true); // 협동 게임은 릴레이 모드 (클라이언트 측 물리)
             roomStore.put(sessionId, newRoom);
             return newRoom;
         });

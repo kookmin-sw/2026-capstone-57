@@ -41,6 +41,9 @@ public class GameLoopService {
         Collection<GameRoom> activeRooms = roomStore.getActiveRooms();
 
         for (GameRoom room : activeRooms) {
+            // 릴레이 모드 방은 서버 물리 시뮬레이션 불필요 (클라이언트 측 물리)
+            if (room.isRelayMode()) continue;
+
             GameRoomStatus status = room.getStatus().get();
             try {
                 if (status == GameRoomStatus.PLAYING) {

@@ -47,6 +47,10 @@ public class GameRoom {
     @Setter
     private volatile Instant disconnectedAt;
 
+    // Room mode (relay vs server-authoritative)
+    @Setter
+    private boolean relayMode = false;
+
     public GameRoom(UUID sessionId, UUID matchId, UUID userAId, UUID userBId, MapData mapData) {
         this.sessionId = sessionId;
         this.matchId = matchId;

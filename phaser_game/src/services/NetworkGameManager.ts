@@ -341,6 +341,9 @@ export class NetworkGameManager {
 
     // Change door sprite to open state
     this.config.door.setTexture('door');
+
+    // Notify the scene that door is open (for checkClear logic)
+    this.scene.events.emit('network-door-opened');
   };
 
   private onGameCleared = (payload: GameClearedPayload): void => {

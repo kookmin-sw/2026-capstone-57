@@ -535,6 +535,11 @@ export default class Level extends Phaser.Scene {
 			};
 			this.networkGameManager.initialize(this, networkConfig);
 
+			// Listen for door opened event from NetworkGameManager
+			this.events.on('network-door-opened', () => {
+				this.doorOpen = true;
+			});
+
 			// Skip tutorial overlay in online mode
 			this.tutorialOverlay.setVisible(false);
 			this.tutorialShown = false;
@@ -663,13 +668,20 @@ export default class Level extends Phaser.Scene {
 		coin: Phaser.Types.Physics.Arcade.GameObjectWithBody
 	) {
 
-		coin.destroy();
+		if (this.isOnlineMode && this.networkGameManager) {
+			// 온라인 모드: NetworkGameManager가 optimistic update + 서버 전송 처리
+			const coinImage = coin as Phaser.Physics.Arcade.Image;
+			const coinIndex = this.coins.getChildren().indexOf(coinImage);
+			const coinId = `coin_${coinIndex}`;
+			this.networkGameManager.handleCoinCollected(coinImage, coinId);
+		} else {
+			// 로컬 모드: 기존 로직
+			coin.destroy();
+			this.score += 1;
 
-		this.score += 1;
-		//this.scoreText.setText(`달: ${this.score}`);
-
-		if (this.score >= this.totalCoins) {
-			this.openDoor();
+			if (this.score >= this.totalCoins) {
+				this.openDoor();
+			}
 		}
 	}
 
@@ -763,12 +775,16 @@ private checkClear() {
 	}
 
 	if (this.player1AtDoor && this.player2AtDoor) {
-		console.log("CLEAR!");
-
-		this.physics.pause();
-
-		this.clearLogo.setVisible(true);
-		this.backButton.setVisible(true);
+		if (this.isOnlineMode && this.networkGameManager) {
+			// 온라인 모드: 서버에 CLEAR_REQUEST 전송 (서버가 검증 후 GAME_CLEARED 브로드캐스트)
+			this.networkGameManager.sendClearRequest();
+		} else {
+			// 로컬 모드: 바로 클리어 처리
+			console.log("CLEAR!");
+			this.physics.pause();
+			this.clearLogo.setVisible(true);
+			this.backButton.setVisible(true);
+		}
 	}
 }
 	/* END-USER-CODE */
