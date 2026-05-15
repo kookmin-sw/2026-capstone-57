@@ -6,26 +6,26 @@
 
 ## Tasks
 
-- [ ] 1. Client infrastructure - 타입 정의 및 환경 설정
-  - [ ] 1.1 Create network message type definitions
+- [x] 1. Client infrastructure - 타입 정의 및 환경 설정
+  - [x] 1.1 Create network message type definitions
     - Create `phaser_game/src/types/network.ts` with all STOMP message interfaces
     - Define `GameActionMessage`, `PositionUpdatePayload`, `GameEventPayload`
     - Define all `ServerMessageType` and `ServerMessagePayloadMap` interfaces
     - Define `ConnectionState` type and `PlayerAnimation` type
     - _Requirements: 3.2, 4.1, 5.1, 6.1_
-  - [ ] 1.2 Configure environment variables and Vite proxy
+  - [x] 1.2 Configure environment variables and Vite proxy
     - Create `phaser_game/.env.development` with `VITE_WS_URL=http://localhost:8080/ws/game` and `VITE_API_BASE_URL=http://localhost:8080/api`
     - Create `phaser_game/.env.production` with production URL placeholders
     - Update `phaser_game/types/process.env.ts` to add VITE_ environment variable types
     - Update `phaser_game/vite/config.dev.mjs` to add proxy for `/api` → `http://localhost:8081` and `/ws` → `http://localhost:8081` (ws: true)
     - _Requirements: 9.1, 9.2, 9.5_
-  - [ ] 1.3 Install client dependencies
+  - [x] 1.3 Install client dependencies
     - Add `@stomp/stompjs` (^7.x), `sockjs-client` (^1.6.x) to dependencies
     - Add `@types/sockjs-client` (^1.5.x) to devDependencies
     - _Requirements: 1.1_
 
-- [ ] 2. Client infrastructure - NetworkService 구현
-  - [ ] 2.1 Implement NetworkService class
+- [x] 2. Client infrastructure - NetworkService 구현
+  - [x] 2.1 Implement NetworkService class
     - Create `phaser_game/src/services/NetworkService.ts`
     - Implement STOMP-over-SockJS connection to `/ws/game` endpoint
     - Include JWT token in STOMP CONNECT frame headers
@@ -34,7 +34,7 @@
     - Implement `sendReady()`, `sendPositionUpdate()`, `sendGameEvent()` methods
     - Expose `connectionState` and `isConnected` properties
     - _Requirements: 1.1, 1.2, 1.5, 1.6, 2.2, 3.4_
-  - [ ] 2.2 Implement reconnection with exponential backoff
+  - [x] 2.2 Implement reconnection with exponential backoff
     - Implement automatic reconnection on disconnect (1s, 2s, 4s, 8s, max 30s)
     - Manage connection state transitions: DISCONNECTED→CONNECTING→CONNECTED→RECONNECTING→ERROR
     - Emit authentication error event on JWT failure
@@ -50,17 +50,17 @@
     - Use fast-check with random event sequence generator
     - **Validates: Requirements 1.6**
 
-- [ ] 3. Server relay - RelayService 구현
-  - [ ] 3.1 Create RelayGameState and PositionUpdateData models
+- [-] 3. Server relay - RelayService 구현
+  - [x] 3.1 Create RelayGameState and PositionUpdateData models
     - Create `backend/.../game/engine/RelayGameState.java` with collected coins set, switch states, door open status, total coins, timing, last positions
     - Create `backend/.../game/dto/request/PositionUpdateData.java` record
     - _Requirements: 11.4_
-  - [ ] 3.2 Create server response event DTOs
+  - [x] 3.2 Create server response event DTOs
     - Create `PartnerPositionEvent.java`, `CoinConfirmedEvent.java`, `CoinRejectedEvent.java`
     - Create `SwitchStateEvent.java`, `DoorOpenedEvent.java`, `GameClearedEvent.java`, `GameOverEvent.java`
     - Create `PlayerDisconnectedEvent.java`, `PlayerReconnectedEvent.java`
     - _Requirements: 4.1, 5.3, 6.3, 7.1, 8.4, 8.5_
-  - [ ] 3.3 Implement RelayService interface and RelayServiceImpl
+  - [-] 3.3 Implement RelayService interface and RelayServiceImpl
     - Create `backend/.../game/service/RelayService.java` interface
     - Create `backend/.../game/service/RelayServiceImpl.java`
     - Implement `relayPosition()`: forward position data to partner without modification
