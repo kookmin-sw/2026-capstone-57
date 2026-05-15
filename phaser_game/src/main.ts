@@ -22,10 +22,10 @@ window.addEventListener("load", function () {
     height: 844,
     backgroundColor: "#2f2f2f",
     parent: "game-container",
-
+    
     pixelArt: true,
     antialias: false,
-
+    roundPixels: true,
     physics: {
       default: "arcade",
       arcade: {

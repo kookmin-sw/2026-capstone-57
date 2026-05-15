@@ -136,7 +136,7 @@ export default class Level extends Phaser.Scene {
 		);
 
 		this.tutorialOverlay.setDepth(1000);
-		this.tutorialOverlay.setDisplaySize(390, 720);
+		this.tutorialOverlay.setDisplaySize(420, 720);
 		this.tutorialOverlay.setInteractive();
 
 		this.tutorialOverlay.on("pointerdown", () => {
