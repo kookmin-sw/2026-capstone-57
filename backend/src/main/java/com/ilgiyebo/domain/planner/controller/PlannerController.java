@@ -2,6 +2,7 @@ package com.ilgiyebo.domain.planner.controller;
 
 import com.ilgiyebo.domain.planner.dto.PlanEntryRequest;
 import com.ilgiyebo.domain.planner.dto.PlanEntryResponse;
+import com.ilgiyebo.domain.planner.dto.ScheduleAutoGenerateResult;
 import com.ilgiyebo.domain.planner.service.PlannerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -58,5 +59,21 @@ public class PlannerController {
             @AuthenticationPrincipal UUID userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(plannerService.getPlanEntries(userId, date));
+    }
+
+    @Operation(summary = "[테스트] 시간표 기반 plan_entry 수동 생성",
+            description = "현재 주의 SCHEDULE_AUTO plan_entry를 시간표 기반으로 수동 생성한다. 기존 SCHEDULE_AUTO 미래 일정은 삭제 후 재생성된다.")
+    @PostMapping("/generate")
+    public ResponseEntity<ScheduleAutoGenerateResult> generateScheduleEntries(
+            @AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(plannerService.regenerateScheduleAutoEntries(userId));
+    }
+
+    @Operation(summary = "[테스트] 다음 주 plan_entry 수동 생성",
+            description = "다음 주의 SCHEDULE_AUTO plan_entry를 수동으로 배치 생성한다. 주간 스케줄러와 동일한 동작.")
+    @PostMapping("/generate/next-week")
+    public ResponseEntity<ScheduleAutoGenerateResult> generateNextWeekEntries(
+            @AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(plannerService.generateNextWeekEntries(userId));
     }
 }

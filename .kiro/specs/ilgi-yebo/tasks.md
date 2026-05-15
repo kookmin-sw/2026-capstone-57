@@ -271,11 +271,24 @@
     - **Property 20: 게임 완료 시 친밀도 부여**
     - **검증 대상: 요구사항 7.2**
 
-  - [ ] 8.3 미션 단계 (4단계) 구현
-    - `generateMission`: RAG 파이프라인으로 미션 생성. CampusVectorStoreService에서 동선 겹침 장소 기반 유사도 검색 후, 검색 결과를 Bedrock Claude에 주입하여 자연스러운 미션 생성
+  - [x] 8.2.1 캠퍼스 공간 데이터 모델 리팩토링 (RAG 미션 생성 준비)
+    - `PlaceType` enum을 `TypeActivity`로 rename (CAFE, CONVENIENCE_STORE, RESTAURANT, LECTURE_ROOM, STUDY_ROOM, MEETING_ROOM, ELEVATOR, BENCH, OTHER)
+    - `CampusVenueEntity`에 필드 추가: `typeActivity` (List<TypeActivity> — JSON 문자열 컬럼 또는 별도 테이블), `description` (String), `operatingHours` (String)
+    - `CampusBuildingPlaceEntity`의 기존 `type` (PlaceType 단일) → `typeActivity` (List<TypeActivity>)로 변경, `description` (String), `operatingHours` (String) 추가
+    - `CampusPathEntity`의 `venue` (단일 ManyToOne) → `List<CampusVenueEntity> venues` (OneToMany 또는 ManyToMany)로 변경. 순서 보장을 위해 `@OrderColumn` 또는 venue 측에 `orderIndex` 필드 추가
+    - 기존 `CampusPathEntity`를 참조하는 코드(`MatchingServiceImpl.createMissionFromOverlap` 등) 수정
+    - _요구사항: 14.1, 14.3, 14.4_
+
+  - [x] 8.3 미션 단계 (4단계) 구현
+    - `requestMissionGeneration`: 매칭 성사 시 SQS 미션 요청 발행. 각 유저의 시간표에서 이동 구간을 파악하고, 캠퍼스 그래프에서 동선(출발 건물 → venue ID 리스트 → 도착 건물)을 선택하여 미션 요청 큐에 발행. 메시지에는 양쪽 유저의 `fromBuilding`, `toBuilding`, `subNodeIds` (동선 venue ID + 출발/도착 건물 place ID), `timeSlot`을 포함
+    - timeSlot 계산: 시간표 상 수업 종료 시간에서 15분을 빼서 실제 종료 시간을 구하고, 그 시점부터 다음 수업 시작까지를 이동 시간으로 산정 (예: 시간표 13:30~15:00 → 실제 종료 14:45, 다음 수업 15:00 시작 → timeSlot = "14:45~15:00")
+    - AI 서버 처리 흐름 (RAG): 양쪽 `subNodeIds` 비교 → 겹치는 노드 ID 추출 (없으면 도착 건물 place 활용) → ChromaDB `campus_nodes` 컬렉션에서 상세 정보 검색(Retrieval) → typeActivity/description/operatingHours 기반으로 LLM 프롬프트 구성(Augmented Generation) → Bedrock Claude 호출 → 미션 생성 결과 SQS 응답
+    - SQS 응답 리스너: `MISSION_GENERATED` 응답 수신 시 Mission 엔티티 생성 및 저장
     - `confirmMission`: 양쪽 미션 수행 확인 시 5단계 해금
     - `extendMissionDeadline`: 미션 기한 1회 연장 (이미 연장된 경우 거부)
     - 미션 기한 만료 처리 (연장 미사용 시 연장 옵션, 연장 후 만료 시 매칭 종료)
+    - 캠퍼스 노드 인덱싱: 장소 등록/수정 시 AI 서버 `POST /api/campus-nodes/index` 호출하여 ChromaDB 동기화
+    - 기존 `createMissionFromOverlap` 로직을 SQS 발행 방식으로 리팩토링 (직접 미션 생성 → AI 서버 위임)
     - _요구사항: 8.1, 8.2, 8.3, 8.4_
 
   - [ ]* 8.4 Property 21, 22 속성 테스트: 미션 관련
@@ -364,92 +377,7 @@
     - jqwik로 임의의 건물/경로/거점 데이터에 대해 등록 후 조회 시 동일 데이터 반환 검증
     - **검증 대상: 요구사항 14.1, 14.2, 14.3, 14.4, 14.5**
 
-- [ ] 15. AI 서비스 클라이언트 구현 (별도 AI 서버 연동)
-  - [ ] 15.1 AIServiceClient 기본 구조 구현
-    - AIServiceClient 인터페이스 정의 (비동기 SQS + 동기 HTTP 통합)
-    - SQS 발행 클라이언트 구현 (퀴즈/미션 요청큐 발행)
-    - SQS 응답큐 리스너 구현 (퀴즈/미션 생성 결과 수신 → DB 저장)
-    - HTTP 클라이언트 구현 (RestTemplate/WebClient 기반, 일기/회고용)
-    - 에러 핸들링: HTTP 타임아웃 시 Spring Retry 최대 3회 재시도
-    - 응답 파싱 및 검증 유틸리티 (Jackson ObjectMapper)
-    - _요구사항: 5.1, 8.1, 9.2, 9.3_
-
-  - [ ] 15.2 AI 동선 추론 구현 [MVP 후순위]
-    - `inferRoute`: 시간표/플래너 + 캠퍼스 공간 데이터 기반 이동 경로 추론
-    - MVP에서는 시간표 기반 단순 동선 계산으로 대체. 출시 후 데이터 축적 시 AI 기반으로 확장
-    - _요구사항: 2.6_
-
-  - [ ] 15.3 AI 매칭 점수 계산 구현 [MVP 후순위]
-    - `calculateRouteMatchScore`: 두 사용자의 추론된 동선이 자연스럽게 겹치는 정도 판단
-    - MVP에서는 시간대 겹침 기반 단순 점수로 대체. 출시 후 데이터 축적 시 AI 기반으로 확장
-    - _요구사항: 4.10_
-
-  - [ ] 15.4 RAG 기반 미션 생성 연동 구현
-    - MissionGenerationInput DTO 정의 (동선 교집합 + 사용자 프로필)
-    - 매칭 성사 시 SQS 미션 요청큐에 MissionGenerationInput 발행
-    - SQS 응답큐 리스너에서 생성된 미션 결과 수신 → MissionEntity DB 저장
-    - AI 서버 측 RAG 파이프라인 (OpenSearch 검색 + Bedrock 생성)은 AI 서버에서 구현
-    - _요구사항: 8.1, 14.6_
-
-  - [ ] 15.5 퀴즈 사전 생성 연동 구현
-    - 퀴즈 생성 시점을 클라이언트 요청 → 매칭 성사 시점으로 변경
-    - 매칭 성사 시 SQS 퀴즈 요청큐에 QuizGenerationInput (상대방 프로필) 발행
-    - SQS 응답큐 리스너에서 생성된 퀴즈 결과 수신 → DB 저장
-    - 클라이언트 퀴즈 조회 API: DB에서 즉시 반환 (대기 없음)
-    - _요구사항: 5.1_
-
-  - [ ] 15.6 AI 일기 대화 HTTP 클라이언트 구현
-    - AI 서버 엔드포인트 호출: POST /api/diary/first-question, /next-question, /generate
-    - DiarySessionService에서 AIServiceClient.generateDiaryFirstQuestion/NextQuestion/Content 호출
-    - 입력값: 플래너 데이터 + 대화 히스토리, 출력값: 질문 또는 생성된 일기
-    - _요구사항: 3.1 (AI 일기 확장)_
-
-  - [ ] 15.7 AI 회고 대화 HTTP 클라이언트 구현
-    - AI 서버 엔드포인트 호출: POST /api/review/questions, /generate
-    - ReviewService에서 AIServiceClient.generateReviewQuestions/Content 호출
-    - 입력값: 만남 컨텍스트 + 답변, 출력값: 질문 목록 또는 생성된 회고 글
-    - _요구사항: 9.2, 9.3_
-
-  - [ ]* 15.8 Property 37, 38, 40 속성 테스트: AI 서비스 관련
-    - **Property 37: AI 동선 추론 - 캠퍼스 공간 데이터 활용**
-    - **Property 38: AI 미션 생성 - 운영시간 준수**
-    - **Property 40: AI 퀴즈 생성 - 프로필 기반 관련성**
-    - AI 서버 HTTP/SQS 응답을 Mockito로 모킹하여 테스트
-    - **검증 대상: 요구사항 2.6, 5.1, 8.1, 14.6**
-
-- [ ] 16. 체크포인트 - AI/캠퍼스 서비스 검증
-  - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
-
-- [ ] 17. 서비스 간 통합 및 배치 스케줄러 연결
-  - [ ] 17.1 배치 매칭 스케줄러 구현
-    - Spring @Scheduled(cron = "0 0 0 * * MON") 월요일 자정 실행 크론 작업 설정
-    - MatchingService.executeBatchMatching 호출
-    - 배치 실행 결과 로깅 (SLF4J)
-    - _요구사항: 4.1_
-
-  - [ ] 17.2 리마인더 스케줄러 구현
-    - 미션 기한 24시간 전 리마인더 자동 스케줄링
-    - _요구사항: 12.4_
-
-  - [ ] 17.3 서비스 간 이벤트 연동 통합
-    - Spring ApplicationEvent 또는 Spring AMQP를 활용한 이벤트 기반 연동
-    - 매칭 성사 → 상호작용 생성 → AI 퀴즈 생성 흐름 연결
-    - 신고 접수 → 매칭 종료 → 차단 처리 흐름 연결
-    - 회고 완료 → 경험치 부여 → 매칭 완료 처리 흐름 연결
-    - 시간표 기반 동선 겹침 계산 → 배치 매칭 흐름 연결
-    - _요구사항: 전체_
-
-  - [ ]* 17.4 통합 테스트 작성
-    - Spring Boot Test + Testcontainers (MySQL, Redis) 기반 통합 테스트
-    - 배치 매칭 전체 흐름 (시간표 기반 동선 겹침 → 매칭 → 알림 전송)
-    - 매칭 주기 연장 흐름 (연장 요청 → 상대방 알림 → 동의/거부 → 주기 연장 또는 유지)
-    - 단계별 상호작용 전체 흐름 (1단계 → 5단계)
-    - 신고 → 매칭 중단 → 차단 → 재매칭 방지 흐름
-    - 경험치 부여 → 레벨업 → 슬롯 해금 흐름
-    - 캠퍼스 공간 데이터 CRUD → 미션 장소 조회 흐름
-    - _요구사항: 전체_
-
-- [ ] 18. 최종 체크포인트 - 전체 시스템 검증
+- [ ] 15. 최종 체크포인트 - 전체 시스템 검증
   - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
 
 ## 참고 사항

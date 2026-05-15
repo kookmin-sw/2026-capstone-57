@@ -87,5 +87,7 @@ cloud:
       max-concurrent-messages: 5
       quiz-request-queue: ${SQS_QUIZ_REQUEST_QUEUE}
       quiz-response-queue: ${SQS_QUIZ_RESPONSE_QUEUE}
+      mission-request-queue: ${SQS_MISSION_REQUEST_QUEUE}
+      mission-response-queue: ${SQS_MISSION_RESPONSE_QUEUE}
     bedrock:
       model-id: ${BEDROCK_MODEL_ID}

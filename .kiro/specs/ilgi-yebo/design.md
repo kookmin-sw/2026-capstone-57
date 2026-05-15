@@ -54,7 +54,10 @@ graph TB
 
         subgraph AWS_AI["AWS AI 서비스"]
             BEDROCK[Amazon Bedrock - Claude/Titan]
-            VECTOR[(Amazon OpenSearch Serverless - 벡터 DB)]
+        end
+
+        subgraph AI_Storage["AI 서버 스토리지"]
+            CHROMA[(ChromaDB - 벡터 DB<br/>campus_nodes 컬렉션)]
         end
 
         subgraph Data["데이터 계층"]
@@ -115,8 +118,8 @@ graph TB
 
     %% AI 서버 → AWS AI 서비스
     AI_QUIZ --> BEDROCK
-    AI_MISSION --> VECTOR
     AI_MISSION --> BEDROCK
+    AI_MISSION --> CHROMA
     AI_DIARY --> BEDROCK
     AI_REVIEW --> BEDROCK
 ```
@@ -131,9 +134,9 @@ graph TB
 6. **별도 AI 서버 + Amazon Bedrock**: AI 관련 로직(프롬프트 관리, Bedrock 호출, RAG 검색)은 별도 AI 서버에서 담당한다. Spring Boot 백엔드는 필요한 입력값만 전달하고, AI 서버가 프롬프트를 구성하여 Bedrock을 호출한다. 통신 방식은 기능별로 구분한다:
    - **퀴즈/미션 (비동기 SQS)**: 매칭 성사 시점에 사전 생성. Spring Boot가 SQS 요청큐에 입력값을 발행하면, AI 서버가 소비하여 Bedrock 호출 후 SQS 응답큐로 결과를 반환. 사용자 대기 없음
    - **일기/회고 (동기 HTTP)**: 사용자가 실시간으로 대화하는 흐름. Spring Boot가 AI 서버의 HTTP 엔드포인트를 직접 호출하여 즉시 응답을 받음
-   - **미션 RAG**: AI 서버가 OpenSearch Serverless에서 벡터 유사도 검색을 수행한 후 검색 결과를 Bedrock 프롬프트에 주입하여 미션 생성
+   - **미션 RAG**: AI 서버가 백엔드로부터 받은 서브 노드 ID로 ChromaDB에서 장소 상세 정보를 검색(Retrieval)하고, 검색 결과를 Bedrock 프롬프트에 주입(Augmented Generation)하여 미션 생성
    - MVP에서는 매칭 점수 계산과 동선 추론에 AI를 사용하지 않으며, 시간표 기반 단순 동선 겹침으로 대체한다. 출시 후 데이터가 충분히 쌓이면 AI 기반으로 확장 예정
-7. **캠퍼스 공간 데이터 + RAG 벡터 저장소**: 건물/경로/거점 정보를 MySQL에 관리하고, 미션 생성을 위해 장소 데이터(장소명, 설명, 특성, 운영시간, 추천 활동)를 Amazon Bedrock Titan Embeddings로 벡터화하여 OpenSearch Serverless에 저장한다. AI 서버가 미션 생성 요청을 받으면 동선 교집합 정보를 쿼리로 유사도 검색하여 관련 장소를 검색(Retrieval)하고, 검색 결과를 Bedrock Claude 프롬프트에 주입(Augmented Generation)하여 자연스러운 미션을 생성한다
+7. **캠퍼스 공간 데이터 (그래프 + RAG)**: 건물(메인 노드)과 건물 사이 장소(서브 노드)를 그래프로 모델링하여 MySQL에 관리한다. 서브 노드는 간선으로 연결되어 여러 동선을 형성한다. 서브 노드의 상세 정보(name, description, typeActivity, operatingHours)는 Bedrock Titan Embeddings로 벡터화하여 AI 서버의 ChromaDB `campus_nodes` 컬렉션에 저장한다. 매칭 시 백엔드가 각 유저의 동선(출발 건물 → 서브 노드 ID 리스트 → 도착 건물)을 선택하여 AI 서버에 SQS로 전달하면, AI 서버가 양쪽 동선의 겹치는 서브 노드 ID를 찾고 ChromaDB에서 상세 정보를 검색(Retrieval)한 후 LLM 프롬프트에 주입(Augmented Generation)하여 미션을 생성한다
 8. **Spring Security + JWT**: 대학 이메일 인증 기반 가입 및 JWT 토큰 기반 인증/인가 처리. `JwtAuthenticationFilter`가 모든 요청에서 Bearer 토큰을 파싱하여 SecurityContext에 userId를 설정한다. 실제 인증 강제는 `@MemberGuard` 커스텀 어노테이션(AOP 기반)이 메서드 단위로 처리하며, `@CurrentMember` 파라미터 어노테이션으로 컨트롤러에서 현재 로그인한 사용자의 UUID를 주입받는다. Spring Security의 `authorizeHttpRequests`는 `permitAll()`로 열어두고, 인증이 필요한 API에만 `@MemberGuard`를 선택적으로 적용하는 구조이다
 9. **Spring Data JPA + MySQL (Amazon RDS Aurora MySQL 호환)**: JPA를 통한 ORM 매핑으로 도메인 모델과 데이터베이스 간 매핑 간소화. 팀 내 MySQL 운영 경험이 풍부하여 생산성 극대화. Aurora MySQL 호환 모드로 고가용성 및 자동 장애 복구 지원. RDS 관리형 서비스로 운영 부담 감소. **스키마 관리는 Flyway 마이그레이션을 사용하지 않고, JPA `ddl-auto: update` 설정을 통해 엔티티 기반으로 테이블을 자동 생성/수정한다.** 엔티티 클래스가 곧 스키마의 단일 진실 공급원(Single Source of Truth)이다
 10. **AWS 배포 전략**: ECS Fargate 기반 컨테이너 배포로 서버 관리 부담 최소화, ALB를 통한 트래픽 분산, RDS/ElastiCache/SQS 등 관리형 서비스 활용으로 운영 효율성 극대화. S3를 통한 정적 자산 관리
@@ -644,9 +647,10 @@ flowchart TD
     
     ROUTE --> MATCH{겹치는 동선 존재?}
     MATCH -->|아니오| NEXT[다음 후보로]
-    MATCH -->|예| SELECT[겹치는 동선 중 하나 선택]
+    MATCH -->|예| SELECT[겹치는 시간대 중 하나 선택]
     SELECT --> ASSIGN[매칭 성사]
-    ASSIGN --> MISSION[선택된 동선 기반 미션 사전 생성]
+    ASSIGN --> PICK_ROUTE[각 유저별 그래프에서 동선 하나 선택]
+    PICK_ROUTE --> SQS_MISSION[SQS 미션 요청 발행 - 양쪽 동선 정보 포함]
 ```
 
 ```java
@@ -661,7 +665,7 @@ public interface MatchingService {
 
     /**
      * 동선 겹침 비교 (MVP: 시간표의 출발/도착 건물 동일 여부만 비교)
-     * 겹치는 동선이 있으면 그 중 하나를 선택하여 미션 데이터 사전 생성
+     * 겹치는 시간대가 있으면 각 유저별 그래프에서 동선을 선택하여 SQS 미션 요청 발행
      */
     RouteOverlap calculateRouteOverlap(String userA, String userB);
 }
@@ -703,6 +707,14 @@ public record RouteOverlap(
 
 public record OverlapLocation(String fromBuilding, String toBuilding, String timeRange) {}
 ```
+
+> **timeSlot(이동 시간) 계산 규칙**: 시간표 상의 수업 종료 시간은 실제 종료 시간보다 15분 늦다. 예를 들어 시간표에 13:30~15:00으로 등록된 수업은 실제로 14:45에 끝난다. 따라서 이동 시간(timeSlot)은 `수업 종료 시간 - 15분`부터 `다음 수업 시작 시간`까지이다.
+>
+> 예시:
+> - 시간표: 수업A 13:30~15:00, 수업B 15:00~16:30
+> - 실제 종료: 14:45
+> - 이동 시간(timeSlot): 14:45~15:00
+> - 출발 건물: 수업A 건물, 도착 건물: 수업B 건물
 
 #### 6. 상호작용 서비스 (InteractionService)
 
@@ -870,42 +882,148 @@ public record GameResult(
 
 #### 9. 미션 서비스 (MissionService)
 
-> **RAG 기반 미션 생성**: 미션 생성은 RAG(Retrieval-Augmented Generation) 파이프라인을 사용한다. 캠퍼스 장소 데이터를 벡터 DB(OpenSearch Serverless)에 임베딩하여 저장하고, 미션 생성 요청 시 동선 교집합 정보를 기반으로 유사도 검색을 수행한 후, 검색된 장소 정보를 LLM 프롬프트에 주입하여 자연스러운 미션을 생성한다.
+> **RAG 기반 미션 생성**: 미션 생성은 RAG(Retrieval-Augmented Generation) 파이프라인을 사용한다. 캠퍼스 서브 노드 데이터(장소명, 설명, typeActivity, 운영시간)를 ChromaDB에 임베딩하여 저장하고, 미션 생성 요청 시 백엔드가 전달한 서브 노드 ID로 벡터 DB에서 상세 정보를 검색(Retrieval)한 후, 검색 결과를 LLM 프롬프트에 주입(Augmented Generation)하여 자연스러운 미션을 생성한다.
 
 ```mermaid
 flowchart TD
-    A[미션 생성 요청] --> B[동선 교집합 정보 추출]
-    B --> C[검색 쿼리 구성]
-    C --> D["벡터 유사도 검색 (OpenSearch Serverless)"]
-    D --> E[상위 K개 장소 정보 반환]
-    E --> F["프롬프트 구성 (검색 결과 + 사용자 컨텍스트)"]
-    F --> G["LLM 호출 (Bedrock Claude)"]
-    G --> H[미션 생성 결과 반환]
+    A[매칭 성사] --> B[백엔드: 각 유저 시간표에서 이동 구간 파악]
+    B --> C[백엔드: 그래프에서 동선 하나 선택]
+    C --> D["백엔드: SQS 미션 요청 발행 (서브 노드 ID만 포함)"]
+    D --> E[AI 서버: 양쪽 서브 노드 ID 비교]
+    E --> F[AI 서버: 겹치는 노드 ID 추출]
+    F --> G["AI 서버: ChromaDB에서 노드 상세 정보 검색 (Retrieval)"]
+    G --> H["AI 서버: 검색 결과 + 시간대로 LLM 프롬프트 구성 (Augmented Generation)"]
+    H --> I["AI 서버: Bedrock Claude 호출"]
+    I --> J[AI 서버: 미션 생성 결과 SQS 응답]
 
-    subgraph "Retrieval (검색)"
+    subgraph "백엔드 (Spring Boot)"
+        B
         C
         D
-        E
     end
 
-    subgraph "Augmented Generation (증강 생성)"
+    subgraph "AI 서버 (FastAPI) - RAG Pipeline"
+        E
         F
         G
         H
+        I
+        J
     end
 ```
 
 **RAG 파이프라인 상세:**
 
-1. **임베딩 & 인덱싱 (오프라인)**: 캠퍼스 장소 데이터(장소명 + 설명 + 특성 + 운영시간 + 추천 활동)를 Bedrock Titan Embeddings로 벡터화하여 OpenSearch Serverless 인덱스에 저장. 관리자가 장소 데이터를 등록/수정할 때 자동으로 재임베딩.
-2. **검색 쿼리 구성 (온라인)**: 동선 교집합 정보(시간대, 건물 위치)와 사용자 프로필을 자연어 쿼리로 변환. 예: "14시에 공학관 근처에서 두 사람이 대화할 수 있는 조용한 장소"
-3. **벡터 유사도 검색**: OpenSearch Serverless에서 코사인 유사도 기반 상위 5개 장소 검색
-4. **프롬프트 증강 & 생성**: 검색된 장소 정보 + 사용자 컨텍스트(프로필, 동선)를 Bedrock Claude 프롬프트에 주입하여 구체적 미션 생성
+1. **임베딩 & 인덱싱 (오프라인)**: 백엔드가 캠퍼스 장소(서브 노드) 데이터를 등록/수정할 때 AI 서버에 HTTP 인덱싱 요청 → AI 서버가 `name + description + typeActivity + operatingHours`를 텍스트로 합쳐서 Bedrock Titan Embeddings로 벡터화 → ChromaDB `campus_nodes` 컬렉션에 저장
+2. **동선 선택 (백엔드)**: 유저 시간표에서 이동 구간(출발 건물 → 도착 건물)을 파악하고, 캠퍼스 그래프에서 가능한 경로 중 하나를 선택하여 서브 노드 ID 리스트를 확정
+3. **SQS 메시지 발행 (백엔드)**: 양쪽 유저의 동선 정보(메인 노드 이름 + 서브 노드 ID 리스트)를 미션 요청 큐에 발행
+4. **교집합 계산 (AI 서버)**: 양쪽 서브 노드 ID를 비교하여 겹치는 노드 추출
+5. **벡터 DB 검색 - Retrieval (AI 서버)**: 겹치는 노드 ID로 ChromaDB `campus_nodes` 컬렉션에서 상세 정보(name, description, typeActivity, operatingHours) 검색
+6. **프롬프트 증강 & 생성 - Augmented Generation (AI 서버)**: 검색된 장소 정보 + timeSlot + TYPE_ACTIVITIES 매핑을 Bedrock Claude 프롬프트에 주입하여 구체적 미션 생성
+
+**AI 서버 TYPE_ACTIVITIES 매핑:**
+
+```python
+TYPE_ACTIVITIES = {
+    "CAFE": "커피, 대화, 휴식",
+    "CONVENIENCE_STORE": "간식, 음료, 대화",
+    "RESTAURANT": "식사, 대화",
+    "LECTURE_ROOM": "수업, 스터디",
+    "STUDY_ROOM": "스터디, 과제, 대화",
+    "MEETING_ROOM": "모임, 대화, 협업",
+    "ELEVATOR": "이동",
+    "BENCH": "대화, 휴식, 산책",
+    "OTHER": "대화, 휴식",
+}
+```
+
+**ChromaDB 컬렉션 구조:**
+
+| 컬렉션 | 용도 | 메타데이터 |
+|---------|------|-----------|
+| `campus_nodes` | 캠퍼스 서브 노드 장소 정보 | node_id, typeActivity, operatingHours |
+
+**미션 요청 SQS 메시지 스키마:**
+
+> 백엔드는 각 유저의 동선에 있는 venue ID와 출발/도착 건물의 place ID를 모두 `subNodeIds`에 포함하여 전달한다. AI 서버는 이 ID들로 ChromaDB `campus_nodes` 컬렉션에서 상세 정보를 검색한다. venue와 buildingPlace는 같은 컬렉션에 통합 저장되므로 (메타데이터의 `source` 필드로 구분) AI 서버는 ID만으로 동일하게 처리할 수 있다.
+
+**매칭 케이스별 subNodeIds 구성:**
+
+| 케이스 | 설명 | subNodeIds에 포함되는 항목 |
+|--------|------|------------------------|
+| 같은 건물에 동시에 있는 경우 | from == to (이동 없음) | 해당 건물의 place ID들 |
+| 같은 건물로 이동 중인 경우 | 도착지 동일, 출발지 다름 | 각 동선의 venue ID + 도착 건물의 place ID들 |
+| 인접 건물 간 이동 중인 경우 | 경로 중간에 겹치는 venue 존재 | 각 동선의 venue ID + 출발/도착 건물의 place ID들 |
+
+**AI 서버 교집합 판단 우선순위:**
+1. 양쪽 `subNodeIds`에서 겹치는 ID가 있으면 → 해당 장소에서 미션 생성
+2. 겹치는 ID가 없으면 → 도착 건물이 같은 경우 도착 건물의 place 중 적합한 장소 선택
+3. 그래도 없으면 → FAILED 응답
+
+```json
+{
+  "action": "GENERATE_MISSION",
+  "matchId": "uuid-string",
+  "userAId": "uuid-string",
+  "userBId": "uuid-string",
+  "timeSlot": "14:45-15:00",
+  "userARoute": {
+    "fromBuilding": { "id": "uuid-string", "name": "미래관" },
+    "toBuilding": { "id": "uuid-string", "name": "북악관" },
+    "subNodeIds": ["venue-uuid-1", "venue-uuid-2", "place-uuid-북악관카페", "place-uuid-북악관로비"]
+  },
+  "userBRoute": {
+    "fromBuilding": { "id": "uuid-string", "name": "공학관" },
+    "toBuilding": { "id": "uuid-string", "name": "북악관" },
+    "subNodeIds": ["venue-uuid-3", "venue-uuid-2", "place-uuid-북악관카페", "place-uuid-북악관로비"]
+  },
+  "requestedAt": "2024-01-01T00:00:00Z"
+}
+```
+
+**미션 응답 SQS 메시지 스키마:**
+
+```json
+{
+  "action": "MISSION_GENERATED",
+  "status": "SUCCESS | FAILED",
+  "matchId": "uuid-string",
+  "mission": {
+    "location": "북악관 카페",
+    "activity": "커피 마시며 서로의 전공 이야기 나누기",
+    "description": "북악관 1층 카페에서 각자 좋아하는 음료를 주문하고, 서로의 전공에서 가장 재미있었던 수업에 대해 이야기해보세요.",
+    "selectedNodeId": "uuid-string"
+  },
+  "completedAt": "2024-01-01T00:00:00Z",
+  "errorMessage": "string (FAILED 시 에러 설명)"
+}
+```
+
+**장소 인덱싱 요청 (백엔드 → AI 서버, HTTP):**
+
+> venue와 buildingPlace 모두 같은 엔드포인트로 인덱싱한다. `source` 필드로 구분하며, ChromaDB `campus_nodes` 컬렉션에 통합 저장된다.
+
+```
+POST /api/campus-nodes/index
+```
+
+```json
+{
+  "nodeId": "uuid-string",
+  "source": "VENUE | BUILDING_PLACE",
+  "name": "북악관 왼쪽 입구",
+  "typeActivity": ["CAFE", "CONVENIENCE_STORE", "RESTAURANT"],
+  "description": "북악관(N2동) 서쪽 입구",
+  "operatingHours": "24시간",
+  "buildingName": "북악관 (BUILDING_PLACE인 경우)",
+  "floor": 1
+}
+```
 
 ```java
 public interface MissionService {
-    /** RAG 기반 미션 생성 (벡터 검색 → LLM 생성) */
-    Mission generateMission(String matchId);
+    /** 미션 생성 요청 (SQS 발행 → AI 서버에서 RAG 기반 생성) */
+    void requestMissionGeneration(String matchId);
 
     /** 미션 수행 확인 */
     MissionStatus confirmMission(String missionId, String userId);
@@ -924,48 +1042,46 @@ public record Mission(
     List<String> confirmedBy,
     boolean extended,
     MissionStatus status,
-    @Nullable List<String> retrievedVenueIds  // RAG 검색에 사용된 장소 ID (추적용)
+    @Nullable String selectedNodeId  // AI가 선택한 서브 노드 ID (추적용)
 ) {}
 
 public enum MissionStatus { PENDING, CONFIRMED, EXPIRED }
 ```
 
-#### 9-1. 캠퍼스 벡터 저장소 (AI 서버 측 구현)
+#### 9-1. 미션 생성 AI 서버 처리 흐름
 
-> 캠퍼스 장소 데이터의 임베딩 및 벡터 검색은 **AI 서버**에서 담당한다. Spring Boot의 CampusDataService가 장소를 등록/수정하면, AI 서버에 인덱싱 요청을 보내 OpenSearch Serverless에 벡터를 업데이트한다. 미션 생성 시에는 AI 서버가 자체적으로 벡터 검색을 수행한다.
+> 미션 생성은 AI 서버가 SQS 미션 요청큐에서 메시지를 소비하여 처리한다. 백엔드는 각 유저의 동선 정보(메인 노드 이름 + 서브 노드 ID 리스트)를 메시지에 포함하여 전달하고, AI 서버는 겹치는 노드 ID로 ChromaDB에서 상세 정보를 검색(Retrieval)하여 LLM 프롬프트에 주입(Augmented Generation)한다.
 
 ```java
 /**
  * [AI 서버 측 구현]
- * 아래는 AI 서버가 내부적으로 수행하는 로직의 개념적 인터페이스.
- * Spring Boot에서는 직접 호출하지 않으며, SQS 미션 요청을 통해 간접적으로 트리거된다.
+ * AI 서버 내부 흐름 (RAG Pipeline):
+ * 1. SQS에서 MissionGenerationRequest 수신
+ * 2. 양쪽 동선의 서브 노드 ID 비교 → 겹치는 노드 ID 추출
+ * 3. 겹치는 노드 ID로 ChromaDB campus_nodes 컬렉션에서 상세 정보 검색 (Retrieval)
+ * 4. 검색된 장소의 typeActivity로 TYPE_ACTIVITIES 매핑
+ * 5. operatingHours와 timeSlot 비교하여 이용 가능한 장소 필터링
+ * 6. 검색 결과(description + 활동 정보)를 Bedrock Claude 프롬프트에 주입 (Augmented Generation)
+ * 7. 생성된 미션을 SQS 응답큐에 발행
  *
- * AI 서버 내부 흐름:
- * 1. SQS에서 MissionGenerationInput 수신
- * 2. 동선 교집합 정보로 자연어 검색 쿼리 구성
- * 3. OpenSearch Serverless에서 벡터 유사도 검색 (상위 5개 장소)
- * 4. 검색 결과 + 사용자 컨텍스트로 Bedrock Claude 프롬프트 구성
- * 5. 생성된 미션을 SQS 응답큐에 발행
+ * 겹치는 노드가 없는 경우:
+ * - FAILED 응답을 반환하여 백엔드가 다른 동선으로 재시도
+ *
+ * 데이터 동기화:
+ * - 백엔드에서 장소 등록/수정 시 POST /api/campus-nodes/index 호출
+ * - AI 서버가 텍스트를 임베딩하여 ChromaDB에 upsert
  */
 
-// AI 서버가 OpenSearch에 저장하는 벡터 문서 구조
-public record VenueDocument(
-    String venueId,
-    String embeddingText,  // "학생회관 1층 카페 | 조용하고 대화하기 좋은 분위기 | 카페 | 만남적합도:5 | 월-금 08:00-21:00 | 커피, 대화, 스터디"
-    Map<String, Object> metadata  // 필터링용 메타데이터 (type, meetingSuitability, buildingId 등)
+// Spring Boot → AI 서버 (SQS 미션 요청 메시지에 포함되는 구조)
+public record UserRoute(
+    BuildingNode fromBuilding,
+    BuildingNode toBuilding,
+    List<String> subNodeIds  // 서브 노드 ID 리스트만 전달
 ) {}
 
-// Spring Boot → AI 서버 (장소 인덱싱 요청, 장소 등록/수정 시 HTTP 호출)
-// POST /api/venues/index
-public record VenueIndexRequest(
-    String venueId,
-    String name,
-    String description,
-    String type,
-    int meetingSuitability,
-    Map<String, String> operatingHours,
-    List<String> characteristics,
-    @Nullable String buildingName
+public record BuildingNode(
+    String id,
+    String name
 ) {}
 ```
 

@@ -23,7 +23,7 @@ public class QuizRequestPublisher {
     private final SqsTemplate sqsTemplate;
     private final ObjectMapper objectMapper;
 
-    public QuizRequestPublisher(SqsTemplate sqsTemplate,
+    public QuizRequestPublisher(@Autowired(required=false) SqsTemplate sqsTemplate,
                                 ObjectMapper objectMapper) {
         this.sqsTemplate = sqsTemplate;
         this.objectMapper = objectMapper;
