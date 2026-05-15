@@ -94,8 +94,8 @@
 - [ ] 4. Checkpoint - Server relay tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Client scenes - NetworkGameManager 구현
-  - [ ] 5.1 Implement NetworkGameManager class
+- [x] 5. Client scenes - NetworkGameManager 구현
+  - [x] 5.1 Implement NetworkGameManager class
     - Create `phaser_game/src/services/NetworkGameManager.ts`
     - Implement `initialize()` with NetworkGameConfig, `destroy()`, `update(time, delta)`
     - Send position updates at 50ms interval (only when position changed)

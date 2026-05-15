@@ -88,7 +88,7 @@ export default class Level extends Phaser.Scene {
 
 	private coins!: Phaser.Physics.Arcade.StaticGroup;
 	private score = 0;
-	private scoreText!: Phaser.GameObjects.Text;
+	//private scoreText!: Phaser.GameObjects.Text;
 
 	//탈출 문 조건 체크 변수
 	private totalCoins = 21;
@@ -251,14 +251,14 @@ export default class Level extends Phaser.Scene {
 		/* SCORE UI */
 		/* ---------------------------------------------------------------------- */
 
-		this.scoreText = this.add.text(145, 20, "찾은 달빛: 0", {
-			fontSize: "16px",
-			color: "#000000",
-			padding: {
-				top: 4,
-				bottom: 4
-			}
-			});
+		// this.scoreText = this.add.text(145, 20, "찾은 달빛: 0", {
+		// 	fontSize: "16px",
+		// 	color: "#000000",
+		// 	padding: {
+		// 		top: 4,
+		// 		bottom: 4
+		// 	}
+		// 	});
 
 		/* ---------------------------------------------------------------------- */
 		/* COINS */
@@ -556,7 +556,7 @@ export default class Level extends Phaser.Scene {
 		coin.destroy();
 
 		this.score += 1;
-		this.scoreText.setText(`달: ${this.score}`);
+		//this.scoreText.setText(`달: ${this.score}`);
 
 		if (this.score >= this.totalCoins) {
 			this.openDoor();
