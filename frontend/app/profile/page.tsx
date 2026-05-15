@@ -134,7 +134,7 @@ export default function ProfilePage() {
                   <span className="text-[10px] text-muted-foreground">{expProgress}%</span>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="shrink-0 w-8 h-8">
+              <Button variant="ghost" size="icon" className="shrink-0 w-8 h-8" onClick={() => window.location.href = "/profile/edit"}>
                 <Pencil className="w-4 h-4 text-muted-foreground" />
               </Button>
             </div>

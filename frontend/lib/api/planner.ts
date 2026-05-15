@@ -13,8 +13,8 @@ export type PlanEntrySource = "MANUAL" | "SCHEDULE_AUTO" | "SCHEDULE_OVERRIDE"
 export interface PlanEntryResponse {
   id: string
   date: string // "YYYY-MM-DD"
-  startTime: LocalTime
-  endTime: LocalTime
+  startTime: string // "HH:mm:ss" from server
+  endTime: string // "HH:mm:ss" from server
   location: string
   name: string
   type: PlanEntryType
@@ -24,22 +24,25 @@ export interface PlanEntryResponse {
 
 export interface PlanEntryRequest {
   date: string // "YYYY-MM-DD"
-  startTime: LocalTime
-  endTime: LocalTime
+  startTime: string // "HH:mm:ss"
+  endTime: string // "HH:mm:ss"
   location?: string
   name?: string
   type: PlanEntryType
 }
 
-// 시간 문자열 "HH:mm" → LocalTime 변환
-export function toLocalTime(timeStr: string): LocalTime {
-  const [hour, minute] = timeStr.split(":").map(Number)
-  return { hour, minute, second: 0, nano: 0 }
+// 시간 문자열 "HH:mm" → "HH:mm:ss" (서버 형식)
+export function toLocalTime(timeStr: string): string {
+  return timeStr.length === 5 ? `${timeStr}:00` : timeStr
 }
 
-// LocalTime → "HH:mm" 문자열 변환
-export function fromLocalTime(lt: LocalTime): string {
-  return `${lt.hour.toString().padStart(2, "0")}:${lt.minute.toString().padStart(2, "0")}`
+// 서버 응답 "HH:mm:ss" → "HH:mm" 표시용
+export function fromLocalTime(lt: string | any): string {
+  if (typeof lt === "string") {
+    return lt.substring(0, 5)
+  }
+  // fallback: 객체 형태인 경우
+  return `${String(lt.hour).padStart(2, "0")}:${String(lt.minute).padStart(2, "0")}`
 }
 
 // 날짜를 "YYYY-MM-DD" 형식으로 변환

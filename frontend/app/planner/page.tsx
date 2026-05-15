@@ -139,7 +139,7 @@ export default function PlannerPage() {
         date: formatDate(targetDate),
         startTime: toLocalTime(entry.startTime),
         endTime: toLocalTime(entry.endTime),
-        location: entry.location,
+        location: entry.location || undefined,
         name: entry.courseName,
         type: entry.type,
       })
@@ -151,15 +151,21 @@ export default function PlannerPage() {
 
   // 일간 뷰에서 일정 추가
   const handleDailyAddEntry = async (data: AddEntryFormData) => {
+    if (!data.startTime || !data.endTime) {
+      console.error("시작/종료 시간을 선택해주세요")
+      return
+    }
+    const body = {
+      date: formatDate(selectedDate),
+      startTime: toLocalTime(data.startTime),
+      endTime: toLocalTime(data.endTime),
+      location: data.location || undefined,
+      name: data.courseName || undefined,
+      type: data.type,
+    }
+    console.log("일정 추가 요청:", JSON.stringify(body))
     try {
-      await createPlanEntry({
-        date: formatDate(selectedDate),
-        startTime: toLocalTime(data.startTime),
-        endTime: toLocalTime(data.endTime),
-        location: data.location,
-        name: data.courseName,
-        type: data.type,
-      })
+      await createPlanEntry(body)
       loadDailyEntries()
     } catch (err) {
       console.error("일정 추가 실패:", err)

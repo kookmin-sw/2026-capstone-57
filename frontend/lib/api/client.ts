@@ -1,4 +1,4 @@
-const API_BASE = "http://54.165.8.48:8080"
+const API_BASE = "/backend"
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null

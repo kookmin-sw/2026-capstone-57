@@ -13,47 +13,44 @@ import {
 import { cn } from "@/lib/utils"
 import type { QuizQuestion } from "@/types/match"
 
-interface HintNote {
-  id: string
-  from: "me" | "partner"
-  question: string
-  answer?: string
-  isExpanded?: boolean
-}
-
 interface QuizStageProps {
   questions: QuizQuestion[]
   onComplete: () => void
+  onSubmitAnswer?: (quizIndex: number, answer: number) => Promise<{ correctAnswer: number; isCorrect: boolean } | null>
+  onSendHint?: (question: string) => void
 }
 
-export function QuizStage({ questions, onComplete }: QuizStageProps) {
+export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }: QuizStageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
+  const [correctAnswer, setCorrectAnswer] = useState<number | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [showHintInput, setShowHintInput] = useState(false)
   const [hintInput, setHintInput] = useState("")
-  const [answerInput, setAnswerInput] = useState("")
-  const [hintNotes, setHintNotes] = useState<HintNote[]>([
-    {
-      id: "1",
-      from: "me",
-      question: "혹시 여름 좋아하시나요?",
-      answer: "더운 건 싫어하지만 바다는 좋아해요",
-    },
-    {
-      id: "2",
-      from: "partner",
-      question: "요즘 가장 자주 가는 장소는 어디인가요?",
-      isExpanded: false,
-    },
-  ])
 
   const currentQuestion = questions[currentIndex]
   const isLastQuestion = currentIndex === questions.length - 1
 
-  const handleSelect = (optionIndex: number) => {
+  const handleSelect = async (optionIndex: number) => {
     if (showResult) return
     setSelectedOption(optionIndex)
+
+    // 서버에 답안 제출
+    if (onSubmitAnswer) {
+      try {
+        const result = await onSubmitAnswer(currentIndex, optionIndex)
+        if (result) {
+          setCorrectAnswer(result.correctAnswer)
+        }
+      } catch (err) {
+        console.error("퀴즈 제출 실패:", err)
+        // 서버 실패 시 로컬 correctIndex 사용
+        setCorrectAnswer(currentQuestion.correctIndex)
+      }
+    } else {
+      setCorrectAnswer(currentQuestion.correctIndex)
+    }
+
     setShowResult(true)
   }
 
@@ -63,24 +60,25 @@ export function QuizStage({ questions, onComplete }: QuizStageProps) {
     } else {
       setCurrentIndex((prev) => prev + 1)
       setSelectedOption(null)
+      setCorrectAnswer(null)
       setShowResult(false)
     }
   }
 
   const handleSendHint = () => {
     if (!hintInput.trim()) return
-    const newNote: HintNote = {
-      id: Date.now().toString(),
-      from: "me",
-      question: hintInput.trim(),
-    }
-    setHintNotes((prev) => [...prev, newNote])
+    onSendHint?.(hintInput.trim())
     setHintInput("")
     setShowHintInput(false)
   }
 
-  const completedNotes = hintNotes.filter((n) => n.answer)
-  const pendingSentNotes = hintNotes.filter((n) => n.from === "me" && !n.answer)
+  if (!currentQuestion || currentQuestion.options.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center bg-card rounded-2xl p-4 shadow-sm border border-border/30">
+        <p className="text-sm text-muted-foreground">퀴즈를 불러오는 중...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col bg-card rounded-2xl p-4 shadow-sm border border-border/30">
@@ -97,11 +95,11 @@ export function QuizStage({ questions, onComplete }: QuizStageProps) {
         {currentQuestion.question}
       </p>
 
-      {/* Options - takes available space */}
+      {/* Options */}
       <div className="flex-1 flex flex-col justify-center gap-2 min-h-0 overflow-hidden">
         {currentQuestion.options.map((option, index) => {
           const isSelected = selectedOption === index
-          const isCorrectOption = index === currentQuestion.correctIndex
+          const isCorrectOption = correctAnswer !== null && index === correctAnswer
 
           return (
             <button
@@ -113,19 +111,36 @@ export function QuizStage({ questions, onComplete }: QuizStageProps) {
                 "w-full py-2 px-3 rounded-xl text-left text-sm transition-all shrink-0",
                 "border bg-secondary/40",
                 !showResult && "hover:bg-secondary/60 active:scale-[0.98]",
-                showResult && isCorrectOption && "border-accent bg-accent/15 text-accent",
+                showResult && isCorrectOption && "border-green-400 bg-green-50 text-green-700",
                 showResult && isSelected && !isCorrectOption && "border-destructive/60 bg-destructive/10 text-destructive"
               )}
             >
               <div className="flex items-center justify-between">
                 <span>{option}</span>
-                {showResult && isCorrectOption && <Check className="w-4 h-4 text-accent" />}
+                {showResult && isCorrectOption && (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <Check className="w-4 h-4" />
+                    <span className="text-[10px]">정답</span>
+                  </span>
+                )}
                 {showResult && isSelected && !isCorrectOption && <X className="w-4 h-4 text-destructive" />}
               </div>
             </button>
           )
         })}
       </div>
+
+      {/* Result message */}
+      {showResult && selectedOption !== null && correctAnswer !== null && (
+        <div className={cn(
+          "text-center text-xs py-1.5 rounded-lg mt-2 shrink-0",
+          selectedOption === correctAnswer
+            ? "bg-green-50 text-green-700"
+            : "bg-destructive/10 text-destructive"
+        )}>
+          {selectedOption === correctAnswer ? "정답이에요! 🎉" : "아쉬워요, 정답을 확인해보세요"}
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-between gap-2 mt-3 shrink-0">

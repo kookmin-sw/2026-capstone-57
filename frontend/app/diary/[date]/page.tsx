@@ -1,71 +1,26 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { ArrowLeft, Edit3, Sparkles } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { DiaryAIChat } from "@/components/diary/diary-ai-chat"
-import { DiaryCompiledView } from "@/components/diary/diary-compiled-view"
 import { cn } from "@/lib/utils"
 import type { DiaryEntry, EmotionTag } from "@/types/diary"
 import { EMOTION_META } from "@/types/diary"
-import type { ChatMessage } from "@/types/diary-chat"
-
-// Sample data - today (2026-05-07) is not written yet
-const sampleDiaries: DiaryEntry[] = [
-  {
-    id: "2",
-    userId: "user-1",
-    entryDate: "2026-05-06",
-    content: "중간고사 준비로 하루종일 도서관에 있었다. 피곤했지만 뿌듯한 하루였다. 내일은 좀 쉬어야겠다.",
-    emotionTag: "TIRED",
-    streakCount: 4,
-    createdAt: "2026-05-06T22:00:00Z",
-    updatedAt: "2026-05-06T22:00:00Z",
-  },
-  {
-    id: "3",
-    userId: "user-1",
-    entryDate: "2026-05-05",
-    content: "날씨가 좋아서 캠퍼스를 산책했다. 벚꽃이 다 졌지만 초록초록한 나무들이 예뻤다. 평온한 하루.",
-    emotionTag: "CALM",
-    streakCount: 3,
-    createdAt: "2026-05-05T20:15:00Z",
-    updatedAt: "2026-05-05T20:15:00Z",
-  },
-  {
-    id: "4",
-    userId: "user-1",
-    entryDate: "2026-05-04",
-    content: "친구들이랑 맛집 탐방을 했다! 새로 생긴 파스타집이 정말 맛있었다. 오랜만에 신나는 주말이었다.",
-    emotionTag: "HAPPY",
-    streakCount: 2,
-    createdAt: "2026-05-04T19:45:00Z",
-    updatedAt: "2026-05-04T19:45:00Z",
-  },
-  {
-    id: "5",
-    userId: "user-1",
-    entryDate: "2026-05-02",
-    content: "과제 마감이 다가와서 불안했다. 하지만 열심히 해서 결국 제출했다!",
-    emotionTag: "ANXIOUS",
-    streakCount: 1,
-    createdAt: "2026-05-02T23:50:00Z",
-    updatedAt: "2026-05-02T23:50:00Z",
-  },
-  {
-    id: "6",
-    userId: "user-1",
-    entryDate: "2026-04-30",
-    content: "비오는 날 창밖을 보며 생각에 잠겼다. 조금 우울한 하루였지만 음악을 들으니 나아졌다.",
-    emotionTag: "SAD",
-    streakCount: 0,
-    createdAt: "2026-04-30T21:00:00Z",
-    updatedAt: "2026-04-30T21:00:00Z",
-  },
-]
+import {
+  getDiaryEntries,
+  createDiary,
+  startDiarySession,
+  getActiveSession,
+  answerDiaryQuestion,
+  generateDiary,
+  confirmDiary,
+  type DiaryEntryResponse,
+  type DiarySessionResponse,
+  type GeneratedDiaryPreview,
+} from "@/lib/api/diary"
 
 function formatDisplayDate(dateStr: string) {
   const date = new Date(dateStr)
@@ -77,12 +32,6 @@ function formatDisplayDate(dateStr: string) {
   return `${year}년 ${month}월 ${day}일 ${weekday}요일`
 }
 
-function isToday(dateStr: string) {
-  const today = new Date()
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
-  return dateStr === todayStr
-}
-
 function isFutureDate(dateStr: string) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -91,189 +40,355 @@ function isFutureDate(dateStr: string) {
   return checkDate > today
 }
 
-type ViewState = "chat" | "compiled" | "view"
+type ViewState = "loading" | "chat" | "compiled" | "view" | "future"
 
 export default function DiaryDetailPage() {
   const params = useParams()
   const router = useRouter()
   const dateStr = params.date as string
 
-  // Find diary entry for this date
-  const entry = useMemo(() => {
-    return sampleDiaries.find((d) => d.entryDate === dateStr)
+  const [viewState, setViewState] = useState<ViewState>("loading")
+  const [entry, setEntry] = useState<DiaryEntry | null>(null)
+
+  // AI session state
+  const [session, setSession] = useState<DiarySessionResponse | null>(null)
+  const [currentQuestion, setCurrentQuestion] = useState("")
+  const [answerInput, setAnswerInput] = useState("")
+  const [chatHistory, setChatHistory] = useState<{ question: string; answer: string }[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+
+  // Compiled state
+  const [compiledContent, setCompiledContent] = useState("")
+  const [suggestedEmotion, setSuggestedEmotion] = useState<EmotionTag>("CALM")
+
+  // Manual write state
+  const [manualContent, setManualContent] = useState("")
+  const [manualEmotion, setManualEmotion] = useState<EmotionTag>("CALM")
+
+  useEffect(() => {
+    if (isFutureDate(dateStr)) {
+      setViewState("future")
+      return
+    }
+    loadEntry()
   }, [dateStr])
 
-  const isFuture = isFutureDate(dateStr)
-  
-  // State for AI chat flow
-  const [viewState, setViewState] = useState<ViewState>(entry ? "view" : "chat")
-  const [compiledContent, setCompiledContent] = useState<string>("")
-
-  const handleChatComplete = (messages: ChatMessage[]) => {
-    // Simulate AI compiling the diary from conversation
-    const userMessages = messages.filter(m => m.role === "user").map(m => m.content)
-    const compiled = userMessages.join("\n\n")
-    setCompiledContent(compiled || "오늘은 특별한 일이 없었지만, 평온한 하루를 보냈다.")
-    setViewState("compiled")
-  }
-
-  const handleSave = (content: string, emotion: EmotionTag) => {
-    console.log("Saving diary:", { content, emotion, date: dateStr })
-    router.push("/diary")
-  }
-
-  const handleBack = () => {
-    router.push("/diary")
-  }
-
-  // Future date - should not be accessible but handle gracefully
-  if (isFuture) {
-    return (
-      <AppShell 
-        title="일기" 
-        showBackButton 
-        rightAction={
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+  const loadEntry = async () => {
+    try {
+      const data = await getDiaryEntries({ page: 0, size: 100 })
+      const found = data.content.find((d) => d.entryDate === dateStr)
+      if (found) {
+        setEntry({
+          id: found.id,
+          userId: found.userId,
+          entryDate: found.entryDate,
+          content: found.content,
+          emotionTag: found.emotionTag,
+          streakCount: found.streakCount,
+          createdAt: found.createdAt,
+          updatedAt: found.createdAt,
+        })
+        setViewState("view")
+      } else {
+        setViewState("chat")
+        // 활성 세션이 있는지 확인
+        try {
+          const activeSession = await getActiveSession(dateStr)
+          setSession(activeSession)
+          setCurrentQuestion(activeSession.currentQuestion || "")
+          setChatHistory(activeSession.conversationHistory || [])
+        } catch {
+          // 세션 없으면 새로 시작
         }
-      >
+      }
+    } catch (err) {
+      console.error("일기 조회 실패:", err)
+      setViewState("chat")
+    }
+  }
+
+  const handleStartAiSession = async () => {
+    try {
+      setAiLoading(true)
+      const newSession = await startDiarySession(dateStr)
+      setSession(newSession)
+      setCurrentQuestion(newSession.currentQuestion || "오늘 하루는 어땠나요?")
+    } catch (err) {
+      console.error("AI 세션 시작 실패:", err)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleAnswerQuestion = async () => {
+    if (!answerInput.trim() || !session) return
+    try {
+      setAiLoading(true)
+      const answer = answerInput.trim()
+      setChatHistory((prev) => [...prev, { question: currentQuestion, answer }])
+      setAnswerInput("")
+
+      const result = await answerDiaryQuestion(session.sessionId, answer)
+
+      if (result.isCompleted) {
+        // 대화 완료 → 일기 생성
+        const preview = await generateDiary(session.sessionId)
+        setCompiledContent(preview.generatedContent)
+        setSuggestedEmotion(preview.suggestedEmotion)
+        setViewState("compiled")
+      } else {
+        setCurrentQuestion(result.nextQuestion || "")
+      }
+    } catch (err) {
+      console.error("답변 제출 실패:", err)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleConfirmDiary = async (content: string, emotion: EmotionTag) => {
+    try {
+      if (session) {
+        await confirmDiary(session.sessionId, content, emotion)
+      } else {
+        await createDiary({ content, emotionTag: emotion, date: dateStr, source: "MANUAL" })
+      }
+      router.push("/diary")
+    } catch (err) {
+      console.error("일기 저장 실패:", err)
+    }
+  }
+
+  const handleManualSave = async () => {
+    if (!manualContent.trim()) return
+    try {
+      await createDiary({ content: manualContent, emotionTag: manualEmotion, date: dateStr, source: "MANUAL" })
+      router.push("/diary")
+    } catch (err) {
+      console.error("일기 저장 실패:", err)
+    }
+  }
+
+  const handleBack = () => router.push("/diary")
+
+  // Future
+  if (viewState === "future") {
+    return (
+      <AppShell title="일기">
         <div className="p-4 flex flex-col items-center justify-center min-h-[60vh]">
           <div className="text-6xl mb-4">🔮</div>
-          <h2 className="text-lg font-semibold text-foreground mb-2">
-            아직 오지 않은 날이에요
-          </h2>
-          <p className="text-sm text-muted-foreground text-center mb-6">
-            미래의 일기는 그 날이 되면 작성할 수 있어요
-          </p>
-          <Button onClick={handleBack}>
-            돌아가기
+          <h2 className="text-lg font-semibold text-foreground mb-2">아직 오지 않은 날이에요</h2>
+          <p className="text-sm text-muted-foreground text-center mb-6">미래의 일기는 그 날이 되면 작성할 수 있어요</p>
+          <Button onClick={handleBack}>돌아가기</Button>
+        </div>
+      </AppShell>
+    )
+  }
+
+  // Loading
+  if (viewState === "loading") {
+    return (
+      <AppShell title="일기">
+        <div className="flex items-center justify-center h-40">
+          <p className="text-sm text-muted-foreground">로딩 중...</p>
+        </div>
+      </AppShell>
+    )
+  }
+
+  // View existing entry
+  if (viewState === "view" && entry) {
+    const emotionMeta = EMOTION_META[entry.emotionTag]
+    return (
+      <AppShell title="일기">
+        <div className="p-4 space-y-4">
+          <button onClick={handleBack} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">캘린더로 돌아가기</span>
+          </button>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{emotionMeta.weatherIcon}</span>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">{formatDisplayDate(entry.entryDate)}</h2>
+                <p className="text-sm text-muted-foreground">{emotionMeta.label}</p>
+              </div>
+            </div>
+          </div>
+
+          <Card className={cn("border-0 shadow-md overflow-hidden", emotionMeta.bgColor)}>
+            <CardContent className="p-0">
+              <div className="p-6 min-h-[200px]" style={{ backgroundImage: "repeating-linear-gradient(transparent, transparent 27px, rgba(0,0,0,0.05) 28px)", backgroundSize: "100% 28px" }}>
+                <p className="text-foreground/90 leading-7 whitespace-pre-wrap">{entry.content}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {entry.streakCount > 0 && (
+            <div className="flex items-center justify-center gap-2 py-3">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span className="text-sm text-muted-foreground">
+                <span className="font-semibold text-amber-600">{entry.streakCount}일</span> 연속 작성
+              </span>
+            </div>
+          )}
+        </div>
+      </AppShell>
+    )
+  }
+
+  // Compiled view
+  if (viewState === "compiled") {
+    return (
+      <AppShell title="일기 완성">
+        <div className="p-4 space-y-4">
+          <button onClick={() => setViewState("chat")} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">다시 대화하기</span>
+          </button>
+
+          <h2 className="text-base font-semibold">AI가 작성한 일기</h2>
+
+          <textarea
+            value={compiledContent}
+            onChange={(e) => setCompiledContent(e.target.value)}
+            className="w-full min-h-[200px] p-4 rounded-xl border border-border/50 bg-background text-sm resize-none outline-none focus:ring-1 focus:ring-primary/30"
+          />
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">감정 태그</p>
+            <div className="flex flex-wrap gap-2">
+              {(["HAPPY", "SAD", "ANGRY", "ANXIOUS", "CALM", "EXCITED", "TIRED"] as EmotionTag[]).map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => setSuggestedEmotion(tag)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs border transition-colors",
+                    suggestedEmotion === tag
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {EMOTION_META[tag].weatherIcon} {EMOTION_META[tag].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Button onClick={() => handleConfirmDiary(compiledContent, suggestedEmotion)} className="w-full h-11">
+            일기 저장
           </Button>
         </div>
       </AppShell>
     )
   }
 
-  // No entry exists - show AI chat or compiled view
-  if (!entry) {
-    // AI Chat view
-    if (viewState === "chat") {
-      return (
-        <AppShell title="일기 쓰기">
-          <div className="h-full flex flex-col">
-            {/* Compact Back Button */}
-            <div className="px-4 pt-3 pb-1">
-              <button
-                onClick={handleBack}
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="text-xs">캘린더</span>
-              </button>
-            </div>
-            
-            {/* AI Chat */}
-            <DiaryAIChat 
-              date={new Date(dateStr)} 
-              onComplete={handleChatComplete}
-              className="flex-1"
-            />
-          </div>
-        </AppShell>
-      )
-    }
-
-    // Compiled diary view
-    if (viewState === "compiled") {
-      return (
-        <AppShell title="일기 완성">
-          <DiaryCompiledView
-            content={compiledContent}
-            suggestedEmotion="CALM"
-            summary="하루를 돌아보며 성장한 나"
-            date={new Date(dateStr)}
-            onSave={handleSave}
-            onEdit={() => setViewState("chat")}
-          />
-        </AppShell>
-      )
-    }
-  }
-
-  // Entry exists - show detail view
-  const emotionMeta = EMOTION_META[entry.emotionTag]
-
+  // Chat view (AI or manual)
   return (
-    <AppShell title="일기">
-      <div className="p-4 space-y-4">
-        {/* Back Button */}
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
+    <AppShell title="일기 쓰기">
+      <div className="p-4 space-y-4 h-full flex flex-col">
+        <button onClick={handleBack} className="flex items-center gap-2 text-muted-foreground hover:text-foreground shrink-0">
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">캘린더로 돌아가기</span>
+          <span className="text-sm">캘린더</span>
         </button>
 
-        {/* Date Header with Emotion */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{emotionMeta.weatherIcon}</span>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                {formatDisplayDate(entry.entryDate)}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {emotionMeta.label}
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Edit3 className="w-4 h-4" />
+        <p className="text-base font-semibold shrink-0">{formatDisplayDate(dateStr)}</p>
+
+        {/* Mode toggle */}
+        <div className="flex gap-2 shrink-0">
+          <Button
+            size="sm"
+            variant={session ? "default" : "outline"}
+            onClick={handleStartAiSession}
+            disabled={aiLoading || !!session}
+            className="text-xs h-8 rounded-full"
+          >
+            ✨ AI와 대화로 쓰기
+          </Button>
+          <Button
+            size="sm"
+            variant={!session ? "default" : "outline"}
+            onClick={() => setSession(null)}
+            className="text-xs h-8 rounded-full"
+          >
+            ✏️ 직접 쓰기
           </Button>
         </div>
 
-        {/* Diary Content Card */}
-        <Card className={cn(
-          "border-0 shadow-md overflow-hidden",
-          emotionMeta.bgColor
-        )}>
-          <CardContent className="p-0">
-            {/* Paper texture lines */}
-            <div 
-              className="p-6 min-h-[300px]"
-              style={{
-                backgroundImage: "repeating-linear-gradient(transparent, transparent 27px, rgba(0,0,0,0.05) 28px)",
-                backgroundSize: "100% 28px",
-              }}
-            >
-              <p className="text-foreground/90 leading-7 whitespace-pre-wrap">
-                {entry.content}
-              </p>
+        {/* AI Chat */}
+        {session ? (
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Chat history */}
+            <div className="flex-1 overflow-y-auto space-y-3 mb-3">
+              {chatHistory.map((item, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="bg-secondary/50 rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground">Q.</p>
+                    <p className="text-sm">{item.question}</p>
+                  </div>
+                  <div className="bg-primary/5 rounded-xl p-3 ml-4">
+                    <p className="text-xs text-muted-foreground">A.</p>
+                    <p className="text-sm">{item.answer}</p>
+                  </div>
+                </div>
+              ))}
+              {currentQuestion && (
+                <div className="bg-secondary/50 rounded-xl p-3">
+                  <p className="text-xs text-muted-foreground">Q.</p>
+                  <p className="text-sm">{currentQuestion}</p>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Streak Info */}
-        {entry.streakCount > 0 && (
-          <div className="flex items-center justify-center gap-2 py-3">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span className="text-sm text-muted-foreground">
-              이 날까지 <span className="font-semibold text-amber-600">{entry.streakCount}일</span> 연속 작성 중이었어요
-            </span>
+            {/* Input */}
+            <div className="shrink-0 flex gap-2">
+              <input
+                value={answerInput}
+                onChange={(e) => setAnswerInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAnswerQuestion() } }}
+                placeholder="답변을 입력하세요..."
+                className="flex-1 px-3 py-2 rounded-xl border border-border/50 text-sm outline-none focus:border-primary/50"
+                disabled={aiLoading}
+              />
+              <Button size="sm" onClick={handleAnswerQuestion} disabled={!answerInput.trim() || aiLoading} className="h-9 px-4 rounded-xl">
+                {aiLoading ? "..." : "전송"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* Manual write */
+          <div className="flex-1 flex flex-col min-h-0">
+            <textarea
+              value={manualContent}
+              onChange={(e) => setManualContent(e.target.value)}
+              placeholder="오늘 하루를 자유롭게 적어보세요..."
+              className="flex-1 w-full p-4 rounded-xl border border-border/50 bg-background text-sm resize-none outline-none focus:ring-1 focus:ring-primary/30"
+            />
+            <div className="mt-3 shrink-0">
+              <p className="text-xs text-muted-foreground mb-2">감정</p>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {(["HAPPY", "SAD", "ANGRY", "ANXIOUS", "CALM", "EXCITED", "TIRED"] as EmotionTag[]).map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => setManualEmotion(tag)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-[11px] border transition-colors",
+                      manualEmotion === tag
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground"
+                    )}
+                  >
+                    {EMOTION_META[tag].weatherIcon} {EMOTION_META[tag].label}
+                  </button>
+                ))}
+              </div>
+              <Button onClick={handleManualSave} disabled={!manualContent.trim()} className="w-full h-10">
+                저장
+              </Button>
+            </div>
           </div>
         )}
-
-        {/* Created Time */}
-        <p className="text-xs text-muted-foreground text-center">
-          작성: {new Date(entry.createdAt).toLocaleString("ko-KR", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
       </div>
     </AppShell>
   )
