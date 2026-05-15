@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { 
+import {
   Clock, Heart, Sparkles, Star, Check, Lock, Zap,
   MessageCircle, Gamepad2, MapPin, BookOpen, ChevronRight
 } from "lucide-react"
@@ -19,7 +19,7 @@ interface SlotCardProps {
   className?: string
 }
 
-const statusConfig: Record<SlotStatus, { 
+const statusConfig: Record<SlotStatus, {
   bgColor: string
   borderColor: string
   icon: React.ReactNode
@@ -28,50 +28,50 @@ const statusConfig: Record<SlotStatus, {
   EMPTY: {
     bgColor: "bg-muted/50",
     borderColor: "border-dashed border-muted-foreground/30",
-    icon: <Clock className="w-4 h-4 text-muted-foreground" />,
+    icon: <Clock className="w-3 h-3 text-muted-foreground" />,
     label: "대기 중",
   },
   ACTIVE: {
     bgColor: "bg-gradient-to-br from-primary/5 to-primary/10",
     borderColor: "border-solid border-primary/30",
-    icon: <Sparkles className="w-4 h-4 text-primary" />,
+    icon: <Sparkles className="w-3 h-3 text-primary" />,
     label: "진행 중",
   },
   COMPLETED: {
     bgColor: "bg-secondary/20",
     borderColor: "border-solid border-secondary/50",
-    icon: <Check className="w-4 h-4 text-foreground" />,
+    icon: <Check className="w-3 h-3 text-foreground" />,
     label: "완료",
   },
 }
 
 const priorityConfig: Record<SlotPriority, { icon: React.ReactNode; color: string }> = {
-  HOBBY: { icon: <Star className="w-3.5 h-3.5" />, color: "text-accent" },
-  INTEREST: { icon: <Sparkles className="w-3.5 h-3.5" />, color: "text-primary" },
-  IDEAL_TYPE: { icon: <Heart className="w-3.5 h-3.5" />, color: "text-destructive" },
+  HOBBY: { icon: <Star className="w-3 h-3" />, color: "text-accent" },
+  INTEREST: { icon: <Sparkles className="w-3 h-3" />, color: "text-primary" },
+  IDEAL_TYPE: { icon: <Heart className="w-3 h-3" />, color: "text-destructive" },
 }
 
 const stageIcons: Record<InteractionStage, React.ReactNode> = {
-  QUIZ: <BookOpen className="w-4 h-4" />,
-  CHAT: <MessageCircle className="w-4 h-4" />,
-  GAME: <Gamepad2 className="w-4 h-4" />,
-  MISSION: <MapPin className="w-4 h-4" />,
-  REVIEW: <BookOpen className="w-4 h-4" />,
+  QUIZ: <BookOpen className="w-3 h-3" />,
+  CHAT: <MessageCircle className="w-3 h-3" />,
+  GAME: <Gamepad2 className="w-3 h-3" />,
+  MISSION: <MapPin className="w-3 h-3" />,
+  REVIEW: <BookOpen className="w-3 h-3" />,
 }
 
 function getCountdownToMonday(): { days: number; hours: number } {
   const now = new Date()
   const dayOfWeek = now.getDay()
   const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek)
-  
+
   const nextMonday = new Date(now)
   nextMonday.setDate(now.getDate() + daysUntilMonday)
   nextMonday.setHours(0, 0, 0, 0)
-  
+
   const diff = nextMonday.getTime() - now.getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  
+
   return { days, hours }
 }
 
@@ -86,7 +86,7 @@ export function SlotCard({ slot, onPriorityChange, onSlotClick, className }: Slo
       setCountdown(getCountdownToMonday())
       const interval = setInterval(() => {
         setCountdown(getCountdownToMonday())
-      }, 1000 * 60) // Update every minute
+      }, 1000 * 60)
       return () => clearInterval(interval)
     }
   }, [slot.status])
@@ -96,32 +96,32 @@ export function SlotCard({ slot, onPriorityChange, onSlotClick, className }: Slo
     setShowPrioritySelector(false)
   }
 
-  const currentStageIndex = slot.currentStage 
+  const currentStageIndex = slot.currentStage
     ? STAGE_ORDER.indexOf(slot.currentStage)
     : 0
 
   return (
     <>
-      <Card 
+      <Card
         className={cn(
           "relative overflow-hidden transition-all duration-200",
           config.bgColor,
           config.borderColor,
-          "border-2",
-          slot.status === "ACTIVE" && "shadow-md",
+          "border",
+          slot.status === "ACTIVE" && "shadow-sm",
           className
         )}
         onClick={() => onSlotClick?.(slot)}
       >
-        <CardContent className="p-4">
-          {/* Header: Slot Number, Status Badge & Quick Match */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
+        <CardContent className="px-3 py-2">
+          {/* Header row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-muted-foreground">
                 슬롯 {slot.slotNumber}
               </span>
               <div className={cn(
-                "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                "flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium",
                 slot.status === "EMPTY" && "bg-muted text-muted-foreground",
                 slot.status === "ACTIVE" && "bg-primary/15 text-primary",
                 slot.status === "COMPLETED" && "bg-secondary text-foreground"
@@ -129,151 +129,112 @@ export function SlotCard({ slot, onPriorityChange, onSlotClick, className }: Slo
                 {config.icon}
                 <span>{config.label}</span>
               </div>
-            </div>
-            {slot.isQuickMatch && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-xs font-medium">
-                <Zap className="w-3 h-3" />
-                <span>빠른매칭</span>
-              </div>
-            )}
-          </div>
-
-          {/* EMPTY State Content */}
-          {slot.status === "EMPTY" && (
-            <div className="py-4">
-              <div className="w-14 h-14 rounded-full bg-muted/80 flex items-center justify-center mx-auto mb-3 border-2 border-dashed border-muted-foreground/20">
-                <Clock className="w-7 h-7 text-muted-foreground/60" />
-              </div>
-              <p className="text-center text-sm text-muted-foreground mb-1">
-                새로운 인연을 기다리고 있어요
-              </p>
-              <p className="text-center text-xs text-muted-foreground/80 mb-3">
-                다음 월요일에 매칭이 시작됩니다
-              </p>
-              {/* Countdown */}
-              <div className="flex items-center justify-center gap-3 text-center">
-                <div className="px-3 py-1.5 rounded-lg bg-muted">
-                  <span className="text-lg font-bold text-foreground">{countdown.days}</span>
-                  <span className="text-xs text-muted-foreground ml-1">일</span>
-                </div>
-                <div className="px-3 py-1.5 rounded-lg bg-muted">
-                  <span className="text-lg font-bold text-foreground">{countdown.hours}</span>
-                  <span className="text-xs text-muted-foreground ml-1">시간</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ACTIVE State Content */}
-          {slot.status === "ACTIVE" && slot.matchedUser && (
-            <div className="py-2">
-              {/* Matched User */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary/30">
-                  <span className="text-xl">
-                    {slot.matchedUser.profileEmoji || slot.matchedUser.nickname.charAt(0)}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-foreground">
-                    {slot.matchedUser.nickname}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {slot.daysRemaining !== undefined && `${slot.daysRemaining}일 남음`}
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
-
-              {/* Current Stage */}
-              {slot.currentStage && (
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5 text-primary">
-                      {stageIcons[slot.currentStage]}
-                      <span className="text-sm font-medium">
-                        {STAGE_LABELS[slot.currentStage]} 단계
-                      </span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {currentStageIndex + 1} / {STAGE_ORDER.length}
-                    </span>
-                  </div>
-                  
-                  {/* Stage Progress Bar */}
-                  <div className="flex gap-1">
-                    {STAGE_ORDER.map((stage, index) => (
-                      <div 
-                        key={stage}
-                        className={cn(
-                          "h-1.5 flex-1 rounded-full transition-colors",
-                          index < currentStageIndex && "bg-primary",
-                          index === currentStageIndex && "bg-primary/60",
-                          index > currentStageIndex && "bg-muted"
-                        )}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Button 
-                variant="default" 
-                size="sm" 
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                {slot.currentStage === "QUIZ" && "퀴즈 풀기"}
-                {slot.currentStage === "CHAT" && "대화하기"}
-                {slot.currentStage === "GAME" && "게임하기"}
-                {slot.currentStage === "MISSION" && "미션 확인"}
-                {slot.currentStage === "REVIEW" && "회고 작성"}
-                {!slot.currentStage && "시작하기"}
-              </Button>
-            </div>
-          )}
-
-          {/* COMPLETED State Content */}
-          {slot.status === "COMPLETED" && (
-            <div className="py-4">
-              <div className="w-14 h-14 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
-                <Check className="w-7 h-7 text-foreground" />
-              </div>
-              <p className="text-center text-sm font-medium text-foreground mb-1">
-                이번 매칭 완료
-              </p>
-              <p className="text-center text-xs text-muted-foreground">
-                다음 주에 새로운 인연을 만나보세요
-              </p>
-              {slot.matchedUser && (
-                <div className="mt-3 p-2 rounded-lg bg-muted/50 text-center">
-                  <span className="text-xs text-muted-foreground">
-                    {slot.matchedUser.nickname}님과의 만남이 끝났어요
-                  </span>
+              {slot.isQuickMatch && (
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[10px] font-medium">
+                  <Zap className="w-2.5 h-2.5" />
+                  <span>빠른</span>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Priority Selector */}
-          <div className="mt-3 pt-3 border-t border-border/30">
+            {/* Priority inline */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 setShowPrioritySelector(true)
               }}
-              className="flex items-center justify-between w-full text-sm hover:bg-muted/50 rounded-lg p-1.5 -m-1.5 transition-colors"
+              className={cn("flex items-center gap-0.5 text-[11px] font-medium", priorityStyle.color)}
             >
-              <span className="text-muted-foreground">매칭 우선순위</span>
-              <div className={cn("flex items-center gap-1.5 font-medium", priorityStyle.color)}>
-                {priorityStyle.icon}
-                <span>{PRIORITY_LABELS[slot.priority]}</span>
-              </div>
+              {priorityStyle.icon}
+              <span>{PRIORITY_LABELS[slot.priority]}</span>
             </button>
           </div>
+
+          {/* EMPTY State - compact */}
+          {slot.status === "EMPTY" && (
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-[11px] text-muted-foreground">
+                다음 월요일 매칭 시작
+              </p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-foreground">{countdown.days}일</span>
+                <span className="text-xs font-bold text-foreground">{countdown.hours}시간</span>
+                <span className="text-[10px] text-muted-foreground">남음</span>
+              </div>
+            </div>
+          )}
+
+          {/* ACTIVE State - compact horizontal layout */}
+          {slot.status === "ACTIVE" && slot.matchedUser && (
+            <div className="mt-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center ring-1 ring-primary/30 shrink-0">
+                  <span className="text-sm">
+                    {slot.matchedUser.profileEmoji || slot.matchedUser.nickname.charAt(0)}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-xs text-foreground truncate">
+                      {slot.matchedUser.nickname}
+                    </p>
+                    {slot.daysRemaining !== undefined && (
+                      <span className="text-[10px] text-muted-foreground shrink-0 ml-1">
+                        {slot.daysRemaining}일 남음
+                      </span>
+                    )}
+                  </div>
+                  {/* Stage progress inline */}
+                  {slot.currentStage && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="flex items-center gap-0.5 text-primary">
+                        {stageIcons[slot.currentStage]}
+                        <span className="text-[10px] font-medium">
+                          {STAGE_LABELS[slot.currentStage]}
+                        </span>
+                      </div>
+                      <div className="flex gap-0.5 flex-1">
+                        {STAGE_ORDER.map((stage, index) => (
+                          <div
+                            key={stage}
+                            className={cn(
+                              "h-1 flex-1 rounded-full",
+                              index < currentStageIndex && "bg-primary",
+                              index === currentStageIndex && "bg-primary/60",
+                              index > currentStageIndex && "bg-muted"
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        {currentStageIndex + 1}/{STAGE_ORDER.length}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </div>
+            </div>
+          )}
+
+          {/* COMPLETED State - compact */}
+          {slot.status === "COMPLETED" && (
+            <div className="flex items-center gap-2 mt-2">
+              <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center shrink-0">
+                <Check className="w-4 h-4 text-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground">이번 매칭 완료</p>
+                {slot.matchedUser && (
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {slot.matchedUser.nickname}님과의 만남이 끝났어요
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Priority Selector Bottom Sheet */}
       <SlotPrioritySelector
         isOpen={showPrioritySelector}
         currentPriority={slot.priority}
@@ -284,7 +245,7 @@ export function SlotCard({ slot, onPriorityChange, onSlotClick, className }: Slo
   )
 }
 
-// Locked Slot Card for slots that need to be unlocked
+// Locked Slot Card
 interface LockedSlotCardProps {
   lockedSlot: LockedSlot
   onUnlock?: () => void
@@ -296,55 +257,42 @@ export function LockedSlotCard({ lockedSlot, onUnlock, className }: LockedSlotCa
 
   return (
     <Card className={cn(
-      "relative overflow-hidden border-2 border-dashed border-muted-foreground/20 bg-muted/20",
+      "relative overflow-hidden border border-dashed border-muted-foreground/20 bg-muted/20",
       className
     )}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium text-muted-foreground">
-            슬롯 {lockedSlot.slotNumber}
-          </span>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-            <Lock className="w-3 h-3" />
-            <span>잠김</span>
+      <CardContent className="px-3 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              슬롯 {lockedSlot.slotNumber}
+            </span>
+            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-medium">
+              <Lock className="w-2.5 h-2.5" />
+              <span>잠김</span>
+            </div>
           </div>
+          <span className="text-[11px] text-muted-foreground">
+            Lv.{lockedSlot.currentLevel}/{lockedSlot.requiredLevel}
+          </span>
         </div>
 
-        <div className="py-4">
-          <div className="w-14 h-14 rounded-full bg-muted/60 flex items-center justify-center mx-auto mb-3">
-            <Lock className="w-7 h-7 text-muted-foreground/60" />
-          </div>
-          <p className="text-center text-sm font-medium text-foreground mb-1">
-            새로운 슬롯
-          </p>
-          <p className="text-center text-xs text-muted-foreground mb-4">
-            레벨 {lockedSlot.requiredLevel} 달성 시 해금
-          </p>
-
-          {/* Level Progress */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-muted-foreground">현재 레벨</span>
-              <span className="text-foreground font-medium">
-                Lv.{lockedSlot.currentLevel} / Lv.{lockedSlot.requiredLevel}
-              </span>
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div 
+        <div className="flex items-center gap-2 mt-2">
+          <div className="flex-1">
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
                 className="h-full bg-primary/60 rounded-full transition-all"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
-
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={onUnlock}
             disabled={lockedSlot.currentLevel < lockedSlot.requiredLevel}
-            className="w-full border-primary/50 text-primary hover:bg-primary/10 disabled:opacity-50"
+            className="h-6 px-2 text-[10px] border-primary/50 text-primary hover:bg-primary/10 disabled:opacity-50"
           >
-            {lockedSlot.currentLevel >= lockedSlot.requiredLevel ? "해금하기" : "레벨업 필요"}
+            {lockedSlot.currentLevel >= lockedSlot.requiredLevel ? "해금" : "레벨업 필요"}
           </Button>
         </div>
       </CardContent>

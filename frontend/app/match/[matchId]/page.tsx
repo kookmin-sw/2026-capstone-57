@@ -60,9 +60,7 @@ const sampleMessages: ChatMessage[] = [
 ]
 
 const sampleGames: GameOption[] = [
-  { id: "g1", name: "이심전심 그림 맞추기", description: "같은 주제로 그림을 그리고 비교해요", icon: "🎨" },
-  { id: "g2", name: "별자리 퍼즐", description: "협동해서 별자리를 완성해요", icon: "🧩" },
-  { id: "g3", name: "이야기 이어쓰기", description: "번갈아 가며 짧은 이야기를 만들어요", icon: "📖" },
+  { id: "g1", name: "달빛찾기", description: "함께 달빛을 찾아서 탈출하세요", icon: "🌙" },
 ]
 
 const sampleMission: MissionInfo = {
@@ -113,12 +111,10 @@ export default function MatchDetailPage() {
 
   const handleGameSelect = (gameId: string) => {
     console.log("Selected game:", gameId)
-    // TODO: Start game
   }
 
   const handleMissionExtend = () => {
     console.log("Mission extended")
-    // TODO: Extend mission deadline
   }
 
   const handleMissionComplete = () => {
@@ -147,20 +143,20 @@ export default function MatchDetailPage() {
         return <QuizStage questions={sampleQuizzes} onComplete={handleQuizComplete} />
       case "CHAT":
         return (
-          <ChatStage 
-            messages={messages} 
-            remainingTime="23:45" 
-            onSendMessage={handleSendMessage} 
+          <ChatStage
+            messages={messages}
+            remainingTime="23:45"
+            onSendMessage={handleSendMessage}
           />
         )
       case "GAME":
         return <GameStage games={sampleGames} onSelectGame={handleGameSelect} />
       case "MISSION":
         return (
-          <MissionStage 
-            mission={sampleMission} 
-            onExtend={handleMissionExtend} 
-            onComplete={handleMissionComplete} 
+          <MissionStage
+            mission={sampleMission}
+            onExtend={handleMissionExtend}
+            onComplete={handleMissionComplete}
           />
         )
       case "REVIEW":
@@ -171,36 +167,40 @@ export default function MatchDetailPage() {
   }
 
   return (
-    <AppShell>
-      <div className="px-5 py-4 pb-24 space-y-6">
+    <AppShell noScroll>
+      <div className="px-4 py-2 h-full flex flex-col overflow-hidden">
         {/* Back navigation */}
         <button
           onClick={handleBack}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mb-2"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" />
           <span>홈으로</span>
         </button>
 
-        {/* Hero card */}
-        <MatchHeroCard partner={match.partner} intimacy={match.intimacy} />
+        {/* Hero card - compact */}
+        <div className="shrink-0">
+          <MatchHeroCard partner={match.partner} intimacy={match.intimacy} />
+        </div>
 
-        {/* Stage stepper */}
-        <StageStepper
-          currentStage={match.currentStage}
-          completedStages={match.completedStages}
-          activeStage={activeStage}
-          onStageSelect={handleStageSelect}
-        />
+        {/* Stage stepper - compact */}
+        <div className="shrink-0 mt-2">
+          <StageStepper
+            currentStage={match.currentStage}
+            completedStages={match.completedStages}
+            activeStage={activeStage}
+            onStageSelect={handleStageSelect}
+          />
+        </div>
 
-        {/* Stage content */}
-        <div className="mt-6">
+        {/* Stage content - fills remaining space */}
+        <div className="flex-1 mt-2 min-h-0">
           {renderStageContent()}
         </div>
 
         {/* Report button */}
-        <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-border/50 bg-card/40 text-muted-foreground text-xs hover:bg-card/60 transition-colors">
-          <Flag className="w-3.5 h-3.5" />
+        <button className="shrink-0 w-full flex items-center justify-center gap-1 py-1.5 text-muted-foreground text-[10px] hover:text-foreground transition-colors mt-1">
+          <Flag className="w-2.5 h-2.5" />
           <span>신고하기</span>
         </button>
       </div>

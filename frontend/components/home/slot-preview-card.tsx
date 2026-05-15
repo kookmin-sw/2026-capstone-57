@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { 
+import {
   Clock, Sparkles, Check, Zap,
   MessageCircle, Gamepad2, MapPin, BookOpen
 } from "lucide-react"
@@ -15,40 +15,40 @@ interface SlotPreviewCardProps {
   className?: string
 }
 
-const statusConfig: Record<SlotStatus, { 
+const statusConfig: Record<SlotStatus, {
   icon: React.ReactNode
   color: string
   bgColor: string
 }> = {
   EMPTY: {
-    icon: <Clock className="w-3.5 h-3.5" />,
+    icon: <Clock className="w-3 h-3" />,
     color: "text-muted-foreground",
     bgColor: "bg-muted",
   },
   ACTIVE: {
-    icon: <Sparkles className="w-3.5 h-3.5" />,
+    icon: <Sparkles className="w-3 h-3" />,
     color: "text-primary",
     bgColor: "bg-primary/10",
   },
   COMPLETED: {
-    icon: <Check className="w-3.5 h-3.5" />,
+    icon: <Check className="w-3 h-3" />,
     color: "text-foreground",
     bgColor: "bg-secondary",
   },
 }
 
 const stageIcons: Record<InteractionStage, React.ReactNode> = {
-  QUIZ: <BookOpen className="w-3.5 h-3.5" />,
-  CHAT: <MessageCircle className="w-3.5 h-3.5" />,
-  GAME: <Gamepad2 className="w-3.5 h-3.5" />,
-  MISSION: <MapPin className="w-3.5 h-3.5" />,
-  REVIEW: <BookOpen className="w-3.5 h-3.5" />,
+  QUIZ: <BookOpen className="w-3 h-3" />,
+  CHAT: <MessageCircle className="w-3 h-3" />,
+  GAME: <Gamepad2 className="w-3 h-3" />,
+  MISSION: <MapPin className="w-3 h-3" />,
+  REVIEW: <BookOpen className="w-3 h-3" />,
 }
 
 export function SlotPreviewCard({ slot, className }: SlotPreviewCardProps) {
   const router = useRouter()
   const config = statusConfig[slot.status]
-  const currentStageIndex = slot.currentStage 
+  const currentStageIndex = slot.currentStage
     ? STAGE_ORDER.indexOf(slot.currentStage)
     : 0
 
@@ -59,10 +59,10 @@ export function SlotPreviewCard({ slot, className }: SlotPreviewCardProps) {
   }
 
   return (
-    <Card 
+    <Card
       className={cn(
         "border",
-        "hover:shadow-md transition-all duration-200",
+        "hover:shadow-sm transition-all duration-200",
         slot.status === "ACTIVE" && "cursor-pointer border-primary/30 bg-primary/5",
         slot.status === "EMPTY" && "border-dashed border-muted-foreground/30",
         slot.status === "COMPLETED" && "border-secondary/50 bg-secondary/10",
@@ -70,80 +70,79 @@ export function SlotPreviewCard({ slot, className }: SlotPreviewCardProps) {
       )}
       onClick={handleClick}
     >
-      <CardContent className="p-3">
-        <div className="flex items-center gap-3">
-          {/* Avatar */}
+      <CardContent className="px-3 py-2">
+        <div className="flex items-center gap-2.5">
+          {/* Avatar - smaller */}
           {slot.status === "ACTIVE" && slot.matchedUser ? (
-            <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary/20 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center ring-1 ring-primary/20 shrink-0">
               <span className="text-sm">
                 {slot.matchedUser.profileEmoji || slot.matchedUser.nickname.charAt(0)}
               </span>
             </div>
           ) : slot.status === "EMPTY" ? (
-            <div className="w-9 h-9 rounded-full bg-muted/80 flex items-center justify-center border-2 border-dashed border-muted-foreground/20 shrink-0">
-              <Clock className="w-4 h-4 text-muted-foreground/50" />
+            <div className="w-8 h-8 rounded-full bg-muted/80 flex items-center justify-center border border-dashed border-muted-foreground/20 shrink-0">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground/50" />
             </div>
           ) : (
-            <div className="w-9 h-9 rounded-full bg-secondary/50 flex items-center justify-center shrink-0">
-              <Check className="w-4 h-4 text-foreground/70" />
+            <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center shrink-0">
+              <Check className="w-3.5 h-3.5 text-foreground/70" />
             </div>
           )}
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 mb-0.5">
+            <div className="flex items-center gap-1.5">
               {slot.status === "ACTIVE" && slot.matchedUser ? (
-                <p className="font-medium text-sm text-foreground truncate">
+                <p className="font-medium text-xs text-foreground truncate">
                   {slot.matchedUser.nickname}
                 </p>
               ) : slot.status === "EMPTY" ? (
-                <p className="text-sm text-muted-foreground">월요일에 새로운 만남</p>
+                <p className="text-xs text-muted-foreground">월요일에 새로운 만남</p>
               ) : (
-                <p className="text-sm text-muted-foreground">매칭 완료</p>
+                <p className="text-xs text-muted-foreground">매칭 완료</p>
               )}
               {slot.isQuickMatch && (
-                <Zap className="w-3 h-3 text-accent shrink-0" />
+                <Zap className="w-2.5 h-2.5 text-accent shrink-0" />
               )}
             </div>
             {slot.status === "ACTIVE" && slot.currentStage && (
-              <div className="flex items-center gap-0.5 text-xs text-primary">
-                {stageIcons[slot.currentStage]}
-                <span>{STAGE_LABELS[slot.currentStage]}</span>
+              <div className="flex items-center gap-1 mt-0.5">
+                <div className="flex items-center gap-0.5 text-[11px] text-primary">
+                  {stageIcons[slot.currentStage]}
+                  <span>{STAGE_LABELS[slot.currentStage]}</span>
+                </div>
+                {/* Inline mini progress */}
+                <div className="flex gap-0.5 flex-1 ml-1">
+                  {STAGE_ORDER.map((stage, index) => (
+                    <div
+                      key={stage}
+                      className={cn(
+                        "h-0.5 flex-1 rounded-full",
+                        index < currentStageIndex && "bg-primary",
+                        index === currentStageIndex && "bg-primary/50",
+                        index > currentStageIndex && "bg-muted"
+                      )}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Status Badge with Priority */}
-          <div className="flex flex-col items-center gap-0.5 shrink-0">
+          {/* Status Badge */}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[10px] text-muted-foreground">
+              {PRIORITY_LABELS[slot.priority]}
+            </span>
             <div className={cn(
-              "inline-flex items-center justify-center w-8 h-8 rounded-full",
+              "w-6 h-6 rounded-full flex items-center justify-center",
               config.bgColor,
               config.color
             )}>
               {config.icon}
             </div>
-            <span className="text-[10px] text-muted-foreground">
-              {PRIORITY_LABELS[slot.priority]}
-            </span>
           </div>
         </div>
-
-        {/* Mini Progress Bar for ACTIVE */}
-        {slot.status === "ACTIVE" && slot.currentStage && (
-          <div className="flex gap-0.5 mt-2">
-            {STAGE_ORDER.map((stage, index) => (
-              <div 
-                key={stage}
-                className={cn(
-                  "h-1 flex-1 rounded-full",
-                  index < currentStageIndex && "bg-primary",
-                  index === currentStageIndex && "bg-primary/50",
-                  index > currentStageIndex && "bg-muted"
-                )}
-              />
-            ))}
-          </div>
-        )}
       </CardContent>
     </Card>
   )

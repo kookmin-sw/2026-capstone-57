@@ -12,52 +12,50 @@ interface MissionStageProps {
 
 export function MissionStage({ mission, onExtend, onComplete }: MissionStageProps) {
   return (
-    <div className="gradient-aurora rounded-3xl p-5 shadow-glow">
+    <div className="h-full bg-gradient-to-br from-sky-50 via-indigo-50 to-violet-50 rounded-2xl p-4 shadow-sm border border-indigo-100/50 flex flex-col">
       {/* Header */}
-      <h3 className="text-base font-semibold text-foreground mb-2">4단계 · 오프라인 미션</h3>
-      
-      {/* Title */}
-      <h4 className="text-lg font-semibold text-foreground mb-1">
-        {mission.location}에서 만나요
-      </h4>
-      <p className="text-sm text-muted-foreground mb-4">
-        두 분의 동선이 자연스럽게 겹치는 시간을 찾았어요.
-      </p>
+      <div className="shrink-0">
+        <h3 className="text-sm font-semibold text-foreground">4단계 · 오프라인 미션</h3>
+        <h4 className="text-base font-semibold text-foreground mt-1">
+          {mission.location}에서 만나요
+        </h4>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          두 분의 동선이 자연스럽게 겹치는 시간을 찾았어요.
+        </p>
+      </div>
 
       {/* Info panel */}
-      <div className="bg-background/40 rounded-2xl p-4 space-y-3 mb-4">
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-primary" />
-          <span className="text-sm text-foreground">
-            장소: {mission.locationDetail}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-primary" />
-          <span className="text-sm text-foreground">
-            추천 시간: {mission.recommendedTime}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Timer className="w-4 h-4 text-accent" />
-          <span className="text-sm text-foreground">
-            미션 기한: D-{mission.daysLeft}
-          </span>
+      <div className="flex-1 flex items-center my-1">
+        <div className="w-full bg-white/80 rounded-xl p-4 space-y-3 border border-indigo-100/50">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-sm text-foreground">{mission.locationDetail}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-sm text-foreground">추천: {mission.recommendedTime}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Timer className="w-4 h-4 text-accent shrink-0" />
+            <span className="text-sm text-foreground">기한: D-{mission.daysLeft}</span>
+          </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button 
-          variant="outline" 
+      <div className="grid grid-cols-2 gap-2 shrink-0">
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onExtend}
-          className="rounded-full"
+          className="rounded-full text-xs h-9"
         >
           기한 연장
         </Button>
-        <Button 
+        <Button
+          size="sm"
           onClick={onComplete}
-          className="rounded-full gradient-gem text-white border-0 shadow-gem"
+          className="rounded-full gradient-gem text-white border-0 shadow-gem text-xs h-9"
         >
           미션 완료
         </Button>

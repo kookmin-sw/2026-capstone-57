@@ -19,7 +19,7 @@ export function SlotList({
   onUnlockSlot 
 }: SlotListProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {slots.map((slot) => (
         <SlotCard
           key={slot.id}

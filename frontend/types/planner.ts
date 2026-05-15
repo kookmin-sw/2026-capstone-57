@@ -13,6 +13,7 @@ export interface TimetableEntry {
   endTime: string // "HH:mm"
   location: string
   courseName: string
+  type: EntryType
   color?: string
 }
 

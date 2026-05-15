@@ -45,46 +45,43 @@ export function ChatStage({ messages, remainingTime, onSendMessage }: ChatStageP
   }
 
   return (
-    <div className="bg-card rounded-3xl shadow-sm border border-border/30 flex flex-col h-[400px]">
+    <div className="h-full bg-card rounded-2xl shadow-sm border border-border/30 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-border/30">
-        <h3 className="text-base font-semibold text-foreground">2단계 · 채팅</h3>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className="w-3.5 h-3.5" />
-          <span>남은 시간 {remainingTime}</span>
+      <div className="flex justify-between items-center px-3 py-2 border-b border-border/30 shrink-0">
+        <h3 className="text-sm font-semibold text-foreground">2단계 · 채팅</h3>
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Clock className="w-3 h-3" />
+          <span>{remainingTime}</span>
         </div>
       </div>
 
       {/* Icebreaker */}
-      <div 
+      <div
         onClick={rotateIcebreaker}
-        className="mx-4 mt-3 p-3 rounded-2xl bg-secondary/40 cursor-pointer hover:bg-secondary/50 transition-colors"
+        className="mx-3 mt-2 px-3 py-2 rounded-xl bg-secondary/40 cursor-pointer hover:bg-secondary/50 transition-colors shrink-0"
       >
-        <div className="flex items-start gap-2">
-          <Lightbulb className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-          <p className="text-xs text-foreground/80">{icebreakers[currentIcebreaker]}</p>
+        <div className="flex items-center gap-2">
+          <Lightbulb className="w-3.5 h-3.5 text-accent shrink-0" />
+          <p className="text-[11px] text-foreground/80 truncate">{icebreakers[currentIcebreaker]}</p>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 scrollbar-hide min-h-0">
         {messages.map((msg) => (
-          <div 
+          <div
             key={msg.id}
-            className={cn(
-              "flex",
-              msg.isMe ? "justify-end" : "justify-start"
-            )}
+            className={cn("flex", msg.isMe ? "justify-end" : "justify-start")}
           >
             <div className={cn(
-              "max-w-[75%] px-3.5 py-2.5 rounded-2xl",
-              msg.isMe 
-                ? "gradient-gem text-white" 
+              "max-w-[75%] px-3 py-2 rounded-2xl",
+              msg.isMe
+                ? "gradient-gem text-white"
                 : "bg-secondary/70 text-foreground"
             )}>
-              <p className="text-sm">{msg.content}</p>
+              <p className="text-xs">{msg.content}</p>
               <p className={cn(
-                "text-[10px] mt-1",
+                "text-[9px] mt-0.5",
                 msg.isMe ? "text-white/60" : "text-muted-foreground/60"
               )}>
                 {msg.timestamp}
@@ -96,23 +93,23 @@ export function ChatStage({ messages, remainingTime, onSendMessage }: ChatStageP
       </div>
 
       {/* Input */}
-      <div className="p-3 border-t border-border/30">
-        <div className="flex items-center gap-2 p-2 rounded-2xl border border-border/50 bg-background">
+      <div className="px-3 py-2 border-t border-border/30 shrink-0">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/50 bg-background">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="메시지를 입력하세요"
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
           />
           <Button
             size="icon"
             onClick={handleSend}
             disabled={!input.trim()}
-            className="w-9 h-9 rounded-xl gradient-gem text-white border-0 shadow-gem shrink-0"
+            className="w-7 h-7 rounded-lg gradient-gem text-white border-0 shrink-0"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>

@@ -52,7 +52,7 @@ const sampleSlots: Slot[] = [
 
 export default function HomePage() {
   return (
-    <AppShell>
+    <AppShell noScroll>
       <div className="px-4 py-3 space-y-4">
         {/* Hint Question Notification Banner */}
         <HintNotificationBanner />
@@ -68,7 +68,7 @@ export default function HomePage() {
             action={{ label: "더보기" }}
             className="mb-2"
           />
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2">
             {sampleSlots.map((slot) => (
               <SlotPreviewCard key={slot.id} slot={slot} />
             ))}
