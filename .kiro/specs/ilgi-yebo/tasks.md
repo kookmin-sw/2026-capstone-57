@@ -314,12 +314,12 @@
   - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
 
 - [ ] 10. 경험치 및 성장 시스템 구현
-  - [ ] 10.1 ExperienceService 구현
-    - `grantExperience`: 활동별 경험치 부여 (퀴즈, 채팅, 게임, 미션, 회고. 일기/플래너는 MVP 후순위)
+  - [x] 10.1 ExperienceService 구현
+    - `grantExperience`: 활동별 경험치 부여
     - `getExperienceInfo`: 누적 경험치, 현재 레벨, 다음 레벨까지 필요 경험치 조회
     - `getExpHistory`: 경험치 획득 내역 조회 (Spring Data JPA Pageable)
     - `checkAndProcessLevelUp`: 레벨업 조건 확인 및 보상 처리 (슬롯 해금 등)
-    - 레벨업 시 알림 전송 (NotificationService 연동)
+    - 레벨업 시 알림 전송 (NotificationService 연동) [MVP 후순위]
     - _요구사항: 10.1, 10.2, 10.3, 10.4_
 
   - [ ]* 10.2 Property 9, 13, 24 속성 테스트: 경험치 시스템
