@@ -83,7 +83,7 @@ public class QuizServiceImpl implements QuizService {
                 .major(partner.getMajor())
                 .hobbies(partner.getHobbies())
                 .interests(partner.getInterests())
-                .personalityType(partner.getPersonalityTypes())
+                .personalityType(partner.getPersonalityType() != null ? partner.getPersonalityType().name() : null)
                 .build();
 
         quizRequestPublisher.requestQuizGeneration(matchId, userId, partnerId, targetProfile);

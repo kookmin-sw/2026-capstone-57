@@ -1,5 +1,6 @@
 package com.ilgiyebo.domain.user.service;
 
+import com.ilgiyebo.domain.user.entity.PersonalityType;
 import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.user.exception.UserException;
 import com.ilgiyebo.domain.user.dto.ParsedEmailInfo;
@@ -64,7 +65,11 @@ public class UserServiceImpl implements UserService {
         user.setGender(profile.gender());
         user.setHobbies(profile.hobbies());
         user.setInterests(profile.interests());
-        user.setPersonalityTypes(profile.personalityTypes());
+        user.setPersonalityType(
+                profile.personalityType() != null
+                        ? PersonalityType.valueOf(profile.personalityType())
+                        : null
+        );
         user.setIdealTypes(profile.idealTypes());
     }
 }

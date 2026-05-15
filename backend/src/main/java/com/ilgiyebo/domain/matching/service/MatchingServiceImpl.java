@@ -328,7 +328,7 @@ public class MatchingServiceImpl implements MatchingService {
                         .major(partnerB.getMajor())
                         .hobbies(partnerB.getHobbies())
                         .interests(partnerB.getInterests())
-                        .personalityType(partnerB.getPersonalityTypes())
+                        .personalityType(partnerB.getPersonalityType() != null ? partnerB.getPersonalityType().name() : null)
                         .build();
                 quizRequestPublisher.requestQuizGeneration(matchId, userA, userB, profileB);
             }
@@ -343,7 +343,7 @@ public class MatchingServiceImpl implements MatchingService {
                         .major(partnerA.getMajor())
                         .hobbies(partnerA.getHobbies())
                         .interests(partnerA.getInterests())
-                        .personalityType(partnerA.getPersonalityTypes())
+                        .personalityType(partnerA.getPersonalityType() != null ? partnerA.getPersonalityType().name() : null)
                         .build();
                 quizRequestPublisher.requestQuizGeneration(matchId, userB, userA, profileA);
             }

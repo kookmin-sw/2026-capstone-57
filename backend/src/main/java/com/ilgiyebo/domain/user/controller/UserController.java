@@ -26,7 +26,7 @@ public class UserController {
     private final UserService userService;
     private final ProfileOptionService profileOptionService;
 
-    @Operation(summary = "프로필 옵션 조회", description = "취미, 관심사, 성격, 이상형 각 10개를 랜덤으로 반환한다")
+    @Operation(summary = "프로필 옵션 조회", description = "취미, 관심사, 이상형 각 10개를 랜덤으로, MBTI 16개 전체를 반환한다")
     @GetMapping("/profile/options")
     public ResponseEntity<ProfileOptionsResponse> getProfileOptions() {
         return ResponseEntity.ok(profileOptionService.getRandomOptions());

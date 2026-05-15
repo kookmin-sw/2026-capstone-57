@@ -4,6 +4,7 @@ import com.ilgiyebo.common.config.AuthProperties;
 import com.ilgiyebo.common.config.JwtTokenProvider;
 import com.ilgiyebo.domain.matching.entity.SlotEntity;
 import com.ilgiyebo.domain.matching.entity.SlotStatus;
+import com.ilgiyebo.domain.user.entity.PersonalityType;
 import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.auth.exception.AuthException;
 import com.ilgiyebo.domain.auth.dto.*;
@@ -108,7 +109,11 @@ public class AuthServiceImpl implements AuthService {
                 .gender(request.gender())
                 .hobbies(request.hobbies())
                 .interests(request.interests())
-                .personalityTypes(request.personalityTypes())
+                .personalityType(
+                        request.personalityType() != null
+                                ? PersonalityType.valueOf(request.personalityType())
+                                : null
+                )
                 .idealTypes(request.idealTypes())
                 .build();
         user = userRepository.save(user);

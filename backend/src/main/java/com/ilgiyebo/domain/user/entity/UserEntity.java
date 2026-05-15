@@ -55,9 +55,9 @@ public class UserEntity extends BaseSchema {
     @Column(columnDefinition = "JSON")
     private List<String> interests;
 
-    @Convert(converter = JsonStringListConverter.class)
-    @Column(name = "personality_type", columnDefinition = "JSON")
-    private List<String> personalityTypes;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "personality_type", length = 4)
+    private PersonalityType personalityType;
 
     @Convert(converter = JsonStringListConverter.class)
     @Column(name = "ideal_type_preferences", columnDefinition = "JSON")

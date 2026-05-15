@@ -31,7 +31,7 @@ public record QuizGenerateRequestMessage(
             String major,
             List<String> hobbies,
             List<String> interests,
-            List<String> personalityType
+            String personalityType
     ) {}
 
     public static QuizGenerateRequestMessage of(

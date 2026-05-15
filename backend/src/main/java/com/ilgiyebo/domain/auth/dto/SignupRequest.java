@@ -25,6 +25,6 @@ public record SignupRequest(
 
     List<String> hobbies,
     List<String> interests,
-    List<String> personalityTypes,
+    String personalityType,
     List<String> idealTypes
 ) {}
