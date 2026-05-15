@@ -214,8 +214,8 @@ export default function ProfilePage() {
               onClick={() => window.location.href = "/profile/schedule"}
             />
             <MenuItem icon={<Bell className="w-4 h-4" />} label="알림 설정" />
-            <MenuItem icon={<Shield className="w-4 h-4" />} label="개인정보 및 보안" />
-            <MenuItem icon={<Settings className="w-4 h-4" />} label="앱 설정" />
+            <MenuItem icon={<Shield className="w-4 h-4" />} label="개인정보 및 보안" onClick={() => window.location.href = "/profile/privacy"} />
+            <MenuItem icon={<Settings className="w-4 h-4" />} label="앱 설정" onClick={() => window.location.href = "/profile/settings"} />
             <MenuItem icon={<HelpCircle className="w-4 h-4" />} label="도움말 / 문의" />
             <div className="my-1 border-t border-border/50" />
             <MenuItem
