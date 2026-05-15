@@ -4,5 +4,6 @@ import java.util.Map;
 
 public record RoomStateEvent(
         String type,
-        Map<String, Boolean> players
+        Map<String, Boolean> players,
+        PlayerAssignmentDto playerAssignment
 ) implements GameSocketEvent {}

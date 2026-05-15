@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import Level from "./scenes/Level";
 import Preload from "./scenes/Preload";
-
+import Lobby from "./scenes/Lobby";
 class Boot extends Phaser.Scene {
   constructor() {
     super("Boot");
@@ -39,6 +39,6 @@ window.addEventListener("load", function () {
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
 
-    scene: [Boot, Preload, Level]
+    scene: [Boot, Lobby, Preload, Level]
   });
 });

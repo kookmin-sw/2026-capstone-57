@@ -85,7 +85,24 @@ export default class Preload extends Phaser.Scene {
 			}
 		}
 
-		this.scene.start("Level");
+		// Check URL for sessionId parameter to determine routing
+		const params = new URLSearchParams(window.location.search);
+		const sessionId = params.get("sessionId");
+
+		if (sessionId) {
+			// Online mode: route to Lobby for connection setup
+			this.scene.start("Lobby");
+		} else if (import.meta.env.VITE_LOCAL_MODE === "true") {
+			// Dev-only: local 2-player mode when no sessionId
+			this.scene.start("Level");
+		} else {
+			// Production: show error when no sessionId
+			this.add.text(195, 422, "세션 연결 실패", {
+				fontSize: "18px",
+				color: "#ff6666",
+				align: "center",
+			}).setOrigin(0.5);
+		}
 	}
 
 	/* END-USER-CODE */

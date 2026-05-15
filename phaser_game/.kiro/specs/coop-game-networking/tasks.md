@@ -136,21 +136,21 @@
     - Handle connection errors: display error message with retry button
     - _Requirements: 1.1, 1.5, 2.1, 2.2, 2.3, 2.4, 12.1, 12.2_
 
-- [ ] 7. Client scenes - Level.ts 온라인 모드 통합
-  - [ ] 7.1 Modify Preload.ts for session routing
+- [x] 7. Client scenes - Level.ts 온라인 모드 통합
+  - [x] 7.1 Modify Preload.ts for session routing
     - In Preload.ts `create()` method, check URL for `sessionId` parameter
     - If sessionId present: route to Lobby scene
     - If sessionId missing AND dev flag/env variable `VITE_LOCAL_MODE=true`: route to Level (local 2-player mode)
     - If sessionId missing AND no dev flag: show "세션 연결 실패" error (production behavior)
     - _Requirements: 12.1, 12.3_
-  - [ ] 7.2 Integrate NetworkGameManager into Level.ts
+  - [x] 7.2 Integrate NetworkGameManager into Level.ts
     - In Level.ts `create()` within START-USER-CODE block, check for online mode config passed from Lobby
     - If online mode: instantiate NetworkGameManager with scene references (sprites, coins, switches, door, scoreText)
     - If online mode: disable input for partner player (no WASD controls for player2 if assigned player1, vice versa)
     - If online mode: skip tutorial overlay
     - Call `networkGameManager.update(time, delta)` in Level.ts `update()` method
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 12.4, 12.5_
-  - [ ] 7.3 Register Lobby scene in main.ts
+  - [x] 7.3 Register Lobby scene in main.ts
     - Import Lobby scene in `phaser_game/src/main.ts`
     - Add Lobby to the Phaser.Game scene array
     - _Requirements: 2.3_

@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     base: './',
+    define: {
+        global: 'globalThis',
+    },
     build: {
         rollupOptions: {
             output: {
@@ -12,14 +15,14 @@ export default defineConfig({
         },
     },
     server: {
-        port: 8080,
+        port: 5173,
         proxy: {
             '/api': {
-                target: 'http://localhost:8081',
+                target: 'http://localhost:8080',
                 changeOrigin: true
             },
             '/ws': {
-                target: 'http://localhost:8081',
+                target: 'http://localhost:8080',
                 ws: true,
                 changeOrigin: true
             }

@@ -19,6 +19,9 @@ const phasermsg = () => {
 export default defineConfig({
     base: './',
     logLevel: 'warning',
+    define: {
+        global: 'globalThis',
+    },
     build: {
         rollupOptions: {
             output: {

@@ -1,5 +1,6 @@
 package com.ilgiyebo.domain.game.controller;
 
+import com.ilgiyebo.domain.game.dto.response.PlayerAssignmentDto;
 import com.ilgiyebo.domain.game.dto.response.RoomStateEvent;
 import com.ilgiyebo.domain.game.engine.GameRoom;
 import com.ilgiyebo.domain.game.service.GameRoomService;
@@ -102,7 +103,12 @@ public class GameEventListener {
                         Map.Entry::getValue
                 ));
 
-        RoomStateEvent event = new RoomStateEvent("ROOM_STATE", playerStates);
+        PlayerAssignmentDto assignment = new PlayerAssignmentDto(
+                room.getUserAId().toString(),
+                room.getUserBId().toString()
+        );
+
+        RoomStateEvent event = new RoomStateEvent("ROOM_STATE", playerStates, assignment);
         messagingTemplate.convertAndSend(GAME_TOPIC_PREFIX + room.getSessionId(), event);
     }
 

@@ -141,7 +141,9 @@ public class GameLoopService {
 
         GameClearedEvent event = new GameClearedEvent(
                 "GAME_CLEARED",
-                new GameResultDto(true, finalScore, clearTimeMs, intimacyPoints)
+                finalScore,
+                clearTimeMs,
+                intimacyPoints
         );
         messagingTemplate.convertAndSend(gameTopic(room.getSessionId()), event);
 

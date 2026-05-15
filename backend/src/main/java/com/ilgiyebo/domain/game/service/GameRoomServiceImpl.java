@@ -181,8 +181,21 @@ public class GameRoomServiceImpl implements GameRoomService {
         log.info("게임 시작: sessionId={}", room.getSessionId());
 
         // Broadcast GAME_STARTED with initial state
+        PlayerAssignmentDto assignment = new PlayerAssignmentDto(
+                room.getUserAId().toString(),
+                room.getUserBId().toString()
+        );
+        int totalCoins = 21; // Default coin count matching client level
+        long timeLimitMs = (long) room.getMapData().getTimeLimitMs();
+
         GameStartedEvent event = new GameStartedEvent(
-                "GAME_STARTED", gameState.toSnapshot(), MapDataDto.from(room.getMapData()));
+                "GAME_STARTED",
+                room.getSessionId().toString(),
+                assignment,
+                totalCoins,
+                timeLimitMs,
+                gameState.toSnapshot(),
+                MapDataDto.from(room.getMapData()));
         messagingTemplate.convertAndSend(gameTopic(room.getSessionId()), event);
     }
 
@@ -203,8 +216,21 @@ public class GameRoomServiceImpl implements GameRoomService {
         log.info("게임 재시작: sessionId={}", room.getSessionId());
 
         // Broadcast GAME_STARTED with fresh state
+        PlayerAssignmentDto assignment = new PlayerAssignmentDto(
+                room.getUserAId().toString(),
+                room.getUserBId().toString()
+        );
+        int totalCoins = 21; // Default coin count matching client level
+        long timeLimitMs = (long) room.getMapData().getTimeLimitMs();
+
         GameStartedEvent event = new GameStartedEvent(
-                "GAME_STARTED", gameState.toSnapshot(), MapDataDto.from(room.getMapData()));
+                "GAME_STARTED",
+                room.getSessionId().toString(),
+                assignment,
+                totalCoins,
+                timeLimitMs,
+                gameState.toSnapshot(),
+                MapDataDto.from(room.getMapData()));
         messagingTemplate.convertAndSend(gameTopic(room.getSessionId()), event);
     }
 
@@ -240,7 +266,12 @@ public class GameRoomServiceImpl implements GameRoomService {
                         Map.Entry::getValue
                 ));
 
-        RoomStateEvent event = new RoomStateEvent("ROOM_STATE", playerStates);
+        PlayerAssignmentDto assignment = new PlayerAssignmentDto(
+                room.getUserAId().toString(),
+                room.getUserBId().toString()
+        );
+
+        RoomStateEvent event = new RoomStateEvent("ROOM_STATE", playerStates, assignment);
         messagingTemplate.convertAndSend(gameTopic(room.getSessionId()), event);
     }
 

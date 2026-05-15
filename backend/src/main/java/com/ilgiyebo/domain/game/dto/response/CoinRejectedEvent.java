@@ -7,5 +7,6 @@ package com.ilgiyebo.domain.game.dto.response;
 public record CoinRejectedEvent(
         String type,
         String coinId,
-        String reason
+        String collectedBy,
+        int totalCollected
 ) implements GameSocketEvent {}

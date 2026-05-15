@@ -48,10 +48,10 @@ public class RelayServiceImpl implements RelayService {
         RelayGameState relayState = getOrCreateRelayState(sessionId, room);
         relayState.updateLastPosition(senderId, position);
 
-        // 상대방에게 그대로 전달
-        UUID partnerId = getPartnerId(room, senderId);
+        // 상대방에게 topic으로 브로드캐스트 (클라이언트가 자신의 메시지는 무시)
         PartnerPositionEvent event = new PartnerPositionEvent(
                 "PARTNER_POSITION",
+                senderId.toString(),
                 position.x(),
                 position.y(),
                 position.velocityX(),
@@ -61,11 +61,7 @@ public class RelayServiceImpl implements RelayService {
                 position.timestamp()
         );
 
-        messagingTemplate.convertAndSendToUser(
-                partnerId.toString(),
-                "/queue/game/" + sessionId,
-                event
-        );
+        messagingTemplate.convertAndSend(gameTopic(sessionId), event);
     }
 
     @Override
@@ -107,7 +103,8 @@ public class RelayServiceImpl implements RelayService {
             CoinRejectedEvent event = new CoinRejectedEvent(
                     "COIN_REJECTED",
                     coinId,
-                    "ALREADY_COLLECTED"
+                    userId.toString(),
+                    relayState.getCollectedCoinCount()
             );
             messagingTemplate.convertAndSend(gameTopic(sessionId), event);
 
@@ -178,7 +175,9 @@ public class RelayServiceImpl implements RelayService {
             // 양쪽에 브로드캐스트
             GameClearedEvent event = new GameClearedEvent(
                     "GAME_CLEARED",
-                    new GameResultDto(true, score, clearTimeMs, intimacyPoints)
+                    score,
+                    clearTimeMs,
+                    intimacyPoints
             );
             messagingTemplate.convertAndSend(gameTopic(sessionId), event);
 
@@ -262,7 +261,7 @@ public class RelayServiceImpl implements RelayService {
         // 맵 데이터에서 코인 수를 결정한다.
         // 현재 MapData에 코인 목록이 없으므로 기본값 사용.
         // 클라이언트가 GAME_STARTED에서 totalCoins를 받아 사용한다.
-        return 5; // 기본 코인 수 (맵에 따라 조정 가능)
+        return 21; // 클라이언트 레벨의 실제 코인 수
     }
 
     private int calculateScore(RelayGameState relayState) {

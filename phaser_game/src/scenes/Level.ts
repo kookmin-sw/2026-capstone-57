@@ -3,6 +3,8 @@
 /* START OF COMPILED CODE */
 
 /* START-USER-IMPORTS */
+import { NetworkGameManager, NetworkGameConfig } from '../services/NetworkGameManager';
+import { NetworkService } from '../services/NetworkService';
 /* END-USER-IMPORTS */
 
 export default class Level extends Phaser.Scene {
@@ -100,6 +102,11 @@ export default class Level extends Phaser.Scene {
 	private mobileLeft = false;
 	private mobileRight = false;
 	private mobileJump = false;
+
+	// --- Online mode ---
+	private networkGameManager: NetworkGameManager | null = null;
+	private isOnlineMode = false;
+	private myPlayerRole: 'player1' | 'player2' = 'player1';
 
 	create() {
 
@@ -465,10 +472,77 @@ export default class Level extends Phaser.Scene {
 		});
 
 		this.player2.play("pink-idle");
+
+		/* ---------------------------------------------------------------------- */
+		/* ONLINE MODE INTEGRATION */
+		/* ---------------------------------------------------------------------- */
+
+		// Check if Level was started from Lobby with online mode config
+		const initData = this.scene.settings.data as {
+			onlineMode?: boolean;
+			networkService?: NetworkService;
+			gameSessionId?: string;
+			myUserId?: string;
+			playerAssignment?: { player1UserId: string; player2UserId: string };
+			totalCoins?: number;
+			timeLimitMs?: number;
+		} | undefined;
+
+		if (initData && initData.onlineMode && initData.networkService) {
+			this.isOnlineMode = true;
+
+			// Determine player role
+			const myUserId = initData.myUserId || '';
+			const assignment = initData.playerAssignment!;
+			this.myPlayerRole = myUserId === assignment.player1UserId ? 'player1' : 'player2';
+
+			// Determine local and partner sprites
+			const localPlayerSprite = this.myPlayerRole === 'player1' ? this.player1 : this.player2;
+			const partnerSprite = this.myPlayerRole === 'player1' ? this.player2 : this.player1;
+
+			// Disable physics on partner sprite (position-only update from server)
+			const partnerBody = partnerSprite.body as Phaser.Physics.Arcade.Body;
+			partnerBody.setAllowGravity(false);
+			partnerBody.setImmovable(true);
+
+			// Create a placeholder scoreText for NetworkGameManager
+			const scoreText = this.add.text(145, 20, "달: 0", {
+				fontSize: "16px",
+				color: "#000000",
+				padding: { top: 4, bottom: 4 }
+			});
+
+			// Instantiate NetworkGameManager
+			this.networkGameManager = new NetworkGameManager();
+			const networkConfig: NetworkGameConfig = {
+				networkService: initData.networkService,
+				gameSessionId: initData.gameSessionId!,
+				myUserId,
+				playerAssignment: assignment,
+				partnerSprite,
+				localPlayerSprite,
+				coins: this.coins,
+				switches: { switch1: this.switch1, switch2: this.switch2 },
+				platforms: {
+					platform1: this.platform1,
+					platform2: this.platform2,
+					platform1BaseY: this.platform1BaseY,
+					platform2BaseY: this.platform2BaseY,
+				},
+				door: this.door,
+				scoreText,
+				totalCoins: initData.totalCoins || this.totalCoins,
+			};
+			this.networkGameManager.initialize(this, networkConfig);
+
+			// Skip tutorial overlay in online mode
+			this.tutorialOverlay.setVisible(false);
+			this.tutorialShown = false;
+		}
 		
 	}
 
-	update() {
+	update(time: number, delta: number) {
 		//튜토리얼 중 이동방지
 		if (this.tutorialShown) {
 			return;
@@ -480,68 +554,104 @@ export default class Level extends Phaser.Scene {
 		/* PLAYER1 MOVEMENT */
 		/* ---------------------------------------------------------------------- */
 
-		body1.setVelocityX(0);
+		// In online mode, only control the assigned player
+		if (!this.isOnlineMode || this.myPlayerRole === 'player1') {
+			body1.setVelocityX(0);
 
-		if (this.cursors.left.isDown || this.mobileLeft) {
-			body1.setVelocityX(-200);
-			this.player1.setFlipX(true);
-		}
-		else if (this.cursors.right.isDown || this.mobileRight) {
-			body1.setVelocityX(200);
-			this.player1.setFlipX(false);
-		}
+			if (this.cursors.left.isDown || this.mobileLeft) {
+				body1.setVelocityX(-200);
+				this.player1.setFlipX(true);
+			}
+			else if (this.cursors.right.isDown || this.mobileRight) {
+				body1.setVelocityX(200);
+				this.player1.setFlipX(false);
+			}
 
-		if ((this.cursors.up.isDown || this.mobileJump) && body1.blocked.down) {
-			body1.setVelocityY(-400);
+			if ((this.cursors.up.isDown || this.mobileJump) && body1.blocked.down) {
+				body1.setVelocityY(-400);
+			}
 		}
 
 		/* ---------------------------------------------------------------------- */
 		/* PLAYER2 MOVEMENT */
 		/* ---------------------------------------------------------------------- */
 
-		body2.setVelocityX(0);
+		// In online mode, only control the assigned player
+		if (!this.isOnlineMode || this.myPlayerRole === 'player2') {
+			body2.setVelocityX(0);
 
-		if (this.wasd.left.isDown) {
-			body2.setVelocityX(-200);
-			this.player2.setFlipX(true);
-		}
-		else if (this.wasd.right.isDown) {
-			body2.setVelocityX(200);
-			this.player2.setFlipX(false);
-		}
+			if (this.isOnlineMode) {
+				// Online mode player2 uses same controls (arrow keys + mobile buttons)
+				if (this.cursors.left.isDown || this.mobileLeft) {
+					body2.setVelocityX(-200);
+					this.player2.setFlipX(true);
+				}
+				else if (this.cursors.right.isDown || this.mobileRight) {
+					body2.setVelocityX(200);
+					this.player2.setFlipX(false);
+				}
 
-		if (this.wasd.up.isDown && body2.blocked.down) {
-			body2.setVelocityY(-400);
+				if ((this.cursors.up.isDown || this.mobileJump) && body2.blocked.down) {
+					body2.setVelocityY(-400);
+				}
+			} else {
+				// Local mode: player2 uses WASD
+				if (this.wasd.left.isDown) {
+					body2.setVelocityX(-200);
+					this.player2.setFlipX(true);
+				}
+				else if (this.wasd.right.isDown) {
+					body2.setVelocityX(200);
+					this.player2.setFlipX(false);
+				}
+
+				if (this.wasd.up.isDown && body2.blocked.down) {
+					body2.setVelocityY(-400);
+				}
+			}
 		}
 
 		/* ---------------------------------------------------------------------- */
 		/* PLAYER1 ANIMATION STATE */
 		/* ---------------------------------------------------------------------- */
 
-		if (!body1.blocked.down) {
-			this.playPlayer1Anim("blue-jump");
-		}
-		else if (body1.velocity.x !== 0) {
-			this.playPlayer1Anim("blue-walk");
-		}
-		else {
-			this.playPlayer1Anim("blue-idle");
+		if (!this.isOnlineMode || this.myPlayerRole === 'player1') {
+			if (!body1.blocked.down) {
+				this.playPlayer1Anim("blue-jump");
+			}
+			else if (body1.velocity.x !== 0) {
+				this.playPlayer1Anim("blue-walk");
+			}
+			else {
+				this.playPlayer1Anim("blue-idle");
+			}
 		}
 
 		/* ---------------------------------------------------------------------- */
 		/* PLAYER2 ANIMATION STATE */
 		/* ---------------------------------------------------------------------- */
 
-		if (!body2.blocked.down) {
-			this.playPlayer2Anim("pink-jump");
+		if (!this.isOnlineMode || this.myPlayerRole === 'player2') {
+			if (!body2.blocked.down) {
+				this.playPlayer2Anim("pink-jump");
+			}
+			else if (body2.velocity.x !== 0) {
+				this.playPlayer2Anim("pink-walk");
+			}
+			else {
+				this.playPlayer2Anim("pink-idle");
+			}
 		}
-		else if (body2.velocity.x !== 0) {
-			this.playPlayer2Anim("pink-walk");
-		}
-		else {
-			this.playPlayer2Anim("pink-idle");
-		}
+
 		this.updateSwitchPlatforms();
+
+		/* ---------------------------------------------------------------------- */
+		/* NETWORK GAME MANAGER UPDATE */
+		/* ---------------------------------------------------------------------- */
+
+		if (this.networkGameManager) {
+			this.networkGameManager.update(time, delta);
+		}
 	}
 
 	/* -------------------------------------------------------------------------- */

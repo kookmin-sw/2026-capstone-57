@@ -33,6 +33,7 @@ export interface PositionUpdatePayload {
   velocityY: number;
   animation: PlayerAnimation;
   flipX: boolean;
+  timestamp: number;
 }
 
 export interface GameEventPayload {
@@ -83,6 +84,7 @@ export interface GameStartedPayload {
 
 export interface PartnerPositionPayload {
   type: 'PARTNER_POSITION';
+  senderId: string;
   x: number;
   y: number;
   velocityX: number;

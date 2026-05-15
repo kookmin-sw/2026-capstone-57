@@ -52,6 +52,7 @@ export function buildPositionMessage(
     velocityY: body.velocity.y,
     animation,
     flipX: sprite.flipX,
+    timestamp: Date.now(),
   };
 }
 
@@ -273,6 +274,9 @@ export class NetworkGameManager {
   // --- Private: Event listeners ---
 
   private onPartnerPosition = (payload: PartnerPositionPayload): void => {
+    // Ignore own position messages (broadcast includes sender)
+    if (payload.senderId === this.config.myUserId) return;
+
     this.partnerTargetX = payload.x;
     this.partnerTargetY = payload.y;
     this.partnerCurrentAnimation = payload.animation;
