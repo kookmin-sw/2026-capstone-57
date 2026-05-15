@@ -20,4 +20,7 @@ public interface InteractionService {
 
     /** 퀴즈 데이터 저장 (요청자 기준으로 해당 유저의 퀴즈 슬롯에 저장) */
     void storeQuizData(UUID matchId, UUID requesterId, List<QuizQuestionDto> quizData);
+
+    /** 채팅 완료 처리 (토큰 한도 도달 시 호출) */
+    InteractionStateDto completeChat(UUID matchId);
 }

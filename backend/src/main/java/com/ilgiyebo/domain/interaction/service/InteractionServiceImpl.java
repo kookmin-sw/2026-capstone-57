@@ -143,6 +143,27 @@ public class InteractionServiceImpl implements InteractionService {
                 matchId, requesterId, quizData.size());
     }
 
+    @Override
+    @Transactional
+    public InteractionStateDto completeChat(UUID matchId) {
+        MatchEntity match = findMatch(matchId);
+        InteractionEntity interaction = findInteraction(matchId);
+
+        if (interaction.getCurrentStage() != 2) {
+            throw InteractionException.STAGE_NOT_ADVANCEABLE.toException();
+        }
+
+        if (interaction.getStageStatus() == StageStatus.TERMINATED) {
+            throw InteractionException.ALREADY_TERMINATED.toException();
+        }
+
+        interaction.setCurrentStage(3);
+        interaction.setStageStatus(StageStatus.IN_PROGRESS);
+        interactionRepository.save(interaction);
+
+        return InteractionStateDto.from(interaction, match);
+    }
+
     // --- Private helpers ---
     private MatchEntity findMatch(UUID matchId) {
         return matchRepository.findById(matchId)

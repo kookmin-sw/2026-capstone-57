@@ -38,6 +38,9 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     @Value("${chat.session.duration-minutes:10}")
     private long sessionDurationMinutes;
 
+    @Value("${chat.session.token-limit:150}")
+    private int chatTokenLimit;
+
     private static final String CACHE_KEY_PREFIX = "chat:session:";
 
     @Override
@@ -64,6 +67,8 @@ public class ChatSessionServiceImpl implements ChatSessionService {
                 .startTime(now)
                 .endTime(endTime)
                 .status(ChatSessionStatus.ACTIVE)
+                .tokenLimit(chatTokenLimit)
+                .usedTokens(0)
                 .build();
 
         ChatSessionEntity savedSession = chatSessionRepository.save(session);
