@@ -125,6 +125,34 @@ public class PlannerServiceImpl implements PlannerService {
                 .toList();
     }
 
+    @Override
+    @Transactional
+    public List<PlanEntryResponse> getWeeklyPlanEntries(UUID userId, LocalDate weekStart) {
+        // weekStart 기준 월~금 범위 계산
+        LocalDate monday = weekStart.with(DayOfWeek.MONDAY);
+        LocalDate friday = monday.plusDays(4);
+
+        // Lazy 생성: 미래 날짜에 SCHEDULE_AUTO가 없으면 해당 날짜만 생성
+        LocalDate today = LocalDate.now();
+        LocalDate current = monday;
+        while (!current.isAfter(friday)) {
+            if (!current.isBefore(today)) {
+                List<PlanEntryEntity> dayEntries = planEntryRepository.findByUserIdAndDateOrderByStartTimeAsc(userId, current);
+                if (dayEntries.stream().noneMatch(e -> e.getSource() == PlanSource.SCHEDULE_AUTO)) {
+                    lazyGenerateForDate(userId, current);
+                }
+            }
+            current = current.plusDays(1);
+        }
+
+        // 월~금 전체 일정 조회
+        List<PlanEntryEntity> entries = planEntryRepository.findByUserIdAndDateBetween(userId, monday, friday);
+
+        return entries.stream()
+                .map(PlanEntryResponse::from)
+                .toList();
+    }
+
     /**
      * 특정 날짜에 대해 SCHEDULE_AUTO PLAN_ENTRY를 lazy 생성한다.
      * 주간 배치가 아직 실행되지 않은 미래 날짜를 조회할 때 fallback으로 사용한다.
@@ -197,9 +225,12 @@ public class PlannerServiceImpl implements PlannerService {
             return ScheduleAutoGenerateResult.success(0);
         }
 
-        // 3. 현재 주(오늘~일)만 즉시 생성
-        LocalDate weekStart = deleteFrom;
-        LocalDate weekEnd = today.with(DayOfWeek.SUNDAY);
+        // 3. 현재 주(월~금)만 즉시 생성
+        LocalDate weekStart = today.with(DayOfWeek.MONDAY);
+        if (weekStart.isBefore(deleteFrom)) {
+            weekStart = deleteFrom;
+        }
+        LocalDate weekEnd = today.with(DayOfWeek.FRIDAY);
         if (weekEnd.isAfter(semesterEnd)) {
             weekEnd = semesterEnd;
         }

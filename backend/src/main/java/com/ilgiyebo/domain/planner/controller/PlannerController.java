@@ -61,6 +61,14 @@ public class PlannerController {
         return ResponseEntity.ok(plannerService.getPlanEntries(userId, date));
     }
 
+    @Operation(summary = "주간 일정 목록 조회", description = "해당 주의 월요일~금요일 일정 목록을 조회한다 (본인만). weekStart에 해당 주의 아무 날짜나 전달하면 자동으로 월~금 범위를 계산한다.")
+    @GetMapping("/weekly")
+    public ResponseEntity<List<PlanEntryResponse>> getWeeklyPlanEntries(
+            @AuthenticationPrincipal UUID userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        return ResponseEntity.ok(plannerService.getWeeklyPlanEntries(userId, weekStart));
+    }
+
     @Operation(summary = "[테스트] 시간표 기반 plan_entry 수동 생성",
             description = "현재 주의 SCHEDULE_AUTO plan_entry를 시간표 기반으로 수동 생성한다. 기존 SCHEDULE_AUTO 미래 일정은 삭제 후 재생성된다.")
     @PostMapping("/generate")
