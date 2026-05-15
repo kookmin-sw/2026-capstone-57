@@ -1,6 +1,0 @@
-package com.ilgiyebo.domain;
-
-public enum NotificationType {
-    MATCH_CREATED, STAGE_COMPLETED, MISSION_REMINDER, PLANNER_REMINDER,
-    LEVEL_UP, HINT_QUESTION_RECEIVED, HINT_ANSWER_RECEIVED
-}
