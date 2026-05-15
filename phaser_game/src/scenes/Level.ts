@@ -107,6 +107,7 @@ export default class Level extends Phaser.Scene {
 	private networkGameManager: NetworkGameManager | null = null;
 	private isOnlineMode = false;
 	private myPlayerRole: 'player1' | 'player2' = 'player1';
+	private reconnectOverlay: Phaser.GameObjects.Text | null = null;
 
 	create() {
 
@@ -298,7 +299,7 @@ export default class Level extends Phaser.Scene {
 
 		];
 
-		coinPositions.forEach(pos => {
+		coinPositions.forEach((pos, index) => {
 
 			// const coin = this.coins.create(
 			// 	pos.x,
@@ -313,6 +314,7 @@ export default class Level extends Phaser.Scene {
 			) as Phaser.Physics.Arcade.Image;
 
 			coin.body.setSize(32, 32, false);
+			coin.setData('coinId', `coin_${index}`);
 		});
 
 		this.physics.add.overlap(this.player1, this.coins, this.collectCoin, undefined, this);
@@ -540,6 +542,14 @@ export default class Level extends Phaser.Scene {
 				this.doorOpen = true;
 			});
 
+			// Listen for partner disconnect/reconnect events
+			this.events.on('network-partner-disconnected', () => {
+				this.showReconnectOverlay();
+			});
+			this.events.on('network-partner-reconnected', () => {
+				this.hideReconnectOverlay();
+			});
+
 			// Skip tutorial overlay in online mode
 			this.tutorialOverlay.setVisible(false);
 			this.tutorialShown = false;
@@ -671,8 +681,11 @@ export default class Level extends Phaser.Scene {
 		if (this.isOnlineMode && this.networkGameManager) {
 			// 온라인 모드: NetworkGameManager가 optimistic update + 서버 전송 처리
 			const coinImage = coin as Phaser.Physics.Arcade.Image;
-			const coinIndex = this.coins.getChildren().indexOf(coinImage);
-			const coinId = `coin_${coinIndex}`;
+
+			// 이미 비활성화된 코인은 무시 (중복 overlap 방지)
+			if (!coinImage.visible) return;
+
+			const coinId = coinImage.getData('coinId') as string;
 			this.networkGameManager.handleCoinCollected(coinImage, coinId);
 		} else {
 			// 로컬 모드: 기존 로직
@@ -785,6 +798,26 @@ private checkClear() {
 			this.clearLogo.setVisible(true);
 			this.backButton.setVisible(true);
 		}
+	}
+}
+
+private showReconnectOverlay() {
+	if (this.reconnectOverlay) return;
+	this.reconnectOverlay = this.add.text(195, 422, '재연결 중...', {
+		fontSize: '20px',
+		color: '#ffffff',
+		backgroundColor: '#000000aa',
+		padding: { x: 20, y: 10 },
+		align: 'center',
+	});
+	this.reconnectOverlay.setOrigin(0.5);
+	this.reconnectOverlay.setDepth(2000);
+}
+
+private hideReconnectOverlay() {
+	if (this.reconnectOverlay) {
+		this.reconnectOverlay.destroy();
+		this.reconnectOverlay = null;
 	}
 }
 	/* END-USER-CODE */

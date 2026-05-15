@@ -376,12 +376,18 @@ export class NetworkGameManager {
     this._partnerConnected = false;
     // Apply alpha effect to partner sprite
     this.config.partnerSprite.setAlpha(0.5);
+    // Pause game and show reconnection overlay
+    this.scene.physics.pause();
+    this.scene.events.emit('network-partner-disconnected');
   };
 
   private onPlayerReconnected = (_payload: PlayerEventPayload): void => {
     this._partnerConnected = true;
     // Restore partner sprite alpha
     this.config.partnerSprite.setAlpha(1.0);
+    // Resume game
+    this.scene.physics.resume();
+    this.scene.events.emit('network-partner-reconnected');
   };
 
   private registerListeners(): void {

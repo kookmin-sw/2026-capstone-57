@@ -75,6 +75,39 @@ public class GameRoomServiceImpl implements GameRoomService {
             throw GameException.NOT_GAME_PARTICIPANT.toException();
         }
 
+        // 이미 PLAYING 상태면 재접속 처리: 바로 GAME_STARTED 재전송
+        if (room.getStatus().get() == GameRoomStatus.PLAYING) {
+            log.info("재접속 감지 (PLAYING 상태): sessionId={}, userId={}", sessionId, userId);
+            room.getConnectedUsers().add(userId);
+
+            // PAUSED 상태였으면 PLAYING으로 복구
+            room.getStatus().compareAndSet(GameRoomStatus.PAUSED, GameRoomStatus.PLAYING);
+            room.setDisconnectedUser(null);
+            room.setDisconnectedAt(null);
+
+            // 재접속한 플레이어에게 GAME_STARTED 재전송
+            PlayerAssignmentDto assignment = new PlayerAssignmentDto(
+                    room.getUserAId().toString(),
+                    room.getUserBId().toString()
+            );
+            long timeLimitMs = (long) room.getMapData().getTimeLimitMs();
+            GameStartedEvent event = new GameStartedEvent(
+                    "GAME_STARTED",
+                    room.getSessionId().toString(),
+                    assignment,
+                    21, // totalCoins
+                    timeLimitMs,
+                    room.getGameState() != null ? room.getGameState().toSnapshot() : null,
+                    MapDataDto.from(room.getMapData()));
+            messagingTemplate.convertAndSend(gameTopic(sessionId), event);
+
+            // 상대방에게 PLAYER_RECONNECTED 알림
+            PlayerReconnectedEvent reconnectEvent = new PlayerReconnectedEvent(
+                    "PLAYER_RECONNECTED", userId.toString());
+            messagingTemplate.convertAndSend(gameTopic(sessionId), reconnectEvent);
+            return;
+        }
+
         // Set ready
         room.getReadyState().put(userId, true);
         log.info("준비 완료: sessionId={}, userId={}", sessionId, userId);
