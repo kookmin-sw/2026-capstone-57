@@ -2,9 +2,9 @@ import { Client, IMessage } from "@stomp/stompjs"
 import SockJS from "sockjs-client"
 
 const WS_URL =
-  process.env.NODE_ENV === "development"
-    ? "http://98.93.112.251:8080/ws/game"
-    : "/backend/ws/game"
+  typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://98.93.112.251:8080/ws"
+    : "/backend/ws"
 
 export interface GameEvent {
   type: string
@@ -19,51 +19,68 @@ export interface GameSocketCallbacks {
 }
 
 let gameStompClient: Client | null = null
+let isGameConnecting = false
 
 export function connectGameSocket(
   gameSessionId: string,
   callbacks: GameSocketCallbacks
-): Client {
+): Client | null {
+  // 방어: 필수 값 검증
+  if (!gameSessionId) {
+    console.error("[Game WS] gameSessionId is missing, cannot connect")
+    return null
+  }
+
+  // 중복 연결 방지
+  if (isGameConnecting) {
+    console.warn("[Game WS] Already connecting, skipping")
+    return gameStompClient
+  }
+
+  // 기존 연결 정리
   if (gameStompClient) {
     gameStompClient.deactivate()
     gameStompClient = null
   }
 
+  isGameConnecting = true
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
 
   const client = new Client({
     webSocketFactory: () => new SockJS(WS_URL) as unknown as WebSocket,
     connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-    reconnectDelay: 5000,
+    reconnectDelay: 3000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
     onConnect: () => {
+      isGameConnecting = false
       callbacks.onConnect?.()
 
       // 게임 이벤트 구독
       client.subscribe(`/topic/game/${gameSessionId}`, (frame: IMessage) => {
         try {
           const event: GameEvent = JSON.parse(frame.body)
-          console.log("[Game WS] 이벤트 수신:", event.type, event)
+          console.log("[Game WS] 이벤트 수신:", event.type)
           callbacks.onEvent(event)
         } catch (err) {
           callbacks.onError?.(err)
         }
       })
 
-      // READY 액션 전송 (client를 직접 사용하여 타이밍 이슈 방지)
-      const readyPayload = JSON.stringify({ type: "READY" })
+      // READY 전송
       console.log("[Game WS] READY 전송:", `/app/game/${gameSessionId}/action`)
       client.publish({
         destination: `/app/game/${gameSessionId}/action`,
         headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: readyPayload,
+        body: JSON.stringify({ type: "READY" }),
       })
     },
     onDisconnect: () => {
+      isGameConnecting = false
       callbacks.onDisconnect?.()
     },
     onStompError: (frame) => {
+      isGameConnecting = false
       console.error("Game STOMP error:", frame.headers["message"])
       callbacks.onError?.(frame)
     },
@@ -90,6 +107,7 @@ export function sendGameAction(gameSessionId: string, action: { type: string; [k
 }
 
 export function disconnectGameSocket() {
+  isGameConnecting = false
   if (gameStompClient) {
     gameStompClient.deactivate()
     gameStompClient = null

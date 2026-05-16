@@ -1,11 +1,10 @@
 import { Client, IMessage } from "@stomp/stompjs"
 import SockJS from "sockjs-client"
 
-// lib/chat-socket.ts
 const WS_URL =
-  process.env.NODE_ENV === "development"
-    ? "http://98.93.112.251:8080/ws/chat"  // 개발: 직접 연결 (프록시 우회)
-    : "/backend/ws/chat"                    // 프로덕션: Nginx 등 프록시 사용
+  typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://98.93.112.251:8080/ws"
+    : "/backend/ws"
 
 export interface IncomingChatMessage {
   messageId: string
@@ -40,26 +39,41 @@ export interface ChatSocketCallbacks {
 }
 
 let stompClient: Client | null = null
+let isChatConnecting = false
 
 export function connectChatSocket(
   sessionId: string,
   callbacks: ChatSocketCallbacks
-): Client {
-  // 기존 연결이 있으면 정리
+): Client | null {
+  // 방어: 필수 값 검증
+  if (!sessionId) {
+    console.error("[Chat WS] sessionId is missing, cannot connect")
+    return null
+  }
+
+  // 중복 연결 방지
+  if (isChatConnecting) {
+    console.warn("[Chat WS] Already connecting, skipping")
+    return stompClient
+  }
+
+  // 기존 연결 정리
   if (stompClient) {
     stompClient.deactivate()
     stompClient = null
   }
 
+  isChatConnecting = true
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
 
   const client = new Client({
     webSocketFactory: () => new SockJS(WS_URL) as unknown as WebSocket,
     connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-    reconnectDelay: 5000,
+    reconnectDelay: 3000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
     onConnect: () => {
+      isChatConnecting = false
       callbacks.onConnect?.()
 
       // 채팅 메시지 구독
@@ -67,7 +81,7 @@ export function connectChatSocket(
         try {
           const data = JSON.parse(frame.body)
 
-          // SessionEndedEvent 감지 (reason 필드가 있으면 종료 이벤트)
+          // SessionEndedEvent 감지
           if (data.reason || data.type === "SESSION_ENDED") {
             callbacks.onSessionEnd?.(data as SessionEndedEvent)
             return
@@ -84,7 +98,7 @@ export function connectChatSocket(
         }
       })
 
-      // 세션 종료 전용 토픽 (별도 채널로 오는 경우 대비)
+      // 세션 종료 전용 토픽
       client.subscribe(`/topic/chat/${sessionId}/end`, (frame: IMessage) => {
         try {
           const event = frame.body ? JSON.parse(frame.body) : undefined
@@ -94,16 +108,14 @@ export function connectChatSocket(
         }
       })
 
-      // 에러 큐 구독 (TOKEN_LIMIT_REACHED 등)
+      // 에러 큐 구독
       client.subscribe(`/user/queue/errors`, (frame: IMessage) => {
         try {
-          // 서버가 plain text 또는 JSON으로 에러를 보낼 수 있음
           let error: ChatErrorEvent
 
           try {
             error = JSON.parse(frame.body)
           } catch {
-            // plain text인 경우 — 토큰 한도 메시지 등
             const body = frame.body || ""
             const isTokenLimit = body.includes("토큰") || body.includes("한도") || body.includes("TOKEN_LIMIT")
             error = {
@@ -123,9 +135,11 @@ export function connectChatSocket(
       })
     },
     onDisconnect: () => {
+      isChatConnecting = false
       callbacks.onDisconnect?.()
     },
     onStompError: (frame) => {
+      isChatConnecting = false
       console.error("STOMP error:", frame.headers["message"])
       callbacks.onError?.(frame)
     },
@@ -155,6 +169,7 @@ export function sendChatMessage(sessionId: string, content: string) {
 }
 
 export function disconnectChatSocket() {
+  isChatConnecting = false
   if (stompClient) {
     stompClient.deactivate()
     stompClient = null
