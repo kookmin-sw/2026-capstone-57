@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Flag } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
@@ -15,22 +15,26 @@ import {
   getInteractionState,
   getQuiz,
   submitQuiz,
-  completeQuiz,
-  getMission,
-  confirmMission,
+  createChatSession,
   getChatSession,
   getChatMessages,
   sendHint,
   getHints,
+  getMission,
+  confirmMission,
   type InteractionStateDto,
-  type QuizQuestionResponse,
-  type MissionDto,
-  type ChatMessageDto,
+  type ChatSessionDto,
   type HintQuestionDto,
 } from "@/lib/api/interaction"
+import {
+  connectChatSocket,
+  sendChatMessage,
+  disconnectChatSocket,
+  type IncomingChatMessage,
+} from "@/lib/chat-socket"
 import { getSlots } from "@/lib/api/slots"
 import type { InteractionStage } from "@/types/slot"
-import type { QuizQuestion, ChatMessage, GameOption, MissionInfo, MatchPartner } from "@/types/match"
+import type { QuizQuestion, ChatMessage, MissionInfo, MatchPartner } from "@/types/match"
 
 // 서버 stage 번호 → InteractionStage 매핑
 const STAGE_MAP: Record<number, InteractionStage> = {
@@ -59,18 +63,25 @@ export default function MatchDetailPage() {
   const [partner, setPartner] = useState<MatchPartner | null>(null)
   const [activeStage, setActiveStage] = useState<InteractionStage>("QUIZ")
 
-  // Stage data
+  // Quiz state
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
   const [quizHints, setQuizHints] = useState<HintQuestionDto[]>([])
+  const [quizWaiting, setQuizWaiting] = useState(false)
+
+  // Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
-  const [chatSessionId, setChatSessionId] = useState<string | null>(null)
+  const [chatSession, setChatSession] = useState<ChatSessionDto | null>(null)
+  const [usedTokens, setUsedTokens] = useState(0)
+  const [chatEnded, setChatEnded] = useState(false)
+  const stompConnectedRef = useRef(false)
+
+  // Mission state
   const [mission, setMission] = useState<MissionInfo | null>(null)
 
   // 초기 데이터 로드
   useEffect(() => {
     async function load() {
       try {
-        // 상호작용 상태 조회
         const state = await getInteractionState(matchId)
         setInteraction(state)
 
@@ -109,6 +120,10 @@ export default function MatchDetailPage() {
       }
     }
     load()
+
+    return () => {
+      disconnectChatSocket()
+    }
   }, [matchId])
 
   const loadStageData = async (stage: InteractionStage) => {
@@ -121,10 +136,9 @@ export default function MatchDetailPage() {
               id: `q${q.quizIndex}`,
               question: q.question,
               options: q.options,
-              correctIndex: -1, // 서버가 정답을 안 줌
+              correctIndex: -1,
             }))
           )
-          // 힌트 목록 로드
           try {
             const hints = await getHints(matchId)
             setQuizHints(hints)
@@ -136,7 +150,12 @@ export default function MatchDetailPage() {
         case "CHAT": {
           try {
             const session = await getChatSession(matchId)
-            setChatSessionId(session.sessionId)
+            setChatSession(session)
+            setUsedTokens(session.usedTokens)
+            if (session.status === "ENDED") {
+              setChatEnded(true)
+            }
+            // 기존 메시지 로드
             const messages = await getChatMessages(session.sessionId)
             const userId = localStorage.getItem("userId") || ""
             setChatMessages(
@@ -151,6 +170,10 @@ export default function MatchDetailPage() {
                 isMe: m.senderId === userId,
               }))
             )
+            // WebSocket 연결
+            if (session.status === "ACTIVE") {
+              initChatSocket(session.sessionId)
+            }
           } catch {
             setChatMessages([])
           }
@@ -180,34 +203,92 @@ export default function MatchDetailPage() {
     }
   }
 
-  const handleBack = () => {
-    router.push("/")
+  /** WebSocket(STOMP) 연결 초기화 */
+  const initChatSocket = (sessionId: string) => {
+    if (stompConnectedRef.current) return
+    stompConnectedRef.current = true
+
+    const userId = localStorage.getItem("userId") || ""
+
+    connectChatSocket(sessionId, {
+      onMessage: (msg: IncomingChatMessage) => {
+        const chatMsg: ChatMessage = {
+          id: msg.messageId,
+          senderId: msg.senderId,
+          content: msg.content,
+          timestamp: new Date(msg.createdAt).toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          isMe: msg.senderId === userId,
+        }
+        setChatMessages((prev) => [...prev, chatMsg])
+      },
+      onTokenUpdate: (tokens: number) => {
+        setUsedTokens(tokens)
+      },
+      onSessionEnd: () => {
+        setChatEnded(true)
+        disconnectChatSocket()
+        stompConnectedRef.current = false
+      },
+      onError: (err) => {
+        console.error("채팅 소켓 에러:", err)
+      },
+    })
   }
 
-  const handleStageSelect = async (stage: InteractionStage) => {
-    setActiveStage(stage)
-    await loadStageData(stage)
-  }
-
-  const [quizWaiting, setQuizWaiting] = useState(false)
-
-  const handleQuizComplete = async () => {
+  /** 퀴즈 답안 제출 핸들러 — allCompleted 시 채팅 세션 생성 */
+  const handleSubmitAnswer = async (quizIndex: number, answer: number) => {
     try {
-      const result = await completeQuiz(matchId)
-      setInteraction(result)
+      const result = await submitQuiz(matchId, {
+        quizIndex: quizIndex + 1, // 1-based
+        answer,
+      })
 
-      if (result.currentStage >= 2 && result.stageStatus !== "WAITING") {
-        // 양쪽 모두 완료 → 다음 단계로 이동
-        const nextStage = STAGE_MAP[result.currentStage] || "CHAT"
-        setActiveStage(nextStage)
-        await loadStageData(nextStage)
-      } else {
-        // 상대방 대기 중
-        setQuizWaiting(true)
+      if (result.allCompleted) {
+        // 양쪽 모두 퀴즈 완료 → 채팅 세션 생성
+        await transitionToChat()
+        return { correctAnswer: result.correctAnswer, isCorrect: result.isCorrect }
       }
+
+      return { correctAnswer: result.correctAnswer, isCorrect: result.isCorrect }
     } catch (err) {
-      console.error("퀴즈 완료 실패:", err)
+      console.error("퀴즈 제출 실패:", err)
+      return null
     }
+  }
+
+  /** 채팅 단계로 전환: 세션 생성 → WebSocket 연결 */
+  const transitionToChat = async () => {
+    try {
+      // 1. 채팅 세션 생성
+      const session = await createChatSession(matchId)
+      setChatSession(session)
+      setUsedTokens(session.usedTokens)
+      setChatEnded(false)
+      setChatMessages([])
+
+      // 2. 단계 전환
+      setActiveStage("CHAT")
+      setQuizWaiting(false)
+
+      // 3. 상호작용 상태 갱신
+      const state = await getInteractionState(matchId)
+      setInteraction(state)
+
+      // 4. WebSocket 연결
+      initChatSocket(session.sessionId)
+    } catch (err) {
+      console.error("채팅 세션 생성 실패:", err)
+    }
+  }
+
+  /** 퀴즈 완료 핸들러 (마지막 문항 "완료" 버튼) */
+  const handleQuizComplete = async () => {
+    // allCompleted가 이미 submitAnswer에서 처리되었을 수 있음
+    // 여기서는 대기 상태로 전환 (상대방이 아직 완료하지 않은 경우)
+    setQuizWaiting(true)
   }
 
   // 대기 중일 때 폴링으로 상태 확인
@@ -221,28 +302,29 @@ export default function MatchDetailPage() {
 
         if (state.currentStage >= 2 && state.stageStatus !== "WAITING") {
           setQuizWaiting(false)
-          const nextStage = STAGE_MAP[state.currentStage] || "CHAT"
-          setActiveStage(nextStage)
-          await loadStageData(nextStage)
+          await transitionToChat()
         }
       } catch (err) {
         console.error("상태 폴링 실패:", err)
       }
-    }, 5000) // 5초마다 확인
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [quizWaiting, matchId])
 
+  /** 채팅 메시지 전송 */
   const handleSendMessage = (content: string) => {
-    // 채팅은 WebSocket 기반이므로 여기서는 UI만 업데이트
-    const newMessage: ChatMessage = {
-      id: `m${Date.now()}`,
-      senderId: "me",
-      content,
-      timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
-      isMe: true,
-    }
-    setChatMessages((prev) => [...prev, newMessage])
+    if (!chatSession) return
+    sendChatMessage(chatSession.sessionId, content)
+  }
+
+  const handleBack = () => {
+    router.push("/")
+  }
+
+  const handleStageSelect = async (stage: InteractionStage) => {
+    setActiveStage(stage)
+    await loadStageData(stage)
   }
 
   const handleGameSelect = (gameId: string) => {
@@ -252,7 +334,6 @@ export default function MatchDetailPage() {
   const handleMissionComplete = async () => {
     try {
       await confirmMission(matchId)
-      // 상태 새로고침
       const state = await getInteractionState(matchId)
       setInteraction(state)
       const nextStage = STAGE_MAP[state.currentStage] || "REVIEW"
@@ -288,21 +369,17 @@ export default function MatchDetailPage() {
         return (
           <QuizStage
             questions={quizQuestions.length > 0 ? quizQuestions : [{ id: "loading", question: "로딩 중...", options: [], correctIndex: -1 }]}
-            hints={quizHints.map((h) => ({ id: h.id, question: h.question, answer: h.answer, status: h.status, quizIndex: h.quizIndex }))}
+            hints={quizHints.map((h) => ({ id: h.id, question: h.question, answer: h.answer, status: h.status, quizIndex: h.quizIndex, senderId: h.senderId }))}
+            currentUserId={localStorage.getItem("userId") || ""}
             matchId={matchId}
             onComplete={handleQuizComplete}
-            onSubmitAnswer={async (quizIndex, answer) => {
-              try {
-                const result = await submitQuiz(matchId, {
-                  quizIndex: quizIndex + 1,  // 1-based로 변환
-                  answer                      // 0-based 그대로 유지
-                })
-                return { correctAnswer: result.correctAnswer, isCorrect: result.isCorrect }
-              } catch (err) {
-                console.error("퀴즈 제출 실패:", err)
-                return null
-              }
-            }}
+            onSubmitAnswer={handleSubmitAnswer}
+            onHintsUpdate={(updated) => setQuizHints((prev) =>
+              prev.map((h) => {
+                const match = updated.find((u) => u.id === h.id)
+                return match ? { ...h, answer: match.answer, status: match.status } : h
+              })
+            )}
             onSendHint={async (question) => {
               try {
                 const newHint = await sendHint(matchId, question)
@@ -317,7 +394,10 @@ export default function MatchDetailPage() {
         return (
           <ChatStage
             messages={chatMessages}
-            remainingTime="--:--"
+            tokenLimit={chatSession?.tokenLimit || 0}
+            usedTokens={usedTokens}
+            icebreakerQuestion={chatSession?.icebreakerQuestion}
+            isEnded={chatEnded}
             onSendMessage={handleSendMessage}
           />
         )
@@ -359,7 +439,7 @@ export default function MatchDetailPage() {
 
   return (
     <AppShell noScroll>
-      <div className="px-4 py-2 h-full flex flex-col overflow-hidden">
+      <div className="px-4 py-2 h-full flex flex-col">
         {/* Back */}
         <button
           onClick={handleBack}
@@ -388,7 +468,7 @@ export default function MatchDetailPage() {
         </div>
 
         {/* Stage content */}
-        <div className="flex-1 mt-2 min-h-0">
+        <div className="flex-1 mt-2 min-h-0 overflow-y-auto">
           {renderStageContent()}
         </div>
 

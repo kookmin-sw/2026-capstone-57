@@ -71,7 +71,6 @@ public class ChatRestController {
                 .sessionId(entity.getId())
                 .matchId(entity.getMatchId())
                 .startTime(entity.getStartTime())
-                .endTime(entity.getEndTime())
                 .status(entity.getStatus())
                 .tokenLimit(entity.getTokenLimit())
                 .usedTokens(entity.getUsedTokens())
@@ -88,6 +87,8 @@ public class ChatRestController {
                 .createdAt(entity.getCreatedAt() != null
                         ? entity.getCreatedAt().toInstant(ZoneOffset.UTC)
                         : null)
+                .usedTokens(0)
+                .tokenLimit(0)
                 .build();
     }
 }

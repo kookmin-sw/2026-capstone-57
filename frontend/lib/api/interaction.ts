@@ -64,6 +64,9 @@ export interface ChatSessionDto {
   startTime: string
   endTime: string
   status: "ACTIVE" | "ENDED"
+  tokenLimit: number
+  usedTokens: number
+  icebreakerQuestion: string
 }
 
 export interface ChatMessageDto {
@@ -92,12 +95,7 @@ export function submitQuiz(matchId: string, data: QuizSubmitRequest) {
   })
 }
 
-/** 퀴즈 단계 완료 */
-export function completeQuiz(matchId: string) {
-  return apiFetch<InteractionStateDto>(`/api/interactions/${matchId}/quiz/complete`, {
-    method: "POST",
-  })
-}
+
 
 /** 힌트 질문 목록 조회 */
 export function getHints(matchId: string) {

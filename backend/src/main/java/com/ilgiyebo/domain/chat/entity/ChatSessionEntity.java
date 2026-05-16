@@ -29,9 +29,6 @@ public class ChatSessionEntity extends BaseSchema {
     @Column(name = "start_time", nullable = false)
     private Instant startTime;
 
-    @Column(name = "end_time", nullable = false)
-    private Instant endTime;
-
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

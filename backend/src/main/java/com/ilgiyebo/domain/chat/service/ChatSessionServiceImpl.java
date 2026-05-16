@@ -5,7 +5,6 @@ import com.ilgiyebo.domain.chat.entity.ChatSessionEntity;
 import com.ilgiyebo.domain.chat.entity.ChatSessionStatus;
 import com.ilgiyebo.domain.chat.entity.IcebreakerQuestion;
 import com.ilgiyebo.domain.chat.exception.ChatException;
-import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import com.ilgiyebo.domain.matching.entity.MatchStatus;
@@ -19,11 +18,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -35,9 +31,6 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     private final InteractionRepository interactionRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
-
-    @Value("${chat.session.duration-minutes:10}")
-    private long sessionDurationMinutes;
 
     @Value("${chat.session.token-limit:150}")
     private int chatTokenLimit;
@@ -61,12 +54,10 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     private ChatSessionEntity createNewSession(UUID matchId) {
         Instant now = Instant.now();
-        Instant endTime = now.plus(Duration.ofMinutes(sessionDurationMinutes));
 
         ChatSessionEntity session = ChatSessionEntity.builder()
                 .matchId(matchId)
                 .startTime(now)
-                .endTime(endTime)
                 .status(ChatSessionStatus.ACTIVE)
                 .tokenLimit(chatTokenLimit)
                 .usedTokens(0)
@@ -90,7 +81,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     @Override
     @Transactional(readOnly = true)
     public ChatSessionEntity getSessionByMatchId(UUID matchId) {
-        return chatSessionRepository.findByMatchId(matchId)
+        return chatSessionRepository.findTopByMatchIdOrderByCreatedAtDesc(matchId)
                 .orElseThrow(ChatException.SESSION_NOT_FOUND::toException);
     }
 
@@ -111,49 +102,27 @@ public class ChatSessionServiceImpl implements ChatSessionService {
             throw ChatException.SESSION_ALREADY_ENDED.toException();
         }
 
-        Instant actualEndTime = Instant.now();
-        Instant originalEndTime = session.getEndTime();
+        Instant endedAt = Instant.now();
 
         session.setStatus(ChatSessionStatus.ENDED);
-        session.setEndTime(actualEndTime);
         chatSessionRepository.save(session);
 
         // Update InteractionEntity chatEndTime
         interactionRepository.findByMatchId(session.getMatchId()).ifPresent(interaction -> {
-            interaction.setChatEndTime(actualEndTime);
+            interaction.setChatEndTime(endedAt);
             interactionRepository.save(interaction);
         });
 
         // Invalidate Redis cache
         invalidateCache(sessionId);
 
-        // Determine reason: MANUAL if ended before original endTime, TIME_EXPIRED otherwise
-        String reason = actualEndTime.isBefore(originalEndTime)
-                ? SessionEndedEvent.MANUAL
-                : SessionEndedEvent.TIME_EXPIRED;
-
         SessionEndedEvent event = SessionEndedEvent.builder()
                 .sessionId(sessionId)
-                .endedAt(actualEndTime)
-                .reason(reason)
+                .endedAt(endedAt)
+                .reason(SessionEndedEvent.TOKEN_LIMIT_REACHED)
                 .build();
 
         messagingTemplate.convertAndSend("/topic/chat/" + sessionId, event);
-    }
-
-    @Override
-    @Transactional
-    public void endExpiredSessions() {
-        List<ChatSessionEntity> expiredSessions = chatSessionRepository
-                .findAllByStatusAndEndTimeBefore(ChatSessionStatus.ACTIVE, Instant.now());
-
-        for (ChatSessionEntity session : expiredSessions) {
-            try {
-                endSession(session.getId());
-            } catch (Exception e) {
-                log.error("Failed to end expired session: {}", session.getId(), e);
-            }
-        }
     }
 
     @Override
@@ -192,14 +161,8 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     private void cacheSession(ChatSessionEntity session) {
         String key = CACHE_KEY_PREFIX + session.getId();
-        long ttlSeconds = Duration.between(Instant.now(), session.getEndTime()).getSeconds();
-
-        if (ttlSeconds > 0) {
-            redisTemplate.opsForHash().put(key, "status", session.getStatus().name());
-            redisTemplate.opsForHash().put(key, "endTime", session.getEndTime().toString());
-            redisTemplate.opsForHash().put(key, "matchId", session.getMatchId().toString());
-            redisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS);
-        }
+        redisTemplate.opsForHash().put(key, "status", session.getStatus().name());
+        redisTemplate.opsForHash().put(key, "matchId", session.getMatchId().toString());
     }
 
     private void invalidateCache(UUID sessionId) {
