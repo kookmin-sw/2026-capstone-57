@@ -103,10 +103,10 @@ export function getHints(matchId: string) {
 }
 
 /** 힌트 질문 전송 */
-export function sendHint(matchId: string, question: string) {
+export function sendHint(matchId: string, question: string, quizIndex: number) {
   return apiFetch<HintQuestionDto>(`/api/interactions/${matchId}/hints`, {
     method: "POST",
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, quizIndex }),
   })
 }
 

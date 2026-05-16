@@ -380,9 +380,9 @@ export default function MatchDetailPage() {
                 return match ? { ...h, answer: match.answer, status: match.status } : h
               })
             )}
-            onSendHint={async (question) => {
+            onSendHint={async (question, quizIndex) => {
               try {
-                const newHint = await sendHint(matchId, question)
+                const newHint = await sendHint(matchId, question, quizIndex)
                 setQuizHints((prev) => [...prev, newHint])
               } catch (err) {
                 console.error("힌트 전송 실패:", err)
