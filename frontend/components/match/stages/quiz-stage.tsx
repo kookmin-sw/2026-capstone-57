@@ -35,21 +35,23 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
     if (showResult) return
     setSelectedOption(optionIndex)
 
+    let resolvedCorrectAnswer = currentQuestion.correctIndex ?? 0
+
     if (onSubmitAnswer) {
       try {
         const result = await onSubmitAnswer(currentIndex, optionIndex)
-        if (result) {
-          setCorrectAnswer(result.correctAnswer)
+        if (result !== null && result.correctAnswer !== undefined) {
+          resolvedCorrectAnswer = result.correctAnswer
         }
       } catch (err) {
         console.error("퀴즈 제출 실패:", err)
-        setCorrectAnswer(currentQuestion.correctIndex)
       }
     } else {
-      setCorrectAnswer(currentQuestion.correctIndex)
+      resolvedCorrectAnswer = currentQuestion.correctIndex
     }
 
-    setShowResult(true)
+    setCorrectAnswer(resolvedCorrectAnswer)  // correctAnswer 먼저
+    setShowResult(true)                      // 그 다음 showResult
   }
 
   const handleNext = () => {
@@ -99,7 +101,8 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
       <div className="flex flex-col gap-2 mt-1">
         {currentQuestion.options.map((option, index) => {
           const isSelected = selectedOption === index
-          const isCorrectOption = correctAnswer !== null && index === correctAnswer
+          const isCorrect = showResult && correctAnswer !== null && index === correctAnswer
+          const isWrong = showResult && isSelected && !isCorrect
 
           return (
             <button
@@ -111,19 +114,19 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
                 "w-full py-2 px-3 rounded-xl text-left text-sm transition-all",
                 "border bg-secondary/40",
                 !showResult && "hover:bg-secondary/60 active:scale-[0.98]",
-                showResult && isCorrectOption && "border-green-400 bg-green-50 text-green-700",
-                showResult && isSelected && !isCorrectOption && "border-destructive/60 bg-destructive/10 text-destructive"
+                isCorrect && "border-green-400 bg-green-50 text-green-700",
+                isWrong && "border-destructive/60 bg-destructive/10 text-destructive"
               )}
             >
               <div className="flex items-center justify-between">
                 <span>{option}</span>
-                {showResult && isCorrectOption && (
+                {isCorrect && (
                   <span className="flex items-center gap-1 text-green-600">
                     <Check className="w-4 h-4" />
                     <span className="text-[10px]">정답</span>
                   </span>
                 )}
-                {showResult && isSelected && !isCorrectOption && <X className="w-4 h-4 text-destructive" />}
+                {isWrong && <X className="w-4 h-4 text-destructive" />}
               </div>
             </button>
           )

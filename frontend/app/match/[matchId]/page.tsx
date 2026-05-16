@@ -231,7 +231,10 @@ export default function MatchDetailPage() {
             onComplete={handleQuizComplete}
             onSubmitAnswer={async (quizIndex, answer) => {
               try {
-                const result = await submitQuiz(matchId, { quizIndex, answer })
+                const result = await submitQuiz(matchId, {
+                  quizIndex: quizIndex + 1,  // 1-based로 변환
+                  answer                      // 0-based 그대로 유지
+                })
                 return { correctAnswer: result.correctAnswer, isCorrect: result.isCorrect }
               } catch (err) {
                 console.error("퀴즈 제출 실패:", err)
