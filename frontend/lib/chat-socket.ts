@@ -13,7 +13,8 @@ export interface IncomingChatMessage {
   senderId: string
   content: string
   createdAt: string
-  usedTokens?: number
+  usedTokens: number
+  tokenLimit: number
 }
 
 export interface ChatSocketCallbacks {
@@ -53,7 +54,7 @@ export function connectChatSocket(
         try {
           const msg: IncomingChatMessage = JSON.parse(frame.body)
           callbacks.onMessage(msg)
-          if (msg.usedTokens !== undefined && callbacks.onTokenUpdate) {
+          if (callbacks.onTokenUpdate) {
             callbacks.onTokenUpdate(msg.usedTokens)
           }
         } catch (err) {
