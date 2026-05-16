@@ -27,13 +27,21 @@ public class WebSocketEventListener {
     // sessionId -> userId
     private final ConcurrentHashMap<String, UUID> sessionUsers = new ConcurrentHashMap<>();
 
+    private static final String TOPIC_PREFIX = "/topic/chat/";
+
     @EventListener
     public void handleSubscribe(SessionSubscribeEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         String destination = accessor.getDestination();
         String sessionId = accessor.getSessionId();
 
-        if (destination == null || !destination.startsWith("/topic/chat/")) {
+        if (destination == null || !destination.startsWith(TOPIC_PREFIX)) {
+            return;
+        }
+
+        // /topic/chat/{sessionId} 형태만 처리, /topic/chat/{sessionId}/end 등 하위 경로는 무시
+        String chatSessionId = destination.substring(TOPIC_PREFIX.length());
+        if (chatSessionId.contains("/")) {
             return;
         }
 
@@ -42,8 +50,6 @@ public class WebSocketEventListener {
 
         sessionDestinations.put(sessionId, destination);
         sessionUsers.put(sessionId, userId);
-
-        String chatSessionId = destination.replace("/topic/chat/", "");
 
         log.info("유저 입장: userId={}, sessionId={}", userId, chatSessionId);
 
@@ -74,7 +80,7 @@ public class WebSocketEventListener {
 
         if (destination == null || userId == null) return;
 
-        String chatSessionId = destination.replace("/topic/chat/", "");
+        String chatSessionId = destination.substring(TOPIC_PREFIX.length());
         log.info("유저 퇴장: userId={}, sessionId={}", userId, chatSessionId);
 
         messagingTemplate.convertAndSend(destination, Map.of(
