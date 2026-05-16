@@ -12,6 +12,7 @@ interface ChatStageProps {
   usedTokens: number
   icebreakerQuestion?: string
   isEnded?: boolean
+  isConnected?: boolean
   onSendMessage: (content: string) => void
 }
 
@@ -21,20 +22,23 @@ export function ChatStage({
   usedTokens,
   icebreakerQuestion,
   isEnded = false,
+  isConnected = true,
   onSendMessage,
 }: ChatStageProps) {
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const remainingTokens = Math.max(0, tokenLimit - usedTokens)
-  const usagePercent = tokenLimit > 0 ? Math.min(100, (usedTokens / tokenLimit) * 100) : 0
+  const safeTokenLimit = tokenLimit ?? 0
+  const safeUsedTokens = usedTokens ?? 0
+  const remainingTokens = Math.max(0, safeTokenLimit - safeUsedTokens)
+  const usagePercent = safeTokenLimit > 0 ? Math.min(100, (safeUsedTokens / safeTokenLimit) * 100) : 0
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
   const handleSend = () => {
-    if (!input.trim() || isEnded || remainingTokens <= 0) return
+    if (!input.trim() || isEnded || remainingTokens <= 0 || !isConnected) return
     onSendMessage(input.trim())
     setInput("")
   }
@@ -69,7 +73,7 @@ export function ChatStage({
           />
         </div>
         <p className="text-[10px] text-muted-foreground mt-0.5 text-right">
-          {usedTokens.toLocaleString()} / {tokenLimit.toLocaleString()}자 사용
+          {safeUsedTokens.toLocaleString()} / {safeTokenLimit.toLocaleString()}자 사용
         </p>
       </div>
 
@@ -85,9 +89,9 @@ export function ChatStage({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 scrollbar-hide min-h-0">
-        {messages.map((msg) => (
+        {messages.map((msg, index) => (
           <div
-            key={msg.id}
+            key={msg.id || `msg-${index}`}
             className={cn("flex", msg.isMe ? "justify-end" : "justify-start")}
           >
             <div className={cn(
@@ -133,7 +137,7 @@ export function ChatStage({
             <Button
               size="icon"
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || !isConnected}
               className="w-7 h-7 rounded-lg gradient-gem text-white border-0 shrink-0"
             >
               <Send className="w-3.5 h-3.5" />

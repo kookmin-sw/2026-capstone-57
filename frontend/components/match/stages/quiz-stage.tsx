@@ -29,7 +29,7 @@ interface QuizStageProps {
   currentUserId: string
   onComplete: () => void
   onSubmitAnswer?: (quizIndex: number, answer: number) => Promise<{ correctAnswer: number; isCorrect: boolean } | null>
-  onSendHint?: (question: string) => void
+  onSendHint?: (question: string, quizIndex: number) => void
   onHintsUpdate?: (hints: HintItem[]) => void
   matchId: string
   initialIndex?: number
@@ -116,7 +116,7 @@ export function QuizStage({ questions, hints = [], currentUserId, onComplete, on
 
   const handleSendHint = () => {
     if (!hintInput.trim()) return
-    onSendHint?.(hintInput.trim())
+    onSendHint?.(hintInput.trim(), currentIndex + 1)
     setHintInput("")
     setShowHintInput(false)
   }
@@ -219,11 +219,11 @@ export function QuizStage({ questions, hints = [], currentUserId, onComplete, on
       </div>
 
       {/* Hint Q&A List — Sender: 내가 보낸 질문 */}
-      {hints.filter((h) => h.quizIndex === currentIndex && h.senderId === currentUserId).length > 0 && (
+      {hints.filter((h) => h.quizIndex === currentIndex + 1 && h.senderId === currentUserId).length > 0 && (
         <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-border/30">
           <p className="text-[10px] font-medium text-muted-foreground">내가 보낸 질문</p>
           {hints
-            .filter((h) => h.quizIndex === currentIndex && h.senderId === currentUserId)
+            .filter((h) => h.quizIndex === currentIndex + 1 && h.senderId === currentUserId)
             .map((hint) => (
               <div
                 key={hint.id}

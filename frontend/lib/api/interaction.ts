@@ -62,7 +62,6 @@ export interface ChatSessionDto {
   sessionId: string
   matchId: string
   startTime: string
-  endTime: string
   status: "ACTIVE" | "ENDED"
   tokenLimit: number
   usedTokens: number
@@ -103,10 +102,10 @@ export function getHints(matchId: string) {
 }
 
 /** 힌트 질문 전송 */
-export function sendHint(matchId: string, question: string) {
+export function sendHint(matchId: string, question: string, quizIndex: number) {
   return apiFetch<HintQuestionDto>(`/api/interactions/${matchId}/hints`, {
     method: "POST",
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, quizIndex }),
   })
 }
 
@@ -153,5 +152,26 @@ export function createChatSession(matchId: string) {
   return apiFetch<ChatSessionDto>("/api/chat/sessions", {
     method: "POST",
     body: JSON.stringify({ matchId }),
+  })
+}
+
+/** 게임 세션 DTO */
+export interface GameSessionDto {
+  id: string
+  matchId: string
+  status: "WAITING" | "PLAYING" | "FINISHED"
+}
+
+/** 게임 세션 생성 */
+export function createGameSession(matchId: string) {
+  return apiFetch<GameSessionDto>(`/api/v1/matches/${matchId}/game-sessions`, {
+    method: "POST",
+  })
+}
+
+/** 게임 세션 조회 또는 생성 (재진입 시에도 POST 사용) */
+export function getGameSession(matchId: string) {
+  return apiFetch<GameSessionDto>(`/api/v1/matches/${matchId}/game-sessions`, {
+    method: "POST",
   })
 }

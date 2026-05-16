@@ -61,26 +61,6 @@
                 "key": "door"
             },
             {
-                "url": "/game/assets/FufuSuperDino.png",
-                "type": "image",
-                "key": "FufuSuperDino"
-            },
-            {
-                "url": "/game/assets/game_bg.png",
-                "type": "image",
-                "key": "game_bg"
-            },
-            {
-                "url": "/game/assets/ui/game_bg_390x844.png",
-                "type": "image",
-                "key": "game_bg_390x844"
-            },
-            {
-                "url": "/game/assets/game_bg2.png",
-                "type": "image",
-                "key": "game_bg2"
-            },
-            {
                 "url": "/game/assets/game_bg4.png",
                 "type": "image",
                 "key": "game_bg4"
@@ -111,41 +91,6 @@
                 "key": "moon_32x32_optimized"
             },
             {
-                "url": "/game/assets/moon_coin.png",
-                "type": "image",
-                "key": "moon_coin"
-            },
-            {
-                "url": "/game/assets/moon2.svg",
-                "svgConfig": {
-                    "width": 0,
-                    "height": 0,
-                    "scale": 0
-                },
-                "type": "svg",
-                "key": "moon2"
-            },
-            {
-                "url": "/game/assets/moon2 (1).svg",
-                "svgConfig": {
-                    "width": 0,
-                    "height": 0,
-                    "scale": 0
-                },
-                "type": "svg",
-                "key": "moon2 (1)"
-            },
-            {
-                "url": "/game/assets/moon2 (2).svg",
-                "svgConfig": {
-                    "width": 0,
-                    "height": 0,
-                    "scale": 0
-                },
-                "type": "svg",
-                "key": "moon2 (2)"
-            },
-            {
                 "url": "/game/assets/moonlight_tileset_32x32.png",
                 "frameConfig": {
                     "frameWidth": 32,
@@ -157,13 +102,6 @@
                 },
                 "type": "spritesheet",
                 "key": "moonlight_tileset_32x32"
-            },
-            {
-                "url": "/game/assets/MoonlightScene.js",
-                "systemKey": "MoonlightScene",
-                "sceneKey": "MoonlightScene",
-                "type": "scenePlugin",
-                "key": "MoonlightScene"
             },
             {
                 "url": "/game/assets/pink_cloud_idle.png",

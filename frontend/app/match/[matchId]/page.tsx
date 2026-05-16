@@ -18,6 +18,8 @@ import {
   createChatSession,
   getChatSession,
   getChatMessages,
+  createGameSession,
+  getGameSession,
   sendHint,
   getHints,
   getMission,
@@ -32,6 +34,11 @@ import {
   disconnectChatSocket,
   type IncomingChatMessage,
 } from "@/lib/chat-socket"
+import {
+  connectGameSocket,
+  disconnectGameSocket,
+  type GameEvent,
+} from "@/lib/game-socket"
 import { getSlots } from "@/lib/api/slots"
 import type { InteractionStage } from "@/types/slot"
 import type { QuizQuestion, ChatMessage, MissionInfo, MatchPartner } from "@/types/match"
@@ -73,7 +80,12 @@ export default function MatchDetailPage() {
   const [chatSession, setChatSession] = useState<ChatSessionDto | null>(null)
   const [usedTokens, setUsedTokens] = useState(0)
   const [chatEnded, setChatEnded] = useState(false)
-  const stompConnectedRef = useRef(false)
+  const [isStompConnected, setIsStompConnected] = useState(false)
+  const isTransitioningRef = useRef(false)
+
+  // Game state
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null)
+  const [gameWaiting, setGameWaiting] = useState(false)
 
   // Mission state
   const [mission, setMission] = useState<MissionInfo | null>(null)
@@ -123,6 +135,8 @@ export default function MatchDetailPage() {
 
     return () => {
       disconnectChatSocket()
+      disconnectGameSocket()
+      setIsStompConnected(false)
     }
   }, [matchId])
 
@@ -131,6 +145,10 @@ export default function MatchDetailPage() {
       switch (stage) {
         case "QUIZ": {
           const questions = await getQuiz(matchId)
+          if (!Array.isArray(questions)) {
+            console.warn("getQuiz 응답이 배열이 아님:", questions)
+            break
+          }
           setQuizQuestions(
             questions.map((q) => ({
               id: `q${q.quizIndex}`,
@@ -179,6 +197,41 @@ export default function MatchDetailPage() {
           }
           break
         }
+        case "GAME": {
+          try {
+            const session = await getGameSession(matchId)
+            setGameSessionId(session.id)
+
+            if (session.status === "PLAYING") {
+              // 이미 게임 진행 중 → 게임 페이지로 이동
+              const token = localStorage.getItem("token") || ""
+              router.push(`/game?sessionId=${session.id}&token=${token}`)
+            } else if (session.status === "WAITING") {
+              setGameWaiting(true)
+              // 재연결: 구독 + READY 재전송
+              connectGameSocket(session.id, {
+                onConnect: () => {
+                  console.log("게임 소켓 재연결 완료")
+                },
+                onEvent: (event: GameEvent) => {
+                  if (event.type === "GAME_STARTED") {
+                    setGameWaiting(false)
+                    const token = localStorage.getItem("token") || ""
+                    router.push(`/game?sessionId=${session.id}&token=${token}`)
+                  }
+                },
+                onError: (err) => {
+                  console.error("게임 소켓 에러:", err)
+                },
+              })
+            }
+          } catch {
+            // 게임 세션이 아직 없음 — 선택 화면 유지
+            setGameSessionId(null)
+            setGameWaiting(false)
+          }
+          break
+        }
         case "MISSION": {
           try {
             const m = await getMission(matchId)
@@ -203,14 +256,32 @@ export default function MatchDetailPage() {
     }
   }
 
+  /** 채팅 단계 완료 → 다음 단계로 전환 */
+  const handleChatCompleted = async () => {
+    try {
+      const state = await getInteractionState(matchId)
+      setInteraction(state)
+      const nextStage = STAGE_MAP[state.currentStage] || "GAME"
+      setActiveStage(nextStage)
+      await loadStageData(nextStage)
+    } catch (err) {
+      console.error("채팅 완료 후 상태 갱신 실패:", err)
+      // fallback: 게임 단계로 전환
+      setActiveStage("GAME")
+    }
+  }
+
   /** WebSocket(STOMP) 연결 초기화 */
   const initChatSocket = (sessionId: string) => {
-    if (stompConnectedRef.current) return
-    stompConnectedRef.current = true
-
     const userId = localStorage.getItem("userId") || ""
 
     connectChatSocket(sessionId, {
+      onConnect: () => {
+        setIsStompConnected(true)
+      },
+      onDisconnect: () => {
+        setIsStompConnected(false)
+      },
       onMessage: (msg: IncomingChatMessage) => {
         const chatMsg: ChatMessage = {
           id: msg.messageId,
@@ -230,7 +301,12 @@ export default function MatchDetailPage() {
       onSessionEnd: () => {
         setChatEnded(true)
         disconnectChatSocket()
-        stompConnectedRef.current = false
+        setIsStompConnected(false)
+        // 다음 단계로 자동 전환
+        handleChatCompleted()
+      },
+      onChatError: (error) => {
+        console.warn("채팅 에러:", error.code, error.message)
       },
       onError: (err) => {
         console.error("채팅 소켓 에러:", err)
@@ -247,9 +323,16 @@ export default function MatchDetailPage() {
       })
 
       if (result.allCompleted) {
-        // 양쪽 모두 퀴즈 완료 → 채팅 세션 생성
-        await transitionToChat()
-        return { correctAnswer: result.correctAnswer, isCorrect: result.isCorrect }
+        // 내 퀴즈 모두 완료 → 상대방 완료 여부 확인
+        const state = await getInteractionState(matchId)
+        setInteraction(state)
+
+        if (state.currentStage >= 2 && state.stageStatus !== "WAITING") {
+          // 양쪽 모두 완료 → 즉시 채팅 전환
+          setQuizWaiting(false)
+          await transitionToChat()
+        }
+        // 상대방 미완료면 handleQuizComplete에서 대기 상태 진입
       }
 
       return { correctAnswer: result.correctAnswer, isCorrect: result.isCorrect }
@@ -261,6 +344,9 @@ export default function MatchDetailPage() {
 
   /** 채팅 단계로 전환: 세션 생성 → WebSocket 연결 */
   const transitionToChat = async () => {
+    if (isTransitioningRef.current) return
+    isTransitioningRef.current = true
+
     try {
       // 1. 채팅 세션 생성
       const session = await createChatSession(matchId)
@@ -281,6 +367,7 @@ export default function MatchDetailPage() {
       initChatSocket(session.sessionId)
     } catch (err) {
       console.error("채팅 세션 생성 실패:", err)
+      isTransitioningRef.current = false
     }
   }
 
@@ -314,7 +401,7 @@ export default function MatchDetailPage() {
 
   /** 채팅 메시지 전송 */
   const handleSendMessage = (content: string) => {
-    if (!chatSession) return
+    if (!chatSession || !isStompConnected) return
     sendChatMessage(chatSession.sessionId, content)
   }
 
@@ -327,8 +414,36 @@ export default function MatchDetailPage() {
     await loadStageData(stage)
   }
 
-  const handleGameSelect = (gameId: string) => {
-    console.log("게임 시작:", gameId)
+  const handleGameSelect = async (gameId: string) => {
+    try {
+      // 1. 게임 세션 생성
+      const session = await createGameSession(matchId)
+      setGameSessionId(session.id)
+      setGameWaiting(true)
+
+      // 2. WebSocket 연결 (연결 시 자동으로 READY 전송)
+      connectGameSocket(session.id, {
+        onConnect: () => {
+          console.log("게임 소켓 연결 완료")
+        },
+        onEvent: (event: GameEvent) => {
+          if (event.type === "GAME_STARTED") {
+            setGameWaiting(false)
+            const token = localStorage.getItem("token") || ""
+            router.push(`/game?sessionId=${session.id}&token=${token}`)
+          }
+        },
+        onDisconnect: () => {
+          console.log("게임 소켓 연결 해제")
+        },
+        onError: (err) => {
+          console.error("게임 소켓 에러:", err)
+        },
+      })
+    } catch (err) {
+      console.error("게임 세션 생성 실패:", err)
+      setGameWaiting(false)
+    }
   }
 
   const handleMissionComplete = async () => {
@@ -380,9 +495,9 @@ export default function MatchDetailPage() {
                 return match ? { ...h, answer: match.answer, status: match.status } : h
               })
             )}
-            onSendHint={async (question) => {
+            onSendHint={async (question, quizIndex) => {
               try {
-                const newHint = await sendHint(matchId, question)
+                const newHint = await sendHint(matchId, question, quizIndex)
                 setQuizHints((prev) => [...prev, newHint])
               } catch (err) {
                 console.error("힌트 전송 실패:", err)
@@ -398,6 +513,7 @@ export default function MatchDetailPage() {
             usedTokens={usedTokens}
             icebreakerQuestion={chatSession?.icebreakerQuestion}
             isEnded={chatEnded}
+            isConnected={isStompConnected}
             onSendMessage={handleSendMessage}
           />
         )
@@ -405,6 +521,7 @@ export default function MatchDetailPage() {
         return (
           <GameStage
             games={[{ id: "g1", name: "달빛찾기", description: "함께 달빛을 찾아서 탈출하세요", icon: "🌙" }]}
+            isWaiting={gameWaiting}
             onSelectGame={handleGameSelect}
           />
         )
