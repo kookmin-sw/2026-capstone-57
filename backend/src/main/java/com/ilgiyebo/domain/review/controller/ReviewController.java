@@ -38,7 +38,7 @@ public class ReviewController {
             @AuthenticationPrincipal UUID userId,
             @PathVariable UUID matchId,
             @RequestParam UUID sessionId) {
-        return ResponseEntity.ok(reviewService.getAIQuestions(sessionId, userId));
+        return ResponseEntity.ok(reviewService.getAIQuestions(matchId, sessionId, userId));
     }
 
     @Operation(summary = "AI 질문 답변", description = "AI 회고 질문에 답변한다")
@@ -49,7 +49,7 @@ public class ReviewController {
             @PathVariable UUID questionId,
             @RequestParam UUID sessionId,
             @Valid @RequestBody AnswerReviewQuestionRequest request) {
-        return ResponseEntity.ok(reviewService.answerAIQuestion(sessionId, questionId, userId, request.answer()));
+        return ResponseEntity.ok(reviewService.answerAIQuestion(matchId, sessionId, questionId, userId, request.answer()));
     }
 
     @Operation(summary = "AI 회고 생성", description = "답변 기반으로 AI가 회고 글을 생성한다")
@@ -58,7 +58,7 @@ public class ReviewController {
             @AuthenticationPrincipal UUID userId,
             @PathVariable UUID matchId,
             @RequestParam UUID sessionId) {
-        return ResponseEntity.ok(reviewService.generateReview(sessionId, userId));
+        return ResponseEntity.ok(reviewService.generateReview(matchId, sessionId, userId));
     }
 
     @Operation(summary = "AI 회고 확정", description = "생성된 회고를 수정 및 확정한다")
@@ -68,7 +68,7 @@ public class ReviewController {
             @PathVariable UUID matchId,
             @RequestParam UUID sessionId,
             @Valid @RequestBody EditReviewRequest request) {
-        return ResponseEntity.ok(reviewService.editGeneratedReview(sessionId, userId, request));
+        return ResponseEntity.ok(reviewService.editGeneratedReview(matchId, sessionId, userId, request));
     }
 
     @Operation(summary = "직접 회고 제출", description = "직접 작성 모드로 회고를 제출한다")
@@ -80,7 +80,7 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.submitDirectReview(matchId, userId, review));
     }
 
-    @Operation(summary = "회고 조회", description = "본인의 회고를 조회한다")
+    @Operation(summary = "회고 조회", description = "본인의 회고를 조회한다. 회고가 없으면 204 No Content를 반환한다")
     @GetMapping
     public ResponseEntity<ReviewResponse> getReview(
             @AuthenticationPrincipal UUID userId,

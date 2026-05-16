@@ -13,16 +13,16 @@ public interface ReviewService {
     ReviewSessionResponse selectReviewMode(UUID matchId, UUID userId, ReviewMode mode);
 
     /** AI 질문 조회 (AI 기반 모드) */
-    List<AiReviewQuestionDto> getAIQuestions(UUID sessionId, UUID userId);
+    List<AiReviewQuestionDto> getAIQuestions(UUID matchId, UUID sessionId, UUID userId);
 
     /** AI 질문에 답변 */
-    AiReviewQuestionDto answerAIQuestion(UUID sessionId, UUID questionId, UUID userId, String answer);
+    AiReviewQuestionDto answerAIQuestion(UUID matchId, UUID sessionId, UUID questionId, UUID userId, String answer);
 
     /** AI가 답변 기반으로 회고 글 생성 */
-    GeneratedReviewPreview generateReview(UUID sessionId, UUID userId);
+    GeneratedReviewPreview generateReview(UUID matchId, UUID sessionId, UUID userId);
 
     /** 생성된 회고 글 수정 및 확정 */
-    ReviewResponse editGeneratedReview(UUID sessionId, UUID userId, EditReviewRequest request);
+    ReviewResponse editGeneratedReview(UUID matchId, UUID sessionId, UUID userId, EditReviewRequest request);
 
     /** 직접 작성 모드로 회고 제출 */
     ReviewResponse submitDirectReview(UUID matchId, UUID userId, DirectReviewInputDto review);

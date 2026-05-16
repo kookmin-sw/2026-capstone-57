@@ -1,8 +1,10 @@
 package com.ilgiyebo.domain.review.service;
 
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
+import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.domain.matching.entity.MatchEntity;
+import com.ilgiyebo.domain.matching.entity.MatchStatus;
 import com.ilgiyebo.domain.matching.repository.MatchRepository;
 import com.ilgiyebo.domain.review.dto.*;
 import com.ilgiyebo.domain.review.entity.*;
@@ -16,10 +18,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,7 +33,7 @@ import java.util.UUID;
 public class ReviewServiceImpl implements ReviewService {
 
     private static final int REVIEW_STAGE = 5;
-    private static final int AI_QUESTION_COUNT = 3;
+    private static final int MAX_AI_QUESTION_COUNT = 5;
 
     private final ReviewRepository reviewRepository;
     private final ReviewSessionRepository reviewSessionRepository;
@@ -39,6 +43,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
     private final ReviewAiClient reviewAiClient;
     private final ExperienceGrantPort experienceGrantPort;
+    private final TransactionTemplate transactionTemplate;
 
     @Override
     @Transactional
@@ -49,12 +54,10 @@ public class ReviewServiceImpl implements ReviewService {
         InteractionEntity interaction = findInteractionOrThrow(matchId);
         validateReviewStage(interaction);
 
-        // 이미 회고가 작성된 경우
         if (reviewRepository.findByInteractionIdAndUserId(interaction.getId(), userId).isPresent()) {
             throw ReviewException.REVIEW_ALREADY_EXISTS.toException();
         }
 
-        // 이미 세션이 존재하는 경우
         if (reviewSessionRepository.findByInteractionIdAndUserId(interaction.getId(), userId).isPresent()) {
             throw ReviewException.SESSION_ALREADY_EXISTS.toException();
         }
@@ -69,11 +72,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
         session = reviewSessionRepository.save(session);
 
-        // AI 모드인 경우 질문 생성 (추후 AI 연동)
-        if (mode == ReviewMode.AI_ASSISTED) {
-            generateAiQuestions(session.getId());
-        }
-
+        // AI 모드: 질문은 getAIQuestions() 호출 시 lazy하게 생성 (트랜잭션 내 AI 호출 방지)
         log.debug("회고 모드 선택 완료: matchId={}, userId={}, mode={}, sessionId={}",
                 matchId, userId, mode, session.getId());
 
@@ -81,13 +80,75 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<AiReviewQuestionDto> getAIQuestions(UUID sessionId, UUID userId) {
-        ReviewSessionEntity session = findSessionOrThrow(sessionId);
-        validateSessionOwner(session, userId);
+    public List<AiReviewQuestionDto> getAIQuestions(UUID matchId, UUID sessionId, UUID userId) {
+        // 1단계: DB 검증 + mission 프록시 강제 초기화 (트랜잭션)
+        record MissionContext(String missionDesc, String missionLoc) {}
 
-        List<AiReviewQuestionEntity> questions =
-                aiReviewQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(sessionId);
+        MissionContext missionCtx = Objects.requireNonNull(
+                transactionTemplate.execute(status -> {
+                    ReviewSessionEntity s = findSessionOrThrow(sessionId);
+                    validateSessionOwner(s, userId);
+                    validateSessionMatchId(s, matchId);
+                    validateSessionMode(s, ReviewMode.AI_ASSISTED);
+
+                    // mission LAZY 프록시 강제 초기화 (LazyInitializationException 방지)
+                    InteractionEntity interaction = s.getInteraction();
+                    String desc = "만남 미션";
+                    String loc = "캠퍼스";
+                    if (interaction.getMission() != null) {
+                        // activity도 AI 프롬프트에 활용
+                        String activity = interaction.getMission().getActivity();
+                        desc = interaction.getMission().getDescription() != null
+                                ? interaction.getMission().getDescription()
+                                : (activity != null ? activity : desc);
+                        loc = interaction.getMission().getLocation() != null
+                                ? interaction.getMission().getLocation() : loc;
+                    }
+                    return new MissionContext(desc, loc);
+                }),
+                "트랜잭션 실행 결과가 null입니다"
+        );
+
+        // 2단계: 질문 조회 (트랜잭션)
+        List<AiReviewQuestionEntity> existingQuestions = Objects.requireNonNull(
+                transactionTemplate.execute(status ->
+                        aiReviewQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(sessionId)),
+                "트랜잭션 실행 결과가 null입니다"
+        );
+
+        // 3단계: 질문이 없으면 AI 호출 (트랜잭션 밖) + 저장 (별도 트랜잭션)
+        List<AiReviewQuestionEntity> questions;
+        if (existingQuestions.isEmpty()) {
+            List<String> questionTexts = reviewAiClient.generateReviewQuestions(
+                    missionCtx.missionDesc(), missionCtx.missionLoc());
+
+            if (questionTexts.isEmpty()) {
+                throw ReviewException.QUESTION_NOT_FOUND.toException();
+            }
+            if (questionTexts.size() > MAX_AI_QUESTION_COUNT) {
+                questionTexts = questionTexts.subList(0, MAX_AI_QUESTION_COUNT);
+            }
+
+            List<String> finalQuestionTexts = questionTexts;
+            questions = Objects.requireNonNull(
+                    transactionTemplate.execute(status -> {
+                        List<AiReviewQuestionEntity> entities = new ArrayList<>();
+                        for (int i = 0; i < finalQuestionTexts.size(); i++) {
+                            AiReviewQuestionEntity q = AiReviewQuestionEntity.builder()
+                                    .sessionId(sessionId)
+                                    .question(finalQuestionTexts.get(i))
+                                    .questionOrder(i + 1)
+                                    .build();
+                            entities.add(aiReviewQuestionRepository.save(q));
+                        }
+                        return entities;
+                    }),
+                    "트랜잭션 실행 결과가 null입니다"
+            );
+            log.debug("AI 회고 질문 생성 완료: sessionId={}, 질문 수={}", sessionId, questions.size());
+        } else {
+            questions = existingQuestions;
+        }
 
         log.debug("AI 회고 질문 조회: sessionId={}, 질문 수={}", sessionId, questions.size());
 
@@ -98,9 +159,11 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public AiReviewQuestionDto answerAIQuestion(UUID sessionId, UUID questionId, UUID userId, String answer) {
+    public AiReviewQuestionDto answerAIQuestion(UUID matchId, UUID sessionId, UUID questionId, UUID userId, String answer) {
         ReviewSessionEntity session = findSessionOrThrow(sessionId);
         validateSessionOwner(session, userId);
+        validateSessionMatchId(session, matchId);
+        validateSessionMode(session, ReviewMode.AI_ASSISTED);
         validateSessionStatus(session, ReviewSessionStatus.IN_PROGRESS);
 
         AiReviewQuestionEntity question = aiReviewQuestionRepository.findById(questionId)
@@ -125,32 +188,44 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    @Transactional
-    public GeneratedReviewPreview generateReview(UUID sessionId, UUID userId) {
-        ReviewSessionEntity session = findSessionOrThrow(sessionId);
-        validateSessionOwner(session, userId);
-        validateSessionStatus(session, ReviewSessionStatus.IN_PROGRESS);
+    public GeneratedReviewPreview generateReview(UUID matchId, UUID sessionId, UUID userId) {
+        // 1단계: DB 검증만 (상태 변경 없음)
+        List<AiReviewQuestionEntity> questions = Objects.requireNonNull(
+                transactionTemplate.execute(status -> {
+                    ReviewSessionEntity session = findSessionOrThrow(sessionId);
+                    validateSessionOwner(session, userId);
+                    validateSessionMatchId(session, matchId);
+                    validateSessionMode(session, ReviewMode.AI_ASSISTED);
+                    validateSessionStatus(session, ReviewSessionStatus.IN_PROGRESS);
 
-        // DIRECT 모드 세션에서는 AI 생성 불가
-        if (session.getMode() != ReviewMode.AI_ASSISTED) {
-            throw ReviewException.INVALID_SESSION_STATUS.toException();
-        }
+                    List<AiReviewQuestionEntity> qs =
+                            aiReviewQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(sessionId);
 
-        // 모든 질문에 답변했는지 확인
-        List<AiReviewQuestionEntity> questions =
-                aiReviewQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(sessionId);
-        boolean allAnswered = questions.stream().allMatch(q -> q.getAnswer() != null);
-        if (!allAnswered) {
-            throw ReviewException.NOT_ALL_QUESTIONS_ANSWERED.toException();
-        }
+                    if (qs.isEmpty()) {
+                        throw ReviewException.NOT_ALL_QUESTIONS_ANSWERED.toException();
+                    }
 
-        // AI 회고 내용 생성
+                    boolean allAnswered = qs.stream().allMatch(q -> q.getAnswer() != null);
+                    if (!allAnswered) {
+                        throw ReviewException.NOT_ALL_QUESTIONS_ANSWERED.toException();
+                    }
+
+                    return qs;
+                }),
+                "트랜잭션 실행 결과가 null입니다"
+        );
+
+        // 2단계: AI 호출 (트랜잭션 밖 — 실패해도 DB 상태 오염 없음)
         String generatedContent = generateAiReviewContent(questions);
+        // TODO: AI 연동 시 동적 값으로 교체 예정
         int suggestedSatisfaction = 4;
 
-        // 세션 상태 업데이트
-        session.setStatus(ReviewSessionStatus.GENERATED);
-        reviewSessionRepository.save(session);
+        // 3단계: AI 성공 후에만 상태 변경 (별도 트랜잭션)
+        transactionTemplate.executeWithoutResult(status -> {
+            ReviewSessionEntity session = findSessionOrThrow(sessionId);
+            session.setStatus(ReviewSessionStatus.GENERATED);
+            reviewSessionRepository.save(session);
+        });
 
         log.debug("AI 회고 생성 완료: sessionId={}", sessionId);
 
@@ -159,9 +234,11 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewResponse editGeneratedReview(UUID sessionId, UUID userId, EditReviewRequest request) {
+    public ReviewResponse editGeneratedReview(UUID matchId, UUID sessionId, UUID userId, EditReviewRequest request) {
         ReviewSessionEntity session = findSessionOrThrow(sessionId);
         validateSessionOwner(session, userId);
+        validateSessionMatchId(session, matchId);
+        validateSessionMode(session, ReviewMode.AI_ASSISTED);
         validateSessionStatus(session, ReviewSessionStatus.GENERATED);
 
         validateSatisfaction(request.satisfaction());
@@ -180,12 +257,10 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
         review = reviewRepository.save(review);
 
-        // 세션 상태 완료 처리
         session.setStatus(ReviewSessionStatus.COMPLETED);
         reviewSessionRepository.save(session);
 
-        // 상호작용에 회고 완료 기록
-        markReviewCompleted(interaction, userId);
+        markReviewCompleted(interaction.getMatch().getId(), userId);
 
         log.debug("AI 회고 확정 완료: sessionId={}, reviewId={}", sessionId, review.getId());
 
@@ -201,7 +276,6 @@ public class ReviewServiceImpl implements ReviewService {
         InteractionEntity interaction = findInteractionOrThrow(matchId);
         validateReviewStage(interaction);
 
-        // 이미 회고가 작성된 경우
         if (reviewRepository.findByInteractionIdAndUserId(interaction.getId(), userId).isPresent()) {
             throw ReviewException.REVIEW_ALREADY_EXISTS.toException();
         }
@@ -210,14 +284,12 @@ public class ReviewServiceImpl implements ReviewService {
 
         UserEntity user = findUserOrThrow(userId);
 
-        // 이미 AI 모드로 세션이 생성된 경우 직접 작성 불가
         Optional<ReviewSessionEntity> existingSession = reviewSessionRepository
                 .findByInteractionIdAndUserId(interaction.getId(), userId);
         if (existingSession.isPresent() && existingSession.get().getMode() == ReviewMode.AI_ASSISTED) {
             throw ReviewException.SESSION_MODE_MISMATCH.toException();
         }
 
-        // 직접 작성 세션이 없으면 생성
         ReviewSessionEntity session = existingSession
                 .orElseGet(() -> {
                     ReviewSessionEntity newSession = ReviewSessionEntity.builder()
@@ -240,12 +312,10 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
         reviewEntity = reviewRepository.save(reviewEntity);
 
-        // 세션 상태 완료 처리
         session.setStatus(ReviewSessionStatus.COMPLETED);
         reviewSessionRepository.save(session);
 
-        // 상호작용에 회고 완료 기록
-        markReviewCompleted(interaction, userId);
+        markReviewCompleted(matchId, userId);
 
         log.debug("직접 회고 제출 완료: matchId={}, userId={}, reviewId={}",
                 matchId, userId, reviewEntity.getId());
@@ -288,9 +358,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     private void validateUserInMatch(MatchEntity match, UUID userId) {
-        boolean isParticipant = match.getUserA().getId().equals(userId)
-                || match.getUserB().getId().equals(userId);
-        if (!isParticipant) {
+        if (!match.getUserA().getId().equals(userId) && !match.getUserB().getId().equals(userId)) {
             throw ReviewException.USER_NOT_IN_MATCH.toException();
         }
     }
@@ -299,11 +367,26 @@ public class ReviewServiceImpl implements ReviewService {
         if (interaction.getCurrentStage() != REVIEW_STAGE) {
             throw ReviewException.NOT_IN_REVIEW_STAGE.toException();
         }
+        if (interaction.getStageStatus() == StageStatus.TERMINATED) {
+            throw ReviewException.NOT_IN_REVIEW_STAGE.toException();
+        }
     }
 
     private void validateSessionOwner(ReviewSessionEntity session, UUID userId) {
         if (!session.getUser().getId().equals(userId)) {
             throw ReviewException.SESSION_NOT_OWNED.toException();
+        }
+    }
+
+    private void validateSessionMatchId(ReviewSessionEntity session, UUID matchId) {
+        if (!session.getInteraction().getMatch().getId().equals(matchId)) {
+            throw ReviewException.MATCH_NOT_FOUND.toException();
+        }
+    }
+
+    private void validateSessionMode(ReviewSessionEntity session, ReviewMode expectedMode) {
+        if (session.getMode() != expectedMode) {
+            throw ReviewException.SESSION_MODE_MISMATCH.toException();
         }
     }
 
@@ -319,36 +402,6 @@ public class ReviewServiceImpl implements ReviewService {
         }
     }
 
-    private void generateAiQuestions(UUID sessionId) {
-        // 세션에서 interaction → mission 정보를 가져와 AI에 전달
-        ReviewSessionEntity session = findSessionOrThrow(sessionId);
-        InteractionEntity interaction = session.getInteraction();
-
-        String missionDescription = "만남 미션";
-        String missionLocation = "캠퍼스";
-
-        // 실제 미션 정보가 있으면 사용
-        if (interaction.getMission() != null) {
-            missionDescription = interaction.getMission().getDescription() != null
-                    ? interaction.getMission().getDescription() : missionDescription;
-            missionLocation = interaction.getMission().getLocation() != null
-                    ? interaction.getMission().getLocation() : missionLocation;
-        }
-
-        List<String> questions = reviewAiClient.generateReviewQuestions(missionDescription, missionLocation);
-
-        for (int i = 0; i < questions.size(); i++) {
-            AiReviewQuestionEntity question = AiReviewQuestionEntity.builder()
-                    .sessionId(sessionId)
-                    .question(questions.get(i))
-                    .questionOrder(i + 1)
-                    .build();
-            aiReviewQuestionRepository.save(question);
-        }
-
-        log.debug("AI 회고 질문 생성 완료: sessionId={}, 질문 수={}, 미션장소={}", sessionId, questions.size(), missionLocation);
-    }
-
     private String generateAiReviewContent(List<AiReviewQuestionEntity> questions) {
         List<ReviewAiClient.QuestionAnswer> answers = questions.stream()
                 .map(q -> new ReviewAiClient.QuestionAnswer(q.getQuestion(), q.getAnswer()))
@@ -356,7 +409,13 @@ public class ReviewServiceImpl implements ReviewService {
         return reviewAiClient.generateReviewContent(answers);
     }
 
-    private void markReviewCompleted(InteractionEntity interaction, UUID userId) {
+    /**
+     * 회고 완료 기록. 비관적 락(PESSIMISTIC_WRITE)으로 Lost Update 방지.
+     */
+    private void markReviewCompleted(UUID matchId, UUID userId) {
+        InteractionEntity interaction = interactionRepository.findByMatchIdForUpdate(matchId)
+                .orElseThrow(ReviewException.INTERACTION_NOT_FOUND::toException);
+
         List<String> completedBy = interaction.getReviewCompletedBy();
         if (completedBy == null) {
             completedBy = new ArrayList<>();
@@ -367,14 +426,19 @@ public class ReviewServiceImpl implements ReviewService {
             completedBy.add(userIdStr);
             interaction.setReviewCompletedBy(completedBy);
 
-            // 경험치 부여 (요구사항 9.7) — 중복 방지: 최초 완료 시에만 부여
             experienceGrantPort.grantReviewWriteExp(userId);
         }
 
-        // 양쪽 모두 회고 완료 시 상호작용 완료 처리
+        // 양쪽 모두 회고 완료 시 상호작용 + 매칭 완료 처리
         if (completedBy.size() >= 2) {
-            interaction.setStageStatus(com.ilgiyebo.domain.interaction.entity.StageStatus.COMPLETED);
-            log.info("양쪽 회고 모두 완료 - 상호작용 완료 처리: interactionId={}", interaction.getId());
+            interaction.setStageStatus(StageStatus.COMPLETED);
+
+            MatchEntity match = interaction.getMatch();
+            match.setStatus(MatchStatus.COMPLETED);
+            matchRepository.save(match);
+
+            log.info("양쪽 회고 모두 완료 - 상호작용 및 매칭 완료 처리: interactionId={}, matchId={}",
+                    interaction.getId(), match.getId());
         }
 
         interactionRepository.save(interaction);
