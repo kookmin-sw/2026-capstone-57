@@ -47,6 +47,7 @@ class ConversationTurn(BaseModel):
 class FirstQuestionRequest(BaseModel):
     """첫 질문 생성 요청."""
 
+    sessionId: str
     userId: str
     date: str
     todaySchedule: list[ScheduleEntry] = Field(default_factory=list)
@@ -56,6 +57,7 @@ class FirstQuestionRequest(BaseModel):
 class NextQuestionRequest(BaseModel):
     """다음 질문 생성 요청."""
 
+    sessionId: str
     userId: str
     date: str
     conversationHistory: list[ConversationTurn] = Field(default_factory=list)
@@ -73,18 +75,21 @@ class GenerateRequest(BaseModel):
 
 
 class FirstQuestionResponse(BaseModel):
-    """첫 질문 응답."""
+    """첫 질문 응답 (DiarySessionResponse에 매핑)."""
 
-    question: str
+    sessionId: str
+    nextQuestion: str
+    currentTurnNumber: int = 0
     maxTurns: int = 5
 
 
 class NextQuestionResponse(BaseModel):
-    """다음 질문 응답."""
+    """다음 질문 응답 (DiaryTurnResponse에 매핑)."""
 
-    question: Optional[str] = None
-    isConversationComplete: bool = False
-    currentTurn: int
+    sessionId: str
+    isCompleted: bool = False
+    nextQuestion: Optional[str] = None
+    currentTurnNumber: int
     maxTurns: int = 5
 
 
@@ -96,10 +101,10 @@ class ProfileUpdate(BaseModel):
 
 
 class GenerateResponse(BaseModel):
-    """일기 생성 응답."""
+    """일기 생성 응답 (GeneratedDiaryPreview에 매핑)."""
 
     sessionId: str
-    compiledContent: str
+    generatedContent: str
     suggestedEmotion: str
     profileUpdate: Optional[ProfileUpdate] = None
     generatedAt: datetime
@@ -278,7 +283,9 @@ async def first_question(body: FirstQuestionRequest, request: Request):
             )
 
             return FirstQuestionResponse(
-                question=question,
+                sessionId=body.sessionId,
+                nextQuestion=question,
+                currentTurnNumber=0,
                 maxTurns=settings.conversation_max_turns,
             )
 
@@ -304,9 +311,10 @@ async def next_question(body: NextQuestionRequest, request: Request):
             # maxTurns 도달 시 강제 완료
             if current_turn >= max_turns:
                 return NextQuestionResponse(
-                    question=None,
-                    isConversationComplete=True,
-                    currentTurn=current_turn,
+                    sessionId=body.sessionId,
+                    nextQuestion=None,
+                    isCompleted=True,
+                    currentTurnNumber=current_turn,
                     maxTurns=max_turns,
                 )
 
@@ -328,9 +336,10 @@ async def next_question(body: NextQuestionRequest, request: Request):
                 )
 
                 return NextQuestionResponse(
-                    question=response.strip(),
-                    isConversationComplete=True,
-                    currentTurn=current_turn,
+                    sessionId=body.sessionId,
+                    nextQuestion=response.strip(),
+                    isCompleted=True,
+                    currentTurnNumber=current_turn,
                     maxTurns=max_turns,
                 )
 
@@ -358,9 +367,10 @@ async def next_question(body: NextQuestionRequest, request: Request):
             )
 
             return NextQuestionResponse(
-                question=response.strip(),
-                isConversationComplete=False,
-                currentTurn=current_turn,
+                sessionId=body.sessionId,
+                nextQuestion=response.strip(),
+                isCompleted=False,
+                currentTurnNumber=current_turn,
                 maxTurns=max_turns,
             )
 
@@ -402,7 +412,7 @@ async def generate_diary(body: GenerateRequest, request: Request):
 
             return GenerateResponse(
                 sessionId=body.sessionId,
-                compiledContent=compiled_content,
+                generatedContent=compiled_content,
                 suggestedEmotion=suggested_emotion,
                 profileUpdate=profile_update,
                 generatedAt=datetime.now(timezone.utc),
