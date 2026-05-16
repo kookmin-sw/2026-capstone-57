@@ -1,8 +1,6 @@
 package com.ilgiyebo.domain.review.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -11,8 +9,6 @@ import java.util.List;
  * 실제 AI 서버 없이 고정된 질문과 회고 내용을 반환한다.
  */
 @Slf4j
-@Component
-@Profile("local")
 public class StubReviewAiClient implements ReviewAiClient {
 
     @Override

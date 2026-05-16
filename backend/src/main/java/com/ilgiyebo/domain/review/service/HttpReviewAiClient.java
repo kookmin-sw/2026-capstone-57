@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ilgiyebo.common.config.AiServerProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,8 +18,6 @@ import java.util.List;
  * diary의 HttpDiaryAiClient와 동일한 패턴 (재시도, 타임아웃).
  */
 @Slf4j
-@Component
-@Profile("!local")
 public class HttpReviewAiClient implements ReviewAiClient {
 
     private final AiServerProperties aiServerProperties;
@@ -66,7 +62,6 @@ public class HttpReviewAiClient implements ReviewAiClient {
 
     private <T> T executeWithRetry(String url, Object requestBody, Class<T> responseType) {
         int maxRetries = aiServerProperties.getMaxRetries();
-        Exception lastException = null;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -85,31 +80,34 @@ public class HttpReviewAiClient implements ReviewAiClient {
 
                 HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
-                if (response.statusCode() >= 400) {
+                if (response.statusCode() >= 400 && response.statusCode() < 500) {
+                    // 4xx 클라이언트 오류는 재시도 없이 즉시 예외
+                    throw new RuntimeException("AI 서버 클라이언트 오류 (재시도 불가): status=" + response.statusCode());
+                }
+
+                if (response.statusCode() >= 500) {
                     log.warn("AI 서버 응답 오류: url={}, status={}, attempt={}/{}",
                             url, response.statusCode(), attempt, maxRetries);
-                    if (attempt < maxRetries) {
-                        lastException = new RuntimeException("AI 서버 응답 오류: status=" + response.statusCode());
-                        continue;
+                    if (attempt == maxRetries) {
+                        throw new RuntimeException("AI 서버 요청 실패 (최대 재시도 초과): status=" + response.statusCode());
                     }
-                    throw new RuntimeException("AI 서버 요청 실패 (최대 재시도 초과): status=" + response.statusCode());
+                    continue;
                 }
 
                 return objectMapper.readValue(response.body(), responseType);
 
             } catch (RuntimeException e) {
-                lastException = e;
-                if (attempt >= maxRetries) throw e;
+                if (attempt == maxRetries) throw e;
             } catch (Exception e) {
-                lastException = e;
                 log.warn("AI 서버 통신 오류: url={}, attempt={}/{}, error={}", url, attempt, maxRetries, e.getMessage());
-                if (attempt >= maxRetries) {
+                if (attempt == maxRetries) {
                     throw new RuntimeException("AI 서버 요청 실패 (최대 재시도 초과): " + e.getMessage(), e);
                 }
             }
         }
 
-        throw new RuntimeException("AI 서버 요청 실패", lastException);
+        // maxRetries가 0 이하인 경우에만 도달 (정상적으로는 도달 불가)
+        throw new RuntimeException("AI 서버 요청 실패: 재시도 횟수 설정 오류");
     }
 
     // --- Request/Response DTOs ---
