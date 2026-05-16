@@ -62,7 +62,6 @@ export interface ChatSessionDto {
   sessionId: string
   matchId: string
   startTime: string
-  endTime: string
   status: "ACTIVE" | "ENDED"
   tokenLimit: number
   usedTokens: number
