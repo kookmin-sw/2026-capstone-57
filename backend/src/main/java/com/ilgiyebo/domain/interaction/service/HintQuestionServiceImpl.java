@@ -30,7 +30,7 @@ public class HintQuestionServiceImpl implements HintQuestionService {
 
     @Override
     @Transactional
-    public HintQuestionDto sendHintQuestion(UUID matchId, UUID senderId, String question) {
+    public HintQuestionDto sendHintQuestion(UUID matchId, UUID senderId, String question, int quizIndex) {
         MatchEntity match = matchRepository.findById(matchId)
                 .orElseThrow(InteractionException.MATCH_NOT_FOUND::toException);
         validateUserInMatch(match, senderId);
@@ -53,7 +53,7 @@ public class HintQuestionServiceImpl implements HintQuestionService {
                 .sender(sender)
                 .responder(responder)
                 .question(question)
-                .quizIndex(interaction.getCurrentStage())
+                .quizIndex(quizIndex)
                 .status(HintQuestionStatus.PENDING)
                 .build();
 

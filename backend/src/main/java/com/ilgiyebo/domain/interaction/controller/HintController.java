@@ -30,7 +30,7 @@ public class HintController {
             @PathVariable UUID matchId,
             @Valid @RequestBody SendHintQuestionRequest request) {
         return ResponseEntity.ok(
-                hintQuestionService.sendHintQuestion(matchId, userId, request.question()));
+                hintQuestionService.sendHintQuestion(matchId, userId, request.question(), request.quizIndex()));
     }
 
     @Operation(summary = "힌트 질문에 대한 답변 등록")
