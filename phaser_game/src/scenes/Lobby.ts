@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { NetworkService } from '../services/NetworkService';
 import {
-  ConnectionState,
   GameStartedPayload,
   RoomStatePayload,
 } from '../types/network';
