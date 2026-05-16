@@ -7,6 +7,9 @@
 backend/build/
 backend/.gradle/
 backend/.jqwik-database
+frontend/.next/
+frontend/node_modules/
+phaser_game/node_modules/
 
 # Environment
 backend/.env
