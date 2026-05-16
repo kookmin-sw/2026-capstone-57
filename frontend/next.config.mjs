@@ -12,7 +12,7 @@ const nextConfig = {
     return [
       {
         source: "/backend/:path*",
-        destination: "http://localhost:8080/:path*",
+        destination: "http://54.174.25.221:8080/:path*",
       },
       // Game API proxy (development)
       {

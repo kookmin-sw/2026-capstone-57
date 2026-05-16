@@ -41,12 +41,12 @@ export default class Level extends Phaser.Scene {
 		// player1
 		this.player1 = this.physics.add.sprite(30, 542, "blue_cloud_idle", 0);
 		this.player1.name = "player1";
-		this.player1.body.setSize(32, 30, false);
+		this.player1.body!.setSize(32, 30, false);
 
 		// player2
 		this.player2 = this.physics.add.sprite(102, 646, "pink_cloud_idle", 0);
 		this.player2.name = "player2";
-		this.player2.body.setSize(32, 30, false);
+		this.player2.body!.setSize(32, 30, false);
 
 		this.level = level;
 		this.groundLayer = groundLayer;
@@ -54,6 +54,8 @@ export default class Level extends Phaser.Scene {
 		this.events.emit("scene-awake");
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	// @ts-expect-error reserved for future use
 	private level!: Phaser.Tilemaps.Tilemap;
 	private groundLayer!: Phaser.Tilemaps.TilemapLayer;
 
@@ -313,7 +315,7 @@ export default class Level extends Phaser.Scene {
 				"moon_32x32_optimized"
 			) as Phaser.Physics.Arcade.Image;
 
-			coin.body.setSize(32, 32, false);
+			coin.body!.setSize(32, 32, false);
 			coin.setData('coinId', `coin_${index}`);
 		});
 
@@ -695,8 +697,8 @@ export default class Level extends Phaser.Scene {
 	/* -------------------------------------------------------------------------- */
 
 	private collectCoin(
-		_player: Phaser.Types.Physics.Arcade.GameObjectWithBody,
-		coin: Phaser.Types.Physics.Arcade.GameObjectWithBody
+		_player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+		coin: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
 	) {
 
 		if (this.isOnlineMode && this.networkGameManager) {
