@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class QuizAction(str, Enum):
@@ -42,6 +42,14 @@ class TargetProfile(BaseModel):
     hobbies: list[str] = Field(default_factory=list)
     interests: list[str] = Field(default_factory=list)
     personalityType: list[str] = Field(default_factory=list)
+
+    @field_validator("personalityType", "hobbies", "interests", mode="before")
+    @classmethod
+    def ensure_list(cls, v):
+        """문자열이 들어오면 리스트로 변환."""
+        if isinstance(v, str):
+            return [v]
+        return v
 
 
 class QuizQuestion(BaseModel):

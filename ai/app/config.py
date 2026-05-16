@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # Bedrock
     bedrock_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
     bedrock_max_tokens: int = 4096
-    bedrock_timeout_seconds: int = 30
+    bedrock_timeout_seconds: int = 180
     bedrock_embedding_model_id: str = "amazon.titan-embed-text-v2:0"
 
     # SQS Queues
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     mission_search_top_k: int = 3
 
     # Server
-    server_port: int = 8081
+    server_port: int = 8000
 
     # Request timeout
     request_timeout_seconds: int = 60
