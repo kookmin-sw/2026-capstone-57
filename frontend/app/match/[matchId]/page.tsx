@@ -239,6 +239,7 @@ export default function MatchDetailPage() {
           <QuizStage
             questions={quizQuestions.length > 0 ? quizQuestions : [{ id: "loading", question: "로딩 중...", options: [], correctIndex: -1 }]}
             hints={quizHints.map((h) => ({ id: h.id, question: h.question, answer: h.answer, status: h.status, quizIndex: h.quizIndex }))}
+            matchId={matchId}
             onComplete={handleQuizComplete}
             onSubmitAnswer={async (quizIndex, answer) => {
               try {

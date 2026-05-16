@@ -27,10 +27,19 @@ interface QuizStageProps {
   onComplete: () => void
   onSubmitAnswer?: (quizIndex: number, answer: number) => Promise<{ correctAnswer: number; isCorrect: boolean } | null>
   onSendHint?: (question: string) => void
+  matchId: string
+  initialIndex?: number
 }
 
-export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, onSendHint }: QuizStageProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
+export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, onSendHint, matchId, initialIndex }: QuizStageProps) {
+  const STORAGE_KEY = `quiz_progress_${matchId}`
+
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (initialIndex !== undefined) return initialIndex
+    if (typeof window === "undefined") return 0
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? parseInt(saved, 10) : 0
+  })
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [correctAnswer, setCorrectAnswer] = useState<number | null>(null)
   const [showResult, setShowResult] = useState(false)
@@ -65,9 +74,12 @@ export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, o
 
   const handleNext = () => {
     if (isLastQuestion) {
+      localStorage.removeItem(STORAGE_KEY)
       onComplete()
     } else {
-      setCurrentIndex((prev) => prev + 1)
+      const nextIndex = currentIndex + 1
+      localStorage.setItem(STORAGE_KEY, String(nextIndex))
+      setCurrentIndex(nextIndex)
       setSelectedOption(null)
       setCorrectAnswer(null)
       setShowResult(false)
