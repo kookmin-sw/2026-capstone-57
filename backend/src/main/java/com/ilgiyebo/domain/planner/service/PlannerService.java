@@ -22,6 +22,9 @@ public interface PlannerService {
     /** 특정 날짜 일정 목록 조회 (본인만) */
     List<PlanEntryResponse> getPlanEntries(UUID userId, LocalDate date);
 
+    /** 주간 일정 목록 조회 (월~금, 본인만) */
+    List<PlanEntryResponse> getWeeklyPlanEntries(UUID userId, LocalDate weekStart);
+
     /**
      * 시간표 등록 시 호출.
      * 현재 활성 학기를 조회하여 기존 SCHEDULE_AUTO 미래 일정을 삭제하고,

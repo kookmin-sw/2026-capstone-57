@@ -6,16 +6,14 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * AI quiz generation response SQS message.
- * Received from AI to interaction direction.
+ * AI 퀴즈 생성 응답 SQS 메시지.
+ * AI가 퀴즈를 생성 완료하면 이 형식으로 응답한다.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record QuizGenerateResponseMessage(
     String action,
     String status,
-    String matchId,
-    String requesterId,
-    String targetUserId,
+    String userId,
     QuizPayload quiz,
     int questionCount,
     Instant completedAt
@@ -23,8 +21,7 @@ public record QuizGenerateResponseMessage(
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record QuizPayload(
-        String matchId,
-        String targetUserId,
+        String userId,
         List<AiQuizQuestion> questions,
         Instant createdAt
     ) {}

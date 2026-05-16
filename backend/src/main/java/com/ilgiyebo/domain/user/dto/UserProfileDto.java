@@ -1,9 +1,9 @@
 package com.ilgiyebo.domain.user.dto;
 
-import com.ilgiyebo.domain.user.entity.Gender;
-import com.ilgiyebo.domain.user.entity.UserEntity;
+import com.ilgiyebo.domain.user.entity.*;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 
 public record UserProfileDto(
@@ -14,10 +14,10 @@ public record UserProfileDto(
     String major,
     LocalDate birthDate,
     Gender gender,
-    List<String> hobbies,
-    List<String> interests,
-    List<String> personalityTypes,
-    List<String> idealTypes,
+    List<ProfileOptionDto> hobbies,
+    List<ProfileOptionDto> interests,
+    ProfileOptionDto personalityType,
+    List<ProfileOptionDto> idealTypes,
     int totalExp,
     int currentLevel
 ) {
@@ -30,12 +30,29 @@ public record UserProfileDto(
                 user.getMajor(),
                 user.getBirthDate(),
                 user.getGender(),
-                user.getHobbies(),
-                user.getInterests(),
-                user.getPersonalityTypes(),
-                user.getIdealTypes(),
+                toOptionList(user.getHobbies(), Hobby.class),
+                toOptionList(user.getInterests(), Interest.class),
+                user.getPersonalityType() != null
+                        ? new ProfileOptionDto(user.getPersonalityType().name(), user.getPersonalityType().getLabel())
+                        : null,
+                toOptionList(user.getIdealTypes(), IdealType.class),
                 user.getTotalExp(),
                 user.getCurrentLevel()
         );
+    }
+
+    private static <E extends Enum<E>> List<ProfileOptionDto> toOptionList(List<String> codes, Class<E> enumClass) {
+        if (codes == null) return Collections.emptyList();
+        return codes.stream()
+                .map(code -> {
+                    try {
+                        E e = Enum.valueOf(enumClass, code);
+                        String label = (String) e.getClass().getMethod("getLabel").invoke(e);
+                        return new ProfileOptionDto(code, label);
+                    } catch (Exception ex) {
+                        return new ProfileOptionDto(code, code);
+                    }
+                })
+                .toList();
     }
 }

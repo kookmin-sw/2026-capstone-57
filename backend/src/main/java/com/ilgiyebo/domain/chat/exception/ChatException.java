@@ -14,7 +14,8 @@ public enum ChatException {
     MATCH_NOT_FOUND("매치를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     MATCH_NOT_ACTIVE("매치가 활성 상태가 아닙니다", HttpStatus.BAD_REQUEST),
     NOT_PARTICIPANT("채팅 참여자가 아닙니다", HttpStatus.FORBIDDEN),
-    INVALID_MESSAGE("유효하지 않은 메시지입니다", HttpStatus.BAD_REQUEST);
+    INVALID_MESSAGE("유효하지 않은 메시지입니다", HttpStatus.BAD_REQUEST),
+    TOKEN_LIMIT_REACHED("채팅 토큰 한도에 도달했습니다", HttpStatus.BAD_REQUEST);
 
     private final String message;
     private final HttpStatus status;

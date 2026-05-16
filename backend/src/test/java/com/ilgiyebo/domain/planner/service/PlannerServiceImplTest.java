@@ -456,6 +456,11 @@ class PlannerServiceImplTest {
         void shouldGenerateScheduleAutoEntries() {
             UUID scheduleId = UUID.randomUUID();
             LocalDate today = LocalDate.now();
+            // 구현이 today 이후 ~ 이번 주 금요일까지만 생성하므로,
+            // 주말에는 생성 대상 날짜가 없다. 평일에만 내용 검증을 수행한다.
+            boolean isWeekday = today.getDayOfWeek().getValue() <= 5;
+            DayOfWeek testDay = isWeekday ? today.getDayOfWeek() : DayOfWeek.MONDAY;
+
             SemesterEntity semester = SemesterEntity.builder()
                     .year(today.getYear())
                     .term(SemesterTerm.FIRST)
@@ -466,7 +471,7 @@ class PlannerServiceImplTest {
 
             ScheduleEntity schedule = ScheduleEntity.builder()
                     .name("데이터베이스")
-                    .dayOfWeek(today.getDayOfWeek()) // 오늘 요일로 설정하여 현재 주에 생성되도록
+                    .dayOfWeek(testDay)
                     .startedAt(LocalTime.of(9, 0))
                     .endedAt(LocalTime.of(10, 30))
                     .place("공학관 301호")
@@ -496,6 +501,13 @@ class PlannerServiceImplTest {
             verify(planEntryRepository).saveAll(captor.capture());
 
             List<PlanEntryEntity> savedEntries = captor.getValue();
+
+            if (!isWeekday) {
+                // 주말에는 현재 주에 남은 평일이 없으므로 빈 리스트가 정상
+                assertThat(savedEntries).isEmpty();
+                return;
+            }
+
             assertThat(savedEntries).isNotEmpty();
 
             // 모든 생성된 엔트리가 SCHEDULE_AUTO이고 sourceSchedule이 설정됨
@@ -503,7 +515,7 @@ class PlannerServiceImplTest {
                 assertThat(entry.getSource()).isEqualTo(PlanSource.SCHEDULE_AUTO);
                 assertThat(entry.getSourceSchedule()).isNotNull();
                 assertThat(entry.getSourceSchedule().getId()).isEqualTo(scheduleId);
-                assertThat(entry.getDate().getDayOfWeek()).isEqualTo(today.getDayOfWeek());
+                assertThat(entry.getDate().getDayOfWeek()).isEqualTo(testDay);
                 assertThat(entry.getStartTime()).isEqualTo(LocalTime.of(9, 0));
                 assertThat(entry.getEndTime()).isEqualTo(LocalTime.of(10, 30));
                 assertThat(entry.getName()).isEqualTo("데이터베이스");

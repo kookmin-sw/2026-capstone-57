@@ -156,4 +156,20 @@ public interface PlanEntryRepository extends JpaRepository<PlanEntryEntity, UUID
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
             @Param("sources") List<PlanSource> sources);
+
+    /**
+     * 특정 사용자의 날짜 범위 내 모든 일정을 조회한다.
+     * 주간 플래너 조회에 사용한다.
+     */
+    @Query("""
+        SELECT e FROM PlanEntryEntity e
+        WHERE e.user.id = :userId
+          AND e.date >= :fromDate
+          AND e.date <= :toDate
+        ORDER BY e.date, e.startTime
+    """)
+    List<PlanEntryEntity> findByUserIdAndDateBetween(
+            @Param("userId") UUID userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
 }

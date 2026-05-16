@@ -2,8 +2,12 @@ package com.ilgiyebo.domain.auth.service;
 
 import com.ilgiyebo.common.config.AuthProperties;
 import com.ilgiyebo.common.config.JwtTokenProvider;
+import com.ilgiyebo.domain.interaction.dto.QuizGenerateRequestMessage;
+import com.ilgiyebo.domain.interaction.dto.QuizGenerateRequestMessage.UserProfile;
+import com.ilgiyebo.domain.interaction.service.QuizRequestPublisher;
 import com.ilgiyebo.domain.matching.entity.SlotEntity;
 import com.ilgiyebo.domain.matching.entity.SlotStatus;
+import com.ilgiyebo.domain.user.entity.PersonalityType;
 import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.auth.exception.AuthException;
 import com.ilgiyebo.domain.auth.dto.*;
@@ -36,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
     private final AuthProperties authProperties;
+    private final QuizRequestPublisher quizRequestPublisher;
 
     private final ConcurrentHashMap<String, VerificationEntry> verificationStore = new ConcurrentHashMap<>();
     private final SecureRandom secureRandom = new SecureRandom();
@@ -108,7 +113,11 @@ public class AuthServiceImpl implements AuthService {
                 .gender(request.gender())
                 .hobbies(request.hobbies())
                 .interests(request.interests())
-                .personalityTypes(request.personalityTypes())
+                .personalityType(
+                        request.personalityType() != null
+                                ? PersonalityType.valueOf(request.personalityType())
+                                : null
+                )
                 .idealTypes(request.idealTypes())
                 .build();
         user = userRepository.save(user);
@@ -120,6 +129,9 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         slotRepository.save(slot);
         log.info("회원가입 완료 및 초기 슬롯 부여: userId={}", user.getId());
+
+        // 퀴즈 사전 생성 요청 (SQS) — 실패해도 회원가입은 유지
+        requestQuizGenerationSafe(user);
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
@@ -192,6 +204,30 @@ public class AuthServiceImpl implements AuthService {
     private String generateVerificationCode() {
         int code = secureRandom.nextInt(900000) + 100000;
         return String.valueOf(code);
+    }
+
+    private void requestQuizGenerationSafe(UserEntity user) {
+        try {
+            UserProfile profile = UserProfile.builder()
+                    .name(user.getName())
+                    .nickname(user.getNickname())
+                    .university(user.getUniversity())
+                    .major(user.getMajor())
+                    .hobbies(user.getHobbies())
+                    .interests(user.getInterests())
+                    .personalityType(user.getPersonalityType() != null ? user.getPersonalityType().name() : null)
+                    .build();
+
+            QuizGenerateRequestMessage message = QuizGenerateRequestMessage.of(user.getId(), profile);
+            quizRequestPublisher.requestQuizGeneration(message);
+
+            user.setQuizRequestedAt(Instant.now());
+            userRepository.save(user);
+
+            log.info("회원가입 퀴즈 사전 생성 요청 완료: userId={}", user.getId());
+        } catch (Exception e) {
+            log.warn("회원가입 퀴즈 사전 생성 요청 실패 (회원가입은 유지): userId={}", user.getId(), e);
+        }
     }
 
     ConcurrentHashMap<String, VerificationEntry> getVerificationStore() {

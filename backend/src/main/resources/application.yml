@@ -70,6 +70,8 @@ auth:
     kookmin.ac.kr: 국민대학교
 
 chat:
+  session:
+    token-limit: ${CHAT_TOKEN_LIMIT:150}
   websocket:
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:*}
 

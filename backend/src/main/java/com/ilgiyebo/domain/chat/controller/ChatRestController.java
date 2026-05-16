@@ -73,6 +73,9 @@ public class ChatRestController {
                 .startTime(entity.getStartTime())
                 .endTime(entity.getEndTime())
                 .status(entity.getStatus())
+                .tokenLimit(entity.getTokenLimit())
+                .usedTokens(entity.getUsedTokens())
+                .icebreakerQuestion(entity.getIcebreakerQuestion())
                 .build();
     }
 
