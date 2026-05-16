@@ -87,6 +87,8 @@ public class ChatRestController {
                 .createdAt(entity.getCreatedAt() != null
                         ? entity.getCreatedAt().toInstant(ZoneOffset.UTC)
                         : null)
+                .usedTokens(0)
+                .tokenLimit(0)
                 .build();
     }
 }

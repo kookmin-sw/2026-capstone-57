@@ -11,6 +11,8 @@ public record ChatMessageDto(
         UUID sessionId,
         UUID senderId,
         String content,
-        Instant createdAt
+        Instant createdAt,
+        int usedTokens,
+        int tokenLimit
 ) {
 }
