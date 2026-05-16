@@ -97,10 +97,23 @@ export function connectChatSocket(
       // 에러 큐 구독 (TOKEN_LIMIT_REACHED 등)
       client.subscribe(`/user/queue/errors`, (frame: IMessage) => {
         try {
-          const error: ChatErrorEvent = JSON.parse(frame.body)
+          // 서버가 plain text 또는 JSON으로 에러를 보낼 수 있음
+          let error: ChatErrorEvent
+
+          try {
+            error = JSON.parse(frame.body)
+          } catch {
+            // plain text인 경우 — 토큰 한도 메시지 등
+            const body = frame.body || ""
+            const isTokenLimit = body.includes("토큰") || body.includes("한도") || body.includes("TOKEN_LIMIT")
+            error = {
+              code: isTokenLimit ? "TOKEN_LIMIT_REACHED" : "UNKNOWN",
+              message: body,
+            }
+          }
+
           callbacks.onChatError?.(error)
 
-          // TOKEN_LIMIT_REACHED면 세션 종료로 처리
           if (error.code === "TOKEN_LIMIT_REACHED") {
             callbacks.onSessionEnd?.({ sessionId, reason: error.code })
           }

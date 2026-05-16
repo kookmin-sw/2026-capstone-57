@@ -3,7 +3,7 @@ import SockJS from "sockjs-client"
 
 const WS_URL =
   process.env.NODE_ENV === "development"
-    ? "http://54.174.25.221:8080/ws/game"
+    ? "http://98.93.112.251:8080/ws/game"
     : "/backend/ws/game"
 
 export interface GameEvent {
@@ -44,14 +44,21 @@ export function connectGameSocket(
       client.subscribe(`/topic/game/${gameSessionId}`, (frame: IMessage) => {
         try {
           const event: GameEvent = JSON.parse(frame.body)
+          console.log("[Game WS] 이벤트 수신:", event.type, event)
           callbacks.onEvent(event)
         } catch (err) {
           callbacks.onError?.(err)
         }
       })
 
-      // READY 액션 전송
-      sendGameAction(gameSessionId, { type: "READY" })
+      // READY 액션 전송 (client를 직접 사용하여 타이밍 이슈 방지)
+      const readyPayload = JSON.stringify({ type: "READY" })
+      console.log("[Game WS] READY 전송:", `/app/game/${gameSessionId}/action`)
+      client.publish({
+        destination: `/app/game/${gameSessionId}/action`,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: readyPayload,
+      })
     },
     onDisconnect: () => {
       callbacks.onDisconnect?.()

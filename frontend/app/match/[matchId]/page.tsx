@@ -19,6 +19,7 @@ import {
   getChatSession,
   getChatMessages,
   createGameSession,
+  getGameSession,
   sendHint,
   getHints,
   getMission,
@@ -194,6 +195,41 @@ export default function MatchDetailPage() {
             }
           } catch {
             setChatMessages([])
+          }
+          break
+        }
+        case "GAME": {
+          try {
+            const session = await getGameSession(matchId)
+            setGameSessionId(session.gameSessionId)
+
+            if (session.status === "PLAYING") {
+              setGameStarted(true)
+              setGameWaiting(false)
+            } else if (session.status === "WAITING") {
+              setGameWaiting(true)
+              setGameStarted(false)
+              // 재연결: 구독 + READY 재전송
+              connectGameSocket(session.gameSessionId, {
+                onConnect: () => {
+                  console.log("게임 소켓 재연결 완료")
+                },
+                onEvent: (event: GameEvent) => {
+                  if (event.type === "GAME_STARTED") {
+                    setGameWaiting(false)
+                    setGameStarted(true)
+                  }
+                },
+                onError: (err) => {
+                  console.error("게임 소켓 에러:", err)
+                },
+              })
+            }
+          } catch {
+            // 게임 세션이 아직 없음 — 선택 화면 유지
+            setGameSessionId(null)
+            setGameWaiting(false)
+            setGameStarted(false)
           }
           break
         }

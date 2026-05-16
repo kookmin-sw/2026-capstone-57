@@ -168,3 +168,10 @@ export function createGameSession(matchId: string) {
     method: "POST",
   })
 }
+
+/** 게임 세션 조회 (기존 세션 복구용) */
+export function getGameSession(matchId: string) {
+  return apiFetch<GameSessionDto>(`/api/v1/matches/${matchId}/game-sessions`, {
+    method: "GET",
+  })
+}
