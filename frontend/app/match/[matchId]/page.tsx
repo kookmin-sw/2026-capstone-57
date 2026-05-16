@@ -86,7 +86,6 @@ export default function MatchDetailPage() {
   // Game state
   const [gameSessionId, setGameSessionId] = useState<string | null>(null)
   const [gameWaiting, setGameWaiting] = useState(false)
-  const [gameStarted, setGameStarted] = useState(false)
 
   // Mission state
   const [mission, setMission] = useState<MissionInfo | null>(null)
@@ -201,23 +200,24 @@ export default function MatchDetailPage() {
         case "GAME": {
           try {
             const session = await getGameSession(matchId)
-            setGameSessionId(session.gameSessionId)
+            setGameSessionId(session.id)
 
             if (session.status === "PLAYING") {
-              setGameStarted(true)
-              setGameWaiting(false)
+              // 이미 게임 진행 중 → 게임 페이지로 이동
+              const token = localStorage.getItem("token") || ""
+              router.push(`/game?sessionId=${session.id}&token=${token}`)
             } else if (session.status === "WAITING") {
               setGameWaiting(true)
-              setGameStarted(false)
               // 재연결: 구독 + READY 재전송
-              connectGameSocket(session.gameSessionId, {
+              connectGameSocket(session.id, {
                 onConnect: () => {
                   console.log("게임 소켓 재연결 완료")
                 },
                 onEvent: (event: GameEvent) => {
                   if (event.type === "GAME_STARTED") {
                     setGameWaiting(false)
-                    setGameStarted(true)
+                    const token = localStorage.getItem("token") || ""
+                    router.push(`/game?sessionId=${session.id}&token=${token}`)
                   }
                 },
                 onError: (err) => {
@@ -229,7 +229,6 @@ export default function MatchDetailPage() {
             // 게임 세션이 아직 없음 — 선택 화면 유지
             setGameSessionId(null)
             setGameWaiting(false)
-            setGameStarted(false)
           }
           break
         }
@@ -419,18 +418,19 @@ export default function MatchDetailPage() {
     try {
       // 1. 게임 세션 생성
       const session = await createGameSession(matchId)
-      setGameSessionId(session.gameSessionId)
+      setGameSessionId(session.id)
       setGameWaiting(true)
 
       // 2. WebSocket 연결 (연결 시 자동으로 READY 전송)
-      connectGameSocket(session.gameSessionId, {
+      connectGameSocket(session.id, {
         onConnect: () => {
           console.log("게임 소켓 연결 완료")
         },
         onEvent: (event: GameEvent) => {
           if (event.type === "GAME_STARTED") {
             setGameWaiting(false)
-            setGameStarted(true)
+            const token = localStorage.getItem("token") || ""
+            router.push(`/game?sessionId=${session.id}&token=${token}`)
           }
         },
         onDisconnect: () => {
@@ -522,8 +522,6 @@ export default function MatchDetailPage() {
           <GameStage
             games={[{ id: "g1", name: "달빛찾기", description: "함께 달빛을 찾아서 탈출하세요", icon: "🌙" }]}
             isWaiting={gameWaiting}
-            isStarted={gameStarted}
-            gameSessionId={gameSessionId}
             onSelectGame={handleGameSelect}
           />
         )

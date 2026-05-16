@@ -7,23 +7,10 @@ import type { GameOption } from "@/types/match"
 interface GameStageProps {
   games: GameOption[]
   isWaiting?: boolean
-  isStarted?: boolean
-  gameSessionId?: string | null
   onSelectGame: (gameId: string) => void
 }
 
-export function GameStage({ games, isWaiting = false, isStarted = false, gameSessionId, onSelectGame }: GameStageProps) {
-  // 게임 시작됨 → Phaser 게임 페이지로 이동하거나 인라인 렌더링
-  if (isStarted && gameSessionId) {
-    return (
-      <div className="h-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-4 shadow-sm border border-purple-100/50 flex flex-col items-center justify-center">
-        <span className="text-3xl mb-3">🎮</span>
-        <p className="text-sm font-semibold text-foreground">게임이 시작되었습니다!</p>
-        <p className="text-xs text-muted-foreground mt-1">상대방과 함께 플레이하세요</p>
-      </div>
-    )
-  }
-
+export function GameStage({ games, isWaiting = false, onSelectGame }: GameStageProps) {
   // 대기 중
   if (isWaiting) {
     return (

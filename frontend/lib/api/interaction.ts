@@ -157,7 +157,7 @@ export function createChatSession(matchId: string) {
 
 /** 게임 세션 DTO */
 export interface GameSessionDto {
-  gameSessionId: string
+  id: string
   matchId: string
   status: "WAITING" | "PLAYING" | "FINISHED"
 }
@@ -169,9 +169,9 @@ export function createGameSession(matchId: string) {
   })
 }
 
-/** 게임 세션 조회 (기존 세션 복구용) */
+/** 게임 세션 조회 또는 생성 (재진입 시에도 POST 사용) */
 export function getGameSession(matchId: string) {
   return apiFetch<GameSessionDto>(`/api/v1/matches/${matchId}/game-sessions`, {
-    method: "GET",
+    method: "POST",
   })
 }
