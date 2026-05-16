@@ -46,7 +46,9 @@ class TargetProfile(BaseModel):
     @field_validator("personalityType", "hobbies", "interests", mode="before")
     @classmethod
     def ensure_list(cls, v):
-        """문자열이 들어오면 리스트로 변환."""
+        """문자열이 들어오면 리스트로, None이면 빈 리스트로 변환."""
+        if v is None:
+            return []
         if isinstance(v, str):
             return [v]
         return v
