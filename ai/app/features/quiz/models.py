@@ -79,10 +79,10 @@ class QuizRequestMessage(BaseModel):
     """
 
     action: QuizAction = QuizAction.GENERATE_QUIZ
-    matchId: str
-    requesterId: str
-    targetUserId: str
-    requestedAt: datetime
+    matchId: str | None = None
+    requesterId: str | None = None
+    targetUserId: str | None = None
+    requestedAt: datetime | None = None
     targetProfile: TargetProfile
 
 
