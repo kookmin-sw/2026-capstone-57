@@ -16,11 +16,14 @@ import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -334,6 +337,42 @@ public class ReviewServiceImpl implements ReviewService {
 
         return reviewRepository.findByInteractionIdAndUserId(interaction.getId(), userId)
                 .map(ReviewResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ReviewResponse> getMyReviews(
+            UUID userId,
+            ReviewMode mode,
+            Integer minSatisfaction,
+            Integer maxSatisfaction,
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            Pageable pageable) {
+
+        validateSatisfactionFilter(minSatisfaction, "minSatisfaction");
+        validateSatisfactionFilter(maxSatisfaction, "maxSatisfaction");
+        if (minSatisfaction != null && maxSatisfaction != null && minSatisfaction > maxSatisfaction) {
+            throw ReviewException.INVALID_SATISFACTION.toException();
+        }
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw ReviewException.INVALID_DATE_RANGE.toException();
+        }
+
+        log.debug("본인 회고 목록 조회: userId={}, mode={}, minSat={}, maxSat={}, from={}, to={}, page={}, size={}",
+                userId, mode, minSatisfaction, maxSatisfaction, fromDate, toDate,
+                pageable.getPageNumber(), pageable.getPageSize());
+
+        return reviewRepository.findMyReviewsWithFilters(
+                        userId, mode, minSatisfaction, maxSatisfaction, fromDate, toDate, pageable)
+                .map(ReviewResponse::from);
+    }
+
+    private void validateSatisfactionFilter(Integer satisfaction, String paramName) {
+        if (satisfaction != null && (satisfaction < 1 || satisfaction > 5)) {
+            log.warn("잘못된 만족도 필터: {}={}", paramName, satisfaction);
+            throw ReviewException.INVALID_SATISFACTION.toException();
+        }
     }
 
     // --- Private helpers ---

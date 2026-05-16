@@ -18,6 +18,7 @@ public enum ReviewException {
     QUESTION_ALREADY_ANSWERED(HttpStatus.BAD_REQUEST, "이미 답변된 질문입니다"),
     NOT_ALL_QUESTIONS_ANSWERED(HttpStatus.BAD_REQUEST, "모든 질문에 답변해야 합니다"),
     INVALID_SATISFACTION(HttpStatus.BAD_REQUEST, "만족도는 1~5 사이여야 합니다"),
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "잘못된 날짜 범위입니다 (시작일이 종료일보다 늦을 수 없습니다)"),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"),
     SESSION_MODE_MISMATCH(HttpStatus.BAD_REQUEST, "이미 AI 모드로 세션이 생성되어 직접 작성이 불가합니다");
 
