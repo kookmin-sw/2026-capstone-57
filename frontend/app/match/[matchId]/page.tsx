@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Flag } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
@@ -11,7 +11,6 @@ import { ChatStage } from "@/components/match/stages/chat-stage"
 import { GameStage } from "@/components/match/stages/game-stage"
 import { MissionStage } from "@/components/match/stages/mission-stage"
 import { ReviewStage } from "@/components/match/stages/review-stage"
-import { useChatSocket } from "@/hooks/use-chat-socket"
 import {
   getInteractionState,
   getQuiz,
@@ -21,12 +20,13 @@ import {
   confirmMission,
   getChatSession,
   getChatMessages,
-  createChatSession,
   sendHint,
+  getHints,
   type InteractionStateDto,
   type QuizQuestionResponse,
   type MissionDto,
   type ChatMessageDto,
+  type HintQuestionDto,
 } from "@/lib/api/interaction"
 import { getSlots } from "@/lib/api/slots"
 import type { InteractionStage } from "@/types/slot"
@@ -61,6 +61,7 @@ export default function MatchDetailPage() {
 
   // Stage data
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
+  const [quizHints, setQuizHints] = useState<HintQuestionDto[]>([])
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatSessionId, setChatSessionId] = useState<string | null>(null)
   const [mission, setMission] = useState<MissionInfo | null>(null)
@@ -75,6 +76,13 @@ export default function MatchDetailPage() {
 
         const currentStage = STAGE_MAP[state.currentStage] || "QUIZ"
         setActiveStage(currentStage)
+
+        // 이미 퀴즈 완료 후 대기 중인 경우 감지
+        const userId = localStorage.getItem("userId") || ""
+        const quizCompletedBy: string[] = state.stageData?.quizCompletedBy || []
+        if (state.currentStage === 1 && state.stageStatus === "WAITING" && quizCompletedBy.includes(userId)) {
+          setQuizWaiting(true)
+        }
 
         // 슬롯에서 매칭 상대 정보 가져오기
         try {
@@ -116,17 +124,18 @@ export default function MatchDetailPage() {
               correctIndex: -1, // 서버가 정답을 안 줌
             }))
           )
+          // 힌트 목록 로드
+          try {
+            const hints = await getHints(matchId)
+            setQuizHints(hints)
+          } catch {
+            setQuizHints([])
+          }
           break
         }
         case "CHAT": {
           try {
-            let session;
-            try {
-              session = await getChatSession(matchId)
-            } catch {
-              // 세션이 없으면 생성
-              session = await createChatSession(matchId)
-            }
+            const session = await getChatSession(matchId)
             setChatSessionId(session.sessionId)
             const messages = await getChatMessages(session.sessionId)
             const userId = localStorage.getItem("userId") || ""
@@ -180,48 +189,64 @@ export default function MatchDetailPage() {
     await loadStageData(stage)
   }
 
+  const [quizWaiting, setQuizWaiting] = useState(false)
+
   const handleQuizComplete = async () => {
     try {
       const result = await completeQuiz(matchId)
       setInteraction(result)
-      const nextStage = STAGE_MAP[result.currentStage] || "CHAT"
-      setActiveStage(nextStage)
-      await loadStageData(nextStage)
+
+      if (result.currentStage >= 2 && result.stageStatus !== "WAITING") {
+        // 양쪽 모두 완료 → 다음 단계로 이동
+        const nextStage = STAGE_MAP[result.currentStage] || "CHAT"
+        setActiveStage(nextStage)
+        await loadStageData(nextStage)
+      } else {
+        // 상대방 대기 중
+        setQuizWaiting(true)
+      }
     } catch (err) {
       console.error("퀴즈 완료 실패:", err)
     }
   }
 
-  // Chat WebSocket
-  const handleChatMessage = useCallback((msg: ChatMessage) => {
-    setChatMessages((prev) => [...prev, msg])
-  }, [])
+  // 대기 중일 때 폴링으로 상태 확인
+  useEffect(() => {
+    if (!quizWaiting) return
 
-  const { connected: chatConnected, sendMessage: sendChatMessage } = useChatSocket({
-    sessionId: chatSessionId,
-    onMessage: handleChatMessage,
-  })
+    const interval = setInterval(async () => {
+      try {
+        const state = await getInteractionState(matchId)
+        setInteraction(state)
+
+        if (state.currentStage >= 2 && state.stageStatus !== "WAITING") {
+          setQuizWaiting(false)
+          const nextStage = STAGE_MAP[state.currentStage] || "CHAT"
+          setActiveStage(nextStage)
+          await loadStageData(nextStage)
+        }
+      } catch (err) {
+        console.error("상태 폴링 실패:", err)
+      }
+    }, 5000) // 5초마다 확인
+
+    return () => clearInterval(interval)
+  }, [quizWaiting, matchId])
 
   const handleSendMessage = (content: string) => {
-    sendChatMessage(content)
+    // 채팅은 WebSocket 기반이므로 여기서는 UI만 업데이트
+    const newMessage: ChatMessage = {
+      id: `m${Date.now()}`,
+      senderId: "me",
+      content,
+      timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+      isMe: true,
+    }
+    setChatMessages((prev) => [...prev, newMessage])
   }
 
-  const handleGameSelect = async (gameId: string) => {
-    try {
-      const token = localStorage.getItem("token") || ""
-      const res = await fetch(`/backend/api/v1/matches/${matchId}/game-sessions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (!res.ok) throw new Error("세션 생성 실패")
-      const data = await res.json()
-      router.push(`/game?sessionId=${data.id}&token=${token}`)
-    } catch (err) {
-      console.error("게임 시작 실패:", err)
-    }
+  const handleGameSelect = (gameId: string) => {
+    console.log("게임 시작:", gameId)
   }
 
   const handleMissionComplete = async () => {
@@ -249,13 +274,29 @@ export default function MatchDetailPage() {
   const renderStageContent = () => {
     switch (activeStage) {
       case "QUIZ":
+        if (quizWaiting) {
+          return (
+            <div className="flex flex-col items-center justify-center bg-card rounded-2xl p-6 shadow-sm border border-border/30 text-center gap-3">
+              <span className="text-3xl">⏳</span>
+              <p className="text-sm font-semibold text-foreground">퀴즈를 모두 풀었어요!</p>
+              <p className="text-xs text-muted-foreground">
+                상대방이 퀴즈를 완료하면<br />다음 단계로 넘어갑니다
+              </p>
+            </div>
+          )
+        }
         return (
           <QuizStage
             questions={quizQuestions.length > 0 ? quizQuestions : [{ id: "loading", question: "로딩 중...", options: [], correctIndex: -1 }]}
+            hints={quizHints.map((h) => ({ id: h.id, question: h.question, answer: h.answer, status: h.status, quizIndex: h.quizIndex }))}
+            matchId={matchId}
             onComplete={handleQuizComplete}
             onSubmitAnswer={async (quizIndex, answer) => {
               try {
-                const result = await submitQuiz(matchId, { quizIndex, answer })
+                const result = await submitQuiz(matchId, {
+                  quizIndex: quizIndex + 1,  // 1-based로 변환
+                  answer                      // 0-based 그대로 유지
+                })
                 return { correctAnswer: result.correctAnswer, isCorrect: result.isCorrect }
               } catch (err) {
                 console.error("퀴즈 제출 실패:", err)
@@ -264,7 +305,8 @@ export default function MatchDetailPage() {
             }}
             onSendHint={async (question) => {
               try {
-                await sendHint(matchId, question)
+                const newHint = await sendHint(matchId, question)
+                setQuizHints((prev) => [...prev, newHint])
               } catch (err) {
                 console.error("힌트 전송 실패:", err)
               }

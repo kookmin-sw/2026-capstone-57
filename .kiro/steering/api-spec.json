@@ -1,0 +1,2885 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "일기예보 API",
+    "description": "일기로 예견하는 보석같은 만남 - REST API 문서",
+    "version": "v1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://52.90.151.109:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "security": [
+    {
+      "Bearer Token": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Mission",
+      "description": "4단계 미션 기반 만남 API"
+    },
+    {
+      "name": "채팅",
+      "description": "채팅 세션 및 메시지 조회 API"
+    },
+    {
+      "name": "인증",
+      "description": "회원가입, 이메일 인증, 로그인 API"
+    },
+    {
+      "name": "Hint",
+      "description": "매칭 힌트 관련 API"
+    },
+    {
+      "name": "슬롯",
+      "description": "슬롯 관리 API"
+    },
+    {
+      "name": "플래너",
+      "description": "일정 CRUD API"
+    },
+    {
+      "name": "Quiz",
+      "description": "매칭 퀴즈 관련 API"
+    },
+    {
+      "name": "Interaction",
+      "description": "매칭 상호작용 단계 관리 API"
+    },
+    {
+      "name": "관리자 - 매칭",
+      "description": "매칭 관리 API"
+    },
+    {
+      "name": "스케줄",
+      "description": "에브리타임 시간표 연동 API"
+    },
+    {
+      "name": "일기",
+      "description": "일기 CRUD API"
+    },
+    {
+      "name": "AI 일기 세션",
+      "description": "AI 기반 멀티턴 대화 일기 작성 API"
+    },
+    {
+      "name": "사용자",
+      "description": "프로필 조회, 수정 API"
+    }
+  ],
+  "paths": {
+    "/api/users/profile": {
+      "put": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "프로필 수정",
+        "description": "프로필 정보를 수정한다",
+        "operationId": "updateProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileSetup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slots/{slotId}/priority/{priority}": {
+      "put": {
+        "tags": [
+          "슬롯"
+        ],
+        "summary": "슬롯 우선순위 변경",
+        "description": "슬롯의 매칭 우선순위(HOBBY, INTEREST, IDEAL_TYPE)를 변경한다",
+        "operationId": "updateSlotPriority",
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "HOBBY",
+                "INTEREST",
+                "IDEAL_TYPE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner/{entryId}": {
+      "put": {
+        "tags": [
+          "플래너"
+        ],
+        "summary": "일정 수정",
+        "description": "일정을 수정한다 (MANUAL, SCHEDULE_AUTO 모두 수정 가능)",
+        "operationId": "updatePlanEntry",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanEntryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanEntryResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "플래너"
+        ],
+        "summary": "일정 삭제",
+        "description": "일정을 삭제한다",
+        "operationId": "deletePlanEntry",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/users/me/schedules/{identifier}": {
+      "post": {
+        "tags": [
+          "스케줄"
+        ],
+        "summary": "에브리타임 시간표 등록",
+        "description": "에브리타임 identifier로 시간표를 가져와 등록한다",
+        "operationId": "upsertMySchedule",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleUpsertResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slots/unlock": {
+      "post": {
+        "tags": [
+          "슬롯"
+        ],
+        "summary": "슬롯 해금",
+        "description": "새로운 슬롯을 해금한다 (레벨업 보상)",
+        "operationId": "unlockSlot",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner": {
+      "get": {
+        "tags": [
+          "플래너"
+        ],
+        "summary": "일정 목록 조회",
+        "description": "특정 날짜의 일정 목록을 조회한다 (본인만)",
+        "operationId": "getPlanEntries",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanEntryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "플래너"
+        ],
+        "summary": "일정 생성",
+        "description": "날짜 기반 단일 일정을 생성한다 (source=MANUAL)",
+        "operationId": "createPlanEntry",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanEntryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanEntryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner/generate": {
+      "post": {
+        "tags": [
+          "플래너"
+        ],
+        "summary": "[테스트] 시간표 기반 plan_entry 수동 생성",
+        "description": "현재 주의 SCHEDULE_AUTO plan_entry를 시간표 기반으로 수동 생성한다. 기존 SCHEDULE_AUTO 미래 일정은 삭제 후 재생성된다.",
+        "operationId": "generateScheduleEntries",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleAutoGenerateResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner/generate/next-week": {
+      "post": {
+        "tags": [
+          "플래너"
+        ],
+        "summary": "[테스트] 다음 주 plan_entry 수동 생성",
+        "description": "다음 주의 SCHEDULE_AUTO plan_entry를 수동으로 배치 생성한다. 주간 스케줄러와 동일한 동작.",
+        "operationId": "generateNextWeekEntries",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleAutoGenerateResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/missions/{matchId}/generate": {
+      "post": {
+        "tags": [
+          "Mission"
+        ],
+        "summary": "미션 생성 요청 (관리자/테스트용)",
+        "description": "매칭에 대한 미션 생성을 수동으로 요청한다",
+        "operationId": "requestMissionGeneration",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/missions/{matchId}/confirm": {
+      "post": {
+        "tags": [
+          "Mission"
+        ],
+        "summary": "미션 수행 확인",
+        "description": "미션 수행을 확인한다. 양쪽 모두 확인 시 5단계(회고)가 해금된다",
+        "operationId": "confirmMission",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/{matchId}/terminate": {
+      "post": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "매칭 강제 종료",
+        "operationId": "terminateMatch",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminateMatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/interactions/{matchId}/quiz/submit": {
+      "post": {
+        "tags": [
+          "Quiz"
+        ],
+        "summary": "퀴즈 답안 제출 및 채점",
+        "operationId": "submitQuiz",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizSubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/{matchId}/quiz/complete": {
+      "post": {
+        "tags": [
+          "Quiz"
+        ],
+        "summary": "퀴즈 단계 완료 처리 (양쪽 유저 모두 완료 시 다음 단계로 진행)",
+        "operationId": "completeQuiz",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionStateDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/{matchId}/hints": {
+      "get": {
+        "tags": [
+          "Hint"
+        ],
+        "summary": "힌트 질문 및 답변 목록 전체 조회",
+        "operationId": "getHintQuestions",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HintQuestionDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Hint"
+        ],
+        "summary": "힌트 질문 전송",
+        "operationId": "sendHintQuestion",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendHintQuestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/HintQuestionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/{matchId}/hints/{questionId}/answer": {
+      "post": {
+        "tags": [
+          "Hint"
+        ],
+        "summary": "힌트 질문에 대한 답변 등록",
+        "operationId": "answerHintQuestion",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerHintQuestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/HintQuestionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diary": {
+      "get": {
+        "tags": [
+          "일기"
+        ],
+        "summary": "일기 목록 조회",
+        "description": "본인의 일기 목록을 페이지네이션으로 조회한다",
+        "operationId": "getEntries",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDiaryEntryResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "일기"
+        ],
+        "summary": "일기 작성",
+        "description": "일기를 작성한다 (같은 날짜에 이미 존재하면 업데이트)",
+        "operationId": "createEntry",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiaryInputDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiaryEntryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diary/sessions/{sessionId}/generate": {
+      "post": {
+        "tags": [
+          "AI 일기 세션"
+        ],
+        "summary": "일기 생성 요청",
+        "description": "모든 답변을 기반으로 AI에게 일기 생성을 요청한다",
+        "operationId": "generateDiary",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedDiaryPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diary/sessions/{sessionId}/confirm": {
+      "post": {
+        "tags": [
+          "AI 일기 세션"
+        ],
+        "summary": "일기 확정",
+        "description": "생성된 일기를 확정한다 (선택적 수정 포함)",
+        "operationId": "confirmDiary",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiaryConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiaryEntryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diary/sessions/{sessionId}/cancel": {
+      "post": {
+        "tags": [
+          "AI 일기 세션"
+        ],
+        "summary": "세션 취소",
+        "description": "진행 중인 AI 일기 세션을 취소한다",
+        "operationId": "cancelSession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/diary/sessions/{sessionId}/answer": {
+      "post": {
+        "tags": [
+          "AI 일기 세션"
+        ],
+        "summary": "질문에 답변",
+        "description": "현재 질문에 답변하고 다음 질문 또는 대화 완료를 받는다",
+        "operationId": "answerQuestion",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiaryAnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiaryTurnResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diary/sessions/start": {
+      "post": {
+        "tags": [
+          "AI 일기 세션"
+        ],
+        "summary": "AI 일기 세션 시작",
+        "description": "AI 일기 멀티턴 대화 세션을 시작한다",
+        "operationId": "startSession",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiarySessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/sessions": {
+      "post": {
+        "tags": [
+          "채팅"
+        ],
+        "summary": "채팅 세션 생성",
+        "description": "매치 ID로 새 채팅 세션을 생성한다",
+        "operationId": "createSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatSessionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/auth/verify/send": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "인증 코드 발송",
+        "description": "대학 이메일로 6자리 인증 코드를 발송한다",
+        "operationId": "sendVerification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify/confirm": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "인증 코드 확인",
+        "description": "발송된 인증 코드가 일치하는지 확인한다",
+        "operationId": "confirmVerification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationConfirmResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "회원가입",
+        "description": "이메일 인증 완료 후 프로필 정보를 포함하여 회원가입한다",
+        "operationId": "signup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "로그인",
+        "description": "이메일과 비밀번호로 로그인하여 JWT 토큰을 발급받는다",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/matching/run": {
+      "post": {
+        "tags": [
+          "관리자 - 매칭"
+        ],
+        "summary": "배치 매칭 수동 실행",
+        "description": "배치 매칭을 수동으로 실행한다",
+        "operationId": "runBatchMatching",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchMatchingResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/profile/options": {
+      "get": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "프로필 옵션 조회",
+        "description": "취미, 관심사, 이상형 각 10개를 랜덤으로, MBTI 16개 전체를 반환한다",
+        "operationId": "getProfileOptions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOptionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "내 프로필 조회",
+        "description": "현재 로그인한 사용자의 프로필을 조회한다",
+        "operationId": "getMyProfile",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/me/schedules": {
+      "get": {
+        "tags": [
+          "스케줄"
+        ],
+        "summary": "내 시간표 조회",
+        "operationId": "getMySchedule",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slots": {
+      "get": {
+        "tags": [
+          "슬롯"
+        ],
+        "summary": "슬롯 목록 조회",
+        "description": "현재 사용자의 슬롯 목록을 조회한다",
+        "operationId": "getSlots",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SlotResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner/weekly": {
+      "get": {
+        "tags": [
+          "플래너"
+        ],
+        "summary": "주간 일정 목록 조회",
+        "description": "해당 주의 월요일~금요일 일정 목록을 조회한다 (본인만). weekStart에 해당 주의 아무 날짜나 전달하면 자동으로 월~금 범위를 계산한다.",
+        "operationId": "getWeeklyPlanEntries",
+        "parameters": [
+          {
+            "name": "weekStart",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanEntryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/missions/{matchId}": {
+      "get": {
+        "tags": [
+          "Mission"
+        ],
+        "summary": "미션 조회",
+        "description": "매칭 ID로 현재 미션 정보를 조회한다",
+        "operationId": "getMission",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/{matchId}": {
+      "get": {
+        "tags": [
+          "Interaction"
+        ],
+        "summary": "현재 상호작용 상태 조회",
+        "operationId": "getInteractionState",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionStateDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interactions/{matchId}/quiz": {
+      "get": {
+        "tags": [
+          "Quiz"
+        ],
+        "summary": "퀴즈 문항 조회 (정답 미포함)",
+        "operationId": "getQuiz",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuizQuestionResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diary/streak": {
+      "get": {
+        "tags": [
+          "일기"
+        ],
+        "summary": "연속 작성 일수 조회",
+        "description": "현재 연속 작성 일수와 최장 연속 작성 일수를 조회한다",
+        "operationId": "getStreak",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreakInfoDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diary/sessions/active": {
+      "get": {
+        "tags": [
+          "AI 일기 세션"
+        ],
+        "summary": "활성 세션 조회",
+        "description": "특정 날짜의 진행 중인 AI 일기 세션을 조회한다",
+        "operationId": "getActiveSession",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiarySessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diary/emotion-trend": {
+      "get": {
+        "tags": [
+          "일기"
+        ],
+        "summary": "감정 변화 추이 조회",
+        "description": "기간별 감정 변화 추이를 조회한다 (week, month, quarter, year)",
+        "operationId": "getEmotionTrend",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EmotionTrendDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/sessions/{sessionId}/messages": {
+      "get": {
+        "tags": [
+          "채팅"
+        ],
+        "summary": "채팅 메시지 목록 조회",
+        "description": "세션 ID로 채팅 메시지 목록을 조회한다",
+        "operationId": "getMessagesBySessionId",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChatMessageDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/chat/sessions/match/{matchId}": {
+      "get": {
+        "tags": [
+          "채팅"
+        ],
+        "summary": "매치별 채팅 세션 조회",
+        "description": "매치 ID로 채팅 세션 정보를 조회한다",
+        "operationId": "getSessionByMatchId",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/admin/matching": {
+      "get": {
+        "tags": [
+          "관리자 - 매칭"
+        ],
+        "summary": "전체 매칭 목록 조회",
+        "description": "모든 매칭과 해당 미션 정보를 조회한다",
+        "operationId": "getAllMatches",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminMatchDetailDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ProfileSetup": {
+        "required": [
+          "birthDate",
+          "gender",
+          "major",
+          "name",
+          "nickname"
+        ],
+        "type": "object",
+        "properties": {
+          "nickname": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "major": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "OTHER"
+            ]
+          },
+          "hobbies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "interests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "personalityType": {
+            "type": "string"
+          },
+          "idealTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ProfileOptionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "UserProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "major": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "OTHER"
+            ]
+          },
+          "hobbies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOptionDto"
+            }
+          },
+          "interests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOptionDto"
+            }
+          },
+          "personalityType": {
+            "$ref": "#/components/schemas/ProfileOptionDto"
+          },
+          "idealTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOptionDto"
+            }
+          },
+          "totalExp": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentLevel": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MatchedUserDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nickname": {
+            "type": "string"
+          }
+        }
+      },
+      "SlotResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "HOBBY",
+              "INTEREST",
+              "IDEAL_TYPE"
+            ]
+          },
+          "currentMatchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isQuickMatch": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "EMPTY",
+              "ACTIVE",
+              "COMPLETED"
+            ]
+          },
+          "matchedUser": {
+            "$ref": "#/components/schemas/MatchedUserDto"
+          }
+        }
+      },
+      "LocalTime": {
+        "type": "string",
+        "example": "09:30",
+        "pattern": "^([01]\\d|2[0-3]):([0-5]\\d)$"
+      },
+      "PlanEntryRequest": {
+        "required": [
+          "date",
+          "endTime",
+          "startTime",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "location": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CLASS",
+              "FREE",
+              "ACTIVITY"
+            ]
+          }
+        }
+      },
+      "PlanEntryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "location": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CLASS",
+              "FREE",
+              "ACTIVITY"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "SCHEDULE_AUTO",
+              "SCHEDULE_OVERRIDE"
+            ]
+          },
+          "sourceScheduleId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "PlannerAutoGenerateInfo": {
+        "type": "object",
+        "properties": {
+          "createdCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skippedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skippedSchedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkippedSchedule"
+            }
+          }
+        }
+      },
+      "ScheduleItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "type": "string",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ]
+          },
+          "startedAt": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "endedAt": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "place": {
+            "type": "string"
+          }
+        }
+      },
+      "ScheduleUpsertResponse": {
+        "type": "object",
+        "properties": {
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleItem"
+            }
+          },
+          "plannerResult": {
+            "$ref": "#/components/schemas/PlannerAutoGenerateInfo"
+          }
+        }
+      },
+      "SkippedSchedule": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "ScheduleAutoGenerateResult": {
+        "type": "object",
+        "properties": {
+          "createdCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skippedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skippedSchedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkippedSchedule"
+            }
+          }
+        }
+      },
+      "MissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "matchId": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "activity": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmedBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "EXPIRED"
+            ]
+          },
+          "selectedNodeId": {
+            "type": "string"
+          }
+        }
+      },
+      "TerminateMatchRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "USER_REJECTED",
+              "REPORTED",
+              "EXPIRED",
+              "BLOCKED"
+            ]
+          }
+        }
+      },
+      "QuizSubmitRequest": {
+        "required": [
+          "answer",
+          "quizIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "quizIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "answer": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "QuizResponseDto": {
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quizIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "correctAnswer": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "userAnswer": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isCorrect": {
+            "type": "boolean"
+          },
+          "correctCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "allCompleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InteractionStateDto": {
+        "type": "object",
+        "properties": {
+          "interactionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currentStage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stageStatus": {
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "WAITING",
+              "COMPLETED",
+              "TERMINATED"
+            ]
+          },
+          "matchCycleStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "matchCycleEnd": {
+            "type": "string",
+            "format": "date"
+          },
+          "stageData": {
+            "$ref": "#/components/schemas/StageDataDto"
+          }
+        }
+      },
+      "StageDataDto": {
+        "type": "object"
+      },
+      "SendHintQuestionRequest": {
+        "required": [
+          "question"
+        ],
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          }
+        }
+      },
+      "HintQuestionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "ANSWERED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AnswerHintQuestionRequest": {
+        "required": [
+          "answer"
+        ],
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string"
+          }
+        }
+      },
+      "DiaryInputDto": {
+        "required": [
+          "content",
+          "date"
+        ],
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "emotionTag": {
+            "type": "string",
+            "enum": [
+              "HAPPY",
+              "SAD",
+              "ANGRY",
+              "ANXIOUS",
+              "CALM",
+              "EXCITED",
+              "TIRED"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "AI_GENERATED"
+            ]
+          },
+          "aiSessionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "DiaryEntryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entryDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "content": {
+            "type": "string"
+          },
+          "emotionTag": {
+            "type": "string",
+            "enum": [
+              "HAPPY",
+              "SAD",
+              "ANGRY",
+              "ANXIOUS",
+              "CALM",
+              "EXCITED",
+              "TIRED"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "AI_GENERATED"
+            ]
+          },
+          "aiSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "streakCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GeneratedDiaryPreview": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "generatedContent": {
+            "type": "string"
+          },
+          "suggestedEmotion": {
+            "type": "string",
+            "enum": [
+              "HAPPY",
+              "SAD",
+              "ANGRY",
+              "ANXIOUS",
+              "CALM",
+              "EXCITED",
+              "TIRED"
+            ]
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DiaryConfirmRequest": {
+        "type": "object",
+        "properties": {
+          "editedContent": {
+            "type": "string"
+          },
+          "emotionTag": {
+            "type": "string",
+            "enum": [
+              "HAPPY",
+              "SAD",
+              "ANGRY",
+              "ANXIOUS",
+              "CALM",
+              "EXCITED",
+              "TIRED"
+            ]
+          }
+        }
+      },
+      "DiaryAnswerRequest": {
+        "required": [
+          "answer"
+        ],
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string"
+          }
+        }
+      },
+      "DiaryTurnResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isCompleted": {
+            "type": "boolean"
+          },
+          "nextQuestion": {
+            "type": "string"
+          },
+          "currentTurnNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxTurns": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DiaryConversationTurnDto": {
+        "type": "object",
+        "properties": {
+          "turnNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "askedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "answeredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DiarySessionResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "READY_TO_GENERATE",
+              "GENERATED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "currentQuestion": {
+            "type": "string"
+          },
+          "currentTurnNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxTurns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "conversationHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiaryConversationTurnDto"
+            }
+          }
+        }
+      },
+      "ChatSessionCreateRequest": {
+        "required": [
+          "matchId"
+        ],
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ChatSessionDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ENDED"
+            ]
+          },
+          "tokenLimit": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "usedTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "icebreakerQuestion": {
+            "type": "string"
+          }
+        }
+      },
+      "SendVerificationRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "VerificationResponse": {
+        "type": "object",
+        "properties": {
+          "verificationId": {
+            "type": "string"
+          }
+        }
+      },
+      "VerifyRequest": {
+        "required": [
+          "code",
+          "verificationId"
+        ],
+        "type": "object",
+        "properties": {
+          "verificationId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "VerificationConfirmResponse": {
+        "type": "object",
+        "properties": {
+          "verificationId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SignupRequest": {
+        "required": [
+          "birthDate",
+          "gender",
+          "major",
+          "name",
+          "nickname",
+          "password",
+          "verificationId"
+        ],
+        "type": "object",
+        "properties": {
+          "verificationId": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "major": {
+            "type": "string"
+          },
+          "studentId": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "MALE",
+              "FEMALE",
+              "OTHER"
+            ]
+          },
+          "hobbies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "interests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "personalityType": {
+            "type": "string"
+          },
+          "idealTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AuthTokenResponse": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "BatchMatchingResultDto": {
+        "type": "object",
+        "properties": {
+          "totalProcessed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchesCreated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quickMatches": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "normalMatches": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedSlots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ProfileOptionsResponse": {
+        "type": "object",
+        "properties": {
+          "hobbies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOptionDto"
+            }
+          },
+          "interests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOptionDto"
+            }
+          },
+          "personalityTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOptionDto"
+            }
+          },
+          "idealTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileOptionDto"
+            }
+          }
+        }
+      },
+      "ScheduleResponse": {
+        "type": "object",
+        "properties": {
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleItem"
+            }
+          }
+        }
+      },
+      "QuizQuestionResponse": {
+        "type": "object",
+        "properties": {
+          "quizIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "question": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Pageable": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "minimum": 0,
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PageDiaryEntryResponse": {
+        "type": "object",
+        "properties": {
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiaryEntryResponse"
+            }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SortObject"
+            }
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PageableObject": {
+        "type": "object",
+        "properties": {
+          "paged": {
+            "type": "boolean"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SortObject"
+            }
+          },
+          "unpaged": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SortObject": {
+        "type": "object",
+        "properties": {
+          "direction": {
+            "type": "string"
+          },
+          "nullHandling": {
+            "type": "string"
+          },
+          "ascending": {
+            "type": "boolean"
+          },
+          "property": {
+            "type": "string"
+          },
+          "ignoreCase": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StreakInfoDto": {
+        "type": "object",
+        "properties": {
+          "currentStreak": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "longestStreak": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "EmotionTrendDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "emotion": {
+            "type": "string",
+            "enum": [
+              "HAPPY",
+              "SAD",
+              "ANGRY",
+              "ANXIOUS",
+              "CALM",
+              "EXCITED",
+              "TIRED"
+            ]
+          }
+        }
+      },
+      "ChatMessageDto": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AdminMatchDetailDto": {
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "COMPLETED",
+              "TERMINATED"
+            ]
+          },
+          "cycleStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "cycleEndDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "userA": {
+            "$ref": "#/components/schemas/UserSummaryDto"
+          },
+          "userB": {
+            "$ref": "#/components/schemas/UserSummaryDto"
+          },
+          "mission": {
+            "$ref": "#/components/schemas/MissionSummaryDto"
+          }
+        }
+      },
+      "MissionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "location": {
+            "type": "string"
+          },
+          "activity": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "EXPIRED"
+            ]
+          }
+        }
+      },
+      "UserSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nickname": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "Bearer Token": {
+        "type": "http",
+        "name": "Bearer Token",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

@@ -13,15 +13,33 @@ import {
 import { cn } from "@/lib/utils"
 import type { QuizQuestion } from "@/types/match"
 
+interface HintItem {
+  id: string
+  question: string
+  answer: string | null
+  status: "PENDING" | "ANSWERED"
+  quizIndex: number
+}
+
 interface QuizStageProps {
   questions: QuizQuestion[]
+  hints?: HintItem[]
   onComplete: () => void
   onSubmitAnswer?: (quizIndex: number, answer: number) => Promise<{ correctAnswer: number; isCorrect: boolean } | null>
   onSendHint?: (question: string) => void
+  matchId: string
+  initialIndex?: number
 }
 
-export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }: QuizStageProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
+export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, onSendHint, matchId, initialIndex }: QuizStageProps) {
+  const STORAGE_KEY = `quiz_progress_${matchId}`
+
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (initialIndex !== undefined) return initialIndex
+    if (typeof window === "undefined") return 0
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? parseInt(saved, 10) : 0
+  })
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [correctAnswer, setCorrectAnswer] = useState<number | null>(null)
   const [showResult, setShowResult] = useState(false)
@@ -35,30 +53,33 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
     if (showResult) return
     setSelectedOption(optionIndex)
 
-    // 서버에 답안 제출
+    let resolvedCorrectAnswer = currentQuestion.correctIndex ?? 0
+
     if (onSubmitAnswer) {
       try {
         const result = await onSubmitAnswer(currentIndex, optionIndex)
-        if (result) {
-          setCorrectAnswer(result.correctAnswer)
+        if (result !== null && result.correctAnswer !== undefined) {
+          resolvedCorrectAnswer = result.correctAnswer
         }
       } catch (err) {
         console.error("퀴즈 제출 실패:", err)
-        // 서버 실패 시 로컬 correctIndex 사용
-        setCorrectAnswer(currentQuestion.correctIndex)
       }
     } else {
-      setCorrectAnswer(currentQuestion.correctIndex)
+      resolvedCorrectAnswer = currentQuestion.correctIndex
     }
 
-    setShowResult(true)
+    setCorrectAnswer(resolvedCorrectAnswer)  // correctAnswer 먼저
+    setShowResult(true)                      // 그 다음 showResult
   }
 
   const handleNext = () => {
     if (isLastQuestion) {
+      localStorage.removeItem(STORAGE_KEY)
       onComplete()
     } else {
-      setCurrentIndex((prev) => prev + 1)
+      const nextIndex = currentIndex + 1
+      localStorage.setItem(STORAGE_KEY, String(nextIndex))
+      setCurrentIndex(nextIndex)
       setSelectedOption(null)
       setCorrectAnswer(null)
       setShowResult(false)
@@ -74,16 +95,17 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
 
   if (!currentQuestion || currentQuestion.options.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center bg-card rounded-2xl p-4 shadow-sm border border-border/30">
+      <div className="flex items-center justify-center bg-card rounded-2xl p-4 shadow-sm border border-border/30">
         <p className="text-sm text-muted-foreground">퀴즈를 불러오는 중...</p>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col bg-card rounded-2xl p-4 shadow-sm border border-border/30">
+    // ✅ h-full 제거 → 내용물 높이에 맞게 자연스럽게 늘어남
+    <div className="flex flex-col bg-card rounded-2xl p-4 shadow-sm border border-border/30">
       {/* Header */}
-      <div className="flex justify-between items-center mb-2 shrink-0">
+      <div className="flex justify-between items-center mb-2">
         <h3 className="text-sm font-semibold text-foreground">1단계 · 퀴즈</h3>
         <span className="text-[11px] text-muted-foreground">
           {currentIndex + 1} / {questions.length}
@@ -91,15 +113,17 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
       </div>
 
       {/* Question */}
-      <p className="text-sm font-semibold text-foreground mb-3 shrink-0">
+      <p className="text-sm font-semibold text-foreground mb-3">
         {currentQuestion.question}
       </p>
 
       {/* Options */}
-      <div className="flex-1 flex flex-col justify-center gap-2 min-h-0 overflow-hidden">
+      {/* ✅ flex-1, justify-center, min-h-0, overflow-hidden 모두 제거 */}
+      <div className="flex flex-col gap-2 mt-1">
         {currentQuestion.options.map((option, index) => {
           const isSelected = selectedOption === index
-          const isCorrectOption = correctAnswer !== null && index === correctAnswer
+          const isCorrect = showResult && correctAnswer !== null && index === correctAnswer
+          const isWrong = showResult && isSelected && !isCorrect
 
           return (
             <button
@@ -108,22 +132,22 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
               onClick={() => handleSelect(index)}
               disabled={showResult}
               className={cn(
-                "w-full py-2 px-3 rounded-xl text-left text-sm transition-all shrink-0",
+                "w-full py-2 px-3 rounded-xl text-left text-sm transition-all",
                 "border bg-secondary/40",
                 !showResult && "hover:bg-secondary/60 active:scale-[0.98]",
-                showResult && isCorrectOption && "border-green-400 bg-green-50 text-green-700",
-                showResult && isSelected && !isCorrectOption && "border-destructive/60 bg-destructive/10 text-destructive"
+                isCorrect && "border-green-400 bg-green-50 text-green-700",
+                isWrong && "border-destructive/60 bg-destructive/10 text-destructive"
               )}
             >
               <div className="flex items-center justify-between">
                 <span>{option}</span>
-                {showResult && isCorrectOption && (
+                {isCorrect && (
                   <span className="flex items-center gap-1 text-green-600">
                     <Check className="w-4 h-4" />
                     <span className="text-[10px]">정답</span>
                   </span>
                 )}
-                {showResult && isSelected && !isCorrectOption && <X className="w-4 h-4 text-destructive" />}
+                {isWrong && <X className="w-4 h-4 text-destructive" />}
               </div>
             </button>
           )
@@ -133,7 +157,7 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
       {/* Result message */}
       {showResult && selectedOption !== null && correctAnswer !== null && (
         <div className={cn(
-          "text-center text-xs py-1.5 rounded-lg mt-2 shrink-0",
+          "text-center text-xs py-1.5 rounded-lg mt-2",
           selectedOption === correctAnswer
             ? "bg-green-50 text-green-700"
             : "bg-destructive/10 text-destructive"
@@ -143,7 +167,7 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between gap-2 mt-3 shrink-0">
+      <div className="flex items-center justify-between gap-2 mt-3">
         <Button
           type="button"
           variant="outline"
@@ -165,6 +189,33 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
           {isLastQuestion ? "완료" : "다음"}
         </Button>
       </div>
+
+      {/* Hint Q&A List */}
+      {hints.filter((h) => h.quizIndex === currentIndex).length > 0 && (
+        <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-border/30">
+          {hints
+            .filter((h) => h.quizIndex === currentIndex)
+            .map((hint) => (
+              <div
+                key={hint.id}
+                className="bg-secondary/30 rounded-xl px-3 py-2.5 border border-border/20"
+              >
+                <p className="text-xs font-semibold text-primary">
+                  Q. {hint.question}
+                </p>
+                {hint.answer ? (
+                  <p className="text-xs text-foreground mt-1">
+                    {hint.answer}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    답변 대기 중...
+                  </p>
+                )}
+              </div>
+            ))}
+        </div>
+      )}
 
       {/* Hint Drawer */}
       <Drawer open={showHintInput} onOpenChange={setShowHintInput}>

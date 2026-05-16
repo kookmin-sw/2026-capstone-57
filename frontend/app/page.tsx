@@ -7,12 +7,12 @@ import { SectionHeader } from "@/components/section-header"
 import { WeatherStatusCard } from "@/components/home/weather-status-card"
 import { SlotPreviewCard } from "@/components/home/slot-preview-card"
 import { PlannerReminderCard } from "@/components/home/planner-reminder-card"
+import { HintNotification } from "@/components/hint-notification"
 import { getSlots, type SlotResponseDto } from "@/lib/api/slots"
 import { getPlanEntries, formatDate, fromLocalTime, type PlanEntryResponse } from "@/lib/api/planner"
 import { getMyProfile } from "@/lib/api/user"
 import type { Slot } from "@/types/slot"
 
-// API 응답 → Slot 타입 변환
 function toSlot(dto: SlotResponseDto, index: number): Slot {
   return {
     id: dto.id,
@@ -40,32 +40,32 @@ export default function HomePage() {
   const [nextEvent, setNextEvent] = useState<{ title: string; time: string } | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // ✅ 힌트 알림을 위해 매칭된 슬롯의 matchId 수집
+  const activeMatchIds = slots
+    .filter((s) => s.currentMatchId)
+    .map((s) => s.currentMatchId as string)
+
   useEffect(() => {
     async function loadData() {
       try {
-        // 병렬로 데이터 로드
         const [slotsData, profileData, planData] = await Promise.allSettled([
           getSlots(),
           getMyProfile(),
           getPlanEntries(formatDate(new Date())),
         ])
 
-        // 슬롯
         if (slotsData.status === "fulfilled") {
           setSlots(slotsData.value.map(toSlot))
         }
 
-        // 유저 이름
         if (profileData.status === "fulfilled") {
           setUserName(profileData.value.nickname)
         }
 
-        // 오늘 일정
         if (planData.status === "fulfilled") {
           const entries = planData.value
           setTodayEntryCount(entries.length)
 
-          // 현재 시간 이후의 가장 가까운 일정 찾기
           const now = new Date()
           const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
@@ -100,11 +100,15 @@ export default function HomePage() {
 
   return (
     <AppShell noScroll>
+
       <div className="px-4 py-3 space-y-4">
-        {/* Greeting & Weather Card */}
+
+        {/* ✅ 매칭된 슬롯마다 힌트 알림 폴링 */}
+        {activeMatchIds.map((matchId) => (
+          <HintNotification key={matchId} matchId={matchId} pollInterval={15000} />
+        ))}
         <WeatherStatusCard userName={userName || "사용자"} />
 
-        {/* Slot Preview Section */}
         <section>
           <SectionHeader
             title="오늘의 예보"
@@ -127,7 +131,6 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* Planner Reminder Section */}
         <section>
           <SectionHeader
             title="다가오는 일정"
