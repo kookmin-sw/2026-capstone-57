@@ -109,12 +109,13 @@ export default function MatchDetailPage() {
       switch (stage) {
         case "QUIZ": {
           const questions = await getQuiz(matchId)
+          const questionList = Array.isArray(questions) ? questions : []
           setQuizQuestions(
-            questions.map((q) => ({
+            questionList.map((q) => ({
               id: `q${q.quizIndex}`,
               question: q.question,
-              options: q.options,
-              correctIndex: -1, // 서버가 정답을 안 줌
+              options: q.options || [],
+              correctIndex: -1,
             }))
           )
           // 힌트 목록 로드
