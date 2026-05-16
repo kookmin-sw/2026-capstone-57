@@ -1,7 +1,11 @@
 import { Client, IMessage } from "@stomp/stompjs"
 import SockJS from "sockjs-client"
 
-const WS_URL = "/backend/ws"
+// lib/chat-socket.ts
+const WS_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://54.174.25.221:8080/ws/chat"  // 개발: 직접 연결 (프록시 우회)
+    : "/backend/ws/chat"                    // 프로덕션: Nginx 등 프록시 사용
 
 export interface IncomingChatMessage {
   messageId: string
@@ -17,6 +21,8 @@ export interface ChatSocketCallbacks {
   onTokenUpdate?: (usedTokens: number) => void
   onSessionEnd?: () => void
   onError?: (error: unknown) => void
+  onConnect?: () => void
+  onDisconnect?: () => void
 }
 
 let stompClient: Client | null = null
@@ -25,6 +31,12 @@ export function connectChatSocket(
   sessionId: string,
   callbacks: ChatSocketCallbacks
 ): Client {
+  // 기존 연결이 있으면 정리
+  if (stompClient) {
+    stompClient.deactivate()
+    stompClient = null
+  }
+
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
 
   const client = new Client({
@@ -34,6 +46,8 @@ export function connectChatSocket(
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
     onConnect: () => {
+      callbacks.onConnect?.()
+
       // 채팅 메시지 구독
       client.subscribe(`/topic/chat/${sessionId}`, (frame: IMessage) => {
         try {
@@ -52,6 +66,9 @@ export function connectChatSocket(
         callbacks.onSessionEnd?.()
       })
     },
+    onDisconnect: () => {
+      callbacks.onDisconnect?.()
+    },
     onStompError: (frame) => {
       console.error("STOMP error:", frame.headers["message"])
       callbacks.onError?.(frame)
@@ -65,7 +82,10 @@ export function connectChatSocket(
 
 export function sendChatMessage(sessionId: string, content: string) {
   if (!stompClient || !stompClient.connected) {
-    console.error("STOMP client is not connected")
+    console.error("STOMP client is not connected:", {
+      exists: !!stompClient,
+      connected: stompClient?.connected,
+    })
     return
   }
 

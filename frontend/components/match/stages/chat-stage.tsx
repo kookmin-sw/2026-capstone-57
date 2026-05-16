@@ -12,6 +12,7 @@ interface ChatStageProps {
   usedTokens: number
   icebreakerQuestion?: string
   isEnded?: boolean
+  isConnected?: boolean
   onSendMessage: (content: string) => void
 }
 
@@ -21,6 +22,7 @@ export function ChatStage({
   usedTokens,
   icebreakerQuestion,
   isEnded = false,
+  isConnected = true,
   onSendMessage,
 }: ChatStageProps) {
   const [input, setInput] = useState("")
@@ -34,7 +36,7 @@ export function ChatStage({
   }, [messages])
 
   const handleSend = () => {
-    if (!input.trim() || isEnded || remainingTokens <= 0) return
+    if (!input.trim() || isEnded || remainingTokens <= 0 || !isConnected) return
     onSendMessage(input.trim())
     setInput("")
   }
@@ -85,9 +87,9 @@ export function ChatStage({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 scrollbar-hide min-h-0">
-        {messages.map((msg) => (
+        {messages.map((msg, index) => (
           <div
-            key={msg.id}
+            key={msg.id || `msg-${index}`}
             className={cn("flex", msg.isMe ? "justify-end" : "justify-start")}
           >
             <div className={cn(
@@ -133,7 +135,7 @@ export function ChatStage({
             <Button
               size="icon"
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || !isConnected}
               className="w-7 h-7 rounded-lg gradient-gem text-white border-0 shrink-0"
             >
               <Send className="w-3.5 h-3.5" />
