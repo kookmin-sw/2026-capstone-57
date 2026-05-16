@@ -154,3 +154,17 @@ export function createChatSession(matchId: string) {
     body: JSON.stringify({ matchId }),
   })
 }
+
+/** 게임 세션 DTO */
+export interface GameSessionDto {
+  gameSessionId: string
+  matchId: string
+  status: "WAITING" | "PLAYING" | "FINISHED"
+}
+
+/** 게임 세션 생성 */
+export function createGameSession(matchId: string) {
+  return apiFetch<GameSessionDto>(`/api/v1/matches/${matchId}/game-sessions`, {
+    method: "POST",
+  })
+}

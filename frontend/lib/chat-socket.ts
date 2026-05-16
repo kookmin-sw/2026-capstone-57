@@ -4,7 +4,7 @@ import SockJS from "sockjs-client"
 // lib/chat-socket.ts
 const WS_URL =
   process.env.NODE_ENV === "development"
-    ? "http://54.174.25.221:8080/ws/chat"  // 개발: 직접 연결 (프록시 우회)
+    ? "http://98.93.112.251:8080/ws/chat"  // 개발: 직접 연결 (프록시 우회)
     : "/backend/ws/chat"                    // 프로덕션: Nginx 등 프록시 사용
 
 export interface IncomingChatMessage {

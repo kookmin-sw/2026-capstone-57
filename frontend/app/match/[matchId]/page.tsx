@@ -18,6 +18,7 @@ import {
   createChatSession,
   getChatSession,
   getChatMessages,
+  createGameSession,
   sendHint,
   getHints,
   getMission,
@@ -32,6 +33,11 @@ import {
   disconnectChatSocket,
   type IncomingChatMessage,
 } from "@/lib/chat-socket"
+import {
+  connectGameSocket,
+  disconnectGameSocket,
+  type GameEvent,
+} from "@/lib/game-socket"
 import { getSlots } from "@/lib/api/slots"
 import type { InteractionStage } from "@/types/slot"
 import type { QuizQuestion, ChatMessage, MissionInfo, MatchPartner } from "@/types/match"
@@ -75,6 +81,11 @@ export default function MatchDetailPage() {
   const [chatEnded, setChatEnded] = useState(false)
   const [isStompConnected, setIsStompConnected] = useState(false)
   const isTransitioningRef = useRef(false)
+
+  // Game state
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null)
+  const [gameWaiting, setGameWaiting] = useState(false)
+  const [gameStarted, setGameStarted] = useState(false)
 
   // Mission state
   const [mission, setMission] = useState<MissionInfo | null>(null)
@@ -124,6 +135,7 @@ export default function MatchDetailPage() {
 
     return () => {
       disconnectChatSocket()
+      disconnectGameSocket()
       setIsStompConnected(false)
     }
   }, [matchId])
@@ -367,8 +379,35 @@ export default function MatchDetailPage() {
     await loadStageData(stage)
   }
 
-  const handleGameSelect = (gameId: string) => {
-    console.log("게임 시작:", gameId)
+  const handleGameSelect = async (gameId: string) => {
+    try {
+      // 1. 게임 세션 생성
+      const session = await createGameSession(matchId)
+      setGameSessionId(session.gameSessionId)
+      setGameWaiting(true)
+
+      // 2. WebSocket 연결 (연결 시 자동으로 READY 전송)
+      connectGameSocket(session.gameSessionId, {
+        onConnect: () => {
+          console.log("게임 소켓 연결 완료")
+        },
+        onEvent: (event: GameEvent) => {
+          if (event.type === "GAME_STARTED") {
+            setGameWaiting(false)
+            setGameStarted(true)
+          }
+        },
+        onDisconnect: () => {
+          console.log("게임 소켓 연결 해제")
+        },
+        onError: (err) => {
+          console.error("게임 소켓 에러:", err)
+        },
+      })
+    } catch (err) {
+      console.error("게임 세션 생성 실패:", err)
+      setGameWaiting(false)
+    }
   }
 
   const handleMissionComplete = async () => {
@@ -446,6 +485,9 @@ export default function MatchDetailPage() {
         return (
           <GameStage
             games={[{ id: "g1", name: "달빛찾기", description: "함께 달빛을 찾아서 탈출하세요", icon: "🌙" }]}
+            isWaiting={gameWaiting}
+            isStarted={gameStarted}
+            gameSessionId={gameSessionId}
             onSelectGame={handleGameSelect}
           />
         )
