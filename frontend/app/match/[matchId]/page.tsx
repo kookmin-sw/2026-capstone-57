@@ -77,6 +77,13 @@ export default function MatchDetailPage() {
         const currentStage = STAGE_MAP[state.currentStage] || "QUIZ"
         setActiveStage(currentStage)
 
+        // 이미 퀴즈 완료 후 대기 중인 경우 감지
+        const userId = localStorage.getItem("userId") || ""
+        const quizCompletedBy: string[] = state.stageData?.quizCompletedBy || []
+        if (state.currentStage === 1 && state.stageStatus === "WAITING" && quizCompletedBy.includes(userId)) {
+          setQuizWaiting(true)
+        }
+
         // 슬롯에서 매칭 상대 정보 가져오기
         try {
           const slots = await getSlots()
@@ -182,17 +189,49 @@ export default function MatchDetailPage() {
     await loadStageData(stage)
   }
 
+  const [quizWaiting, setQuizWaiting] = useState(false)
+
   const handleQuizComplete = async () => {
     try {
       const result = await completeQuiz(matchId)
       setInteraction(result)
-      const nextStage = STAGE_MAP[result.currentStage] || "CHAT"
-      setActiveStage(nextStage)
-      await loadStageData(nextStage)
+
+      if (result.currentStage >= 2 && result.stageStatus !== "WAITING") {
+        // 양쪽 모두 완료 → 다음 단계로 이동
+        const nextStage = STAGE_MAP[result.currentStage] || "CHAT"
+        setActiveStage(nextStage)
+        await loadStageData(nextStage)
+      } else {
+        // 상대방 대기 중
+        setQuizWaiting(true)
+      }
     } catch (err) {
       console.error("퀴즈 완료 실패:", err)
     }
   }
+
+  // 대기 중일 때 폴링으로 상태 확인
+  useEffect(() => {
+    if (!quizWaiting) return
+
+    const interval = setInterval(async () => {
+      try {
+        const state = await getInteractionState(matchId)
+        setInteraction(state)
+
+        if (state.currentStage >= 2 && state.stageStatus !== "WAITING") {
+          setQuizWaiting(false)
+          const nextStage = STAGE_MAP[state.currentStage] || "CHAT"
+          setActiveStage(nextStage)
+          await loadStageData(nextStage)
+        }
+      } catch (err) {
+        console.error("상태 폴링 실패:", err)
+      }
+    }, 5000) // 5초마다 확인
+
+    return () => clearInterval(interval)
+  }, [quizWaiting, matchId])
 
   const handleSendMessage = (content: string) => {
     // 채팅은 WebSocket 기반이므로 여기서는 UI만 업데이트
@@ -235,6 +274,17 @@ export default function MatchDetailPage() {
   const renderStageContent = () => {
     switch (activeStage) {
       case "QUIZ":
+        if (quizWaiting) {
+          return (
+            <div className="flex flex-col items-center justify-center bg-card rounded-2xl p-6 shadow-sm border border-border/30 text-center gap-3">
+              <span className="text-3xl">⏳</span>
+              <p className="text-sm font-semibold text-foreground">퀴즈를 모두 풀었어요!</p>
+              <p className="text-xs text-muted-foreground">
+                상대방이 퀴즈를 완료하면<br />다음 단계로 넘어갑니다
+              </p>
+            </div>
+          )
+        }
         return (
           <QuizStage
             questions={quizQuestions.length > 0 ? quizQuestions : [{ id: "loading", question: "로딩 중...", options: [], correctIndex: -1 }]}
