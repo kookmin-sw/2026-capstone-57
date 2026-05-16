@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MessageCircle, Check, X, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -11,6 +11,7 @@ import {
   DrawerFooter,
 } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
+import { getHints } from "@/lib/api/interaction"
 import type { QuizQuestion } from "@/types/match"
 
 interface HintItem {
@@ -27,11 +28,12 @@ interface QuizStageProps {
   onComplete: () => void
   onSubmitAnswer?: (quizIndex: number, answer: number) => Promise<{ correctAnswer: number; isCorrect: boolean } | null>
   onSendHint?: (question: string) => void
+  onHintsUpdate?: (hints: HintItem[]) => void
   matchId: string
   initialIndex?: number
 }
 
-export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, onSendHint, matchId, initialIndex }: QuizStageProps) {
+export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, onSendHint, onHintsUpdate, matchId, initialIndex }: QuizStageProps) {
   const STORAGE_KEY = `quiz_progress_${matchId}`
 
   const [currentIndex, setCurrentIndex] = useState(() => {
@@ -48,6 +50,30 @@ export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, o
 
   const currentQuestion = questions[currentIndex]
   const isLastQuestion = currentIndex === questions.length - 1
+
+  // 답변 대기 중인 힌트가 있을 때만 폴링
+  useEffect(() => {
+    const hasPending = hints.some((h) => !h.answer)
+    if (!hasPending) return
+
+    const timer = setInterval(async () => {
+      try {
+        const updated = await getHints(matchId)
+        const mapped = updated.map((h) => ({
+          id: h.id,
+          question: h.question,
+          answer: h.answer,
+          status: h.status,
+          quizIndex: h.quizIndex,
+        }))
+        onHintsUpdate?.(mapped)
+      } catch (err) {
+        console.error("힌트 업데이트 실패:", err)
+      }
+    }, 10000)
+
+    return () => clearInterval(timer)
+  }, [hints, matchId, onHintsUpdate])
 
   const handleSelect = async (optionIndex: number) => {
     if (showResult) return

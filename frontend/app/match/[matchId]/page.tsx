@@ -373,6 +373,12 @@ export default function MatchDetailPage() {
             matchId={matchId}
             onComplete={handleQuizComplete}
             onSubmitAnswer={handleSubmitAnswer}
+            onHintsUpdate={(updated) => setQuizHints((prev) =>
+              prev.map((h) => {
+                const match = updated.find((u) => u.id === h.id)
+                return match ? { ...h, answer: match.answer, status: match.status } : h
+              })
+            )}
             onSendHint={async (question) => {
               try {
                 const newHint = await sendHint(matchId, question)
