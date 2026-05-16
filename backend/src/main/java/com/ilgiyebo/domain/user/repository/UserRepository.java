@@ -1,6 +1,6 @@
-package com.ilgiyebo.repository;
+package com.ilgiyebo.domain.user.repository;
 
-import com.ilgiyebo.domain.UserEntity;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package com.ilgiyebo.config;
+package com.ilgiyebo.common.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;

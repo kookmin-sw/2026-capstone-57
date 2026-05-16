@@ -1,0 +1,33 @@
+package com.ilgiyebo.common.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Getter
+@Setter
+@Component
+@ConfigurationProperties(prefix = "ai.server")
+public class AiServerProperties {
+
+    /**
+     * AI 서버 기본 URL (예: http://localhost:8081)
+     * 비어있으면 스텁 클라이언트를 사용한다.
+     */
+    private String baseUrl = "";
+
+    /**
+     * HTTP 요청 타임아웃 (밀리초)
+     */
+    private int timeoutMs = 10000;
+
+    /**
+     * 최대 재시도 횟수
+     */
+    private int maxRetries = 3;
+
+    public boolean isConfigured() {
+        return baseUrl != null && !baseUrl.isBlank();
+    }
+}

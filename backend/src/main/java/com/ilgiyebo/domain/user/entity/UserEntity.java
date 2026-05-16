@@ -1,7 +1,7 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.user.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.config.JsonStringListConverter;
+import com.ilgiyebo.common.config.JsonStringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "`USER`")
+@Table(name = "`user`")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -62,6 +62,16 @@ public class UserEntity extends BaseSchema {
     @Convert(converter = JsonStringListConverter.class)
     @Column(name = "ideal_type_preferences", columnDefinition = "JSON")
     private List<String> idealTypes;
+
+    @Builder.Default
+    @Convert(converter = JsonStringListConverter.class)
+    @Column(name = "ai_inferred_hobbies", columnDefinition = "JSON")
+    private List<String> aiInferredHobbies = new java.util.ArrayList<>();
+
+    @Builder.Default
+    @Convert(converter = JsonStringListConverter.class)
+    @Column(name = "ai_inferred_interests", columnDefinition = "JSON")
+    private List<String> aiInferredInterests = new java.util.ArrayList<>();
 
     @Builder.Default
     @Column(name = "total_exp", nullable = false)

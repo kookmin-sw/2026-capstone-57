@@ -1,9 +1,9 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.auth.service;
 
-import com.ilgiyebo.dto.AuthTokenResponse;
-import com.ilgiyebo.dto.SignupRequest;
-import com.ilgiyebo.dto.VerificationConfirmResponse;
-import com.ilgiyebo.dto.VerificationResponse;
+import com.ilgiyebo.domain.auth.dto.AuthTokenResponse;
+import com.ilgiyebo.domain.auth.dto.SignupRequest;
+import com.ilgiyebo.domain.auth.dto.VerificationConfirmResponse;
+import com.ilgiyebo.domain.auth.dto.VerificationResponse;
 
 public interface AuthService {
 

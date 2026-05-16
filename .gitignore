@@ -7,6 +7,9 @@
 backend/build/
 backend/.gradle/
 backend/.jqwik-database
+frontend/.next/
+frontend/node_modules/
+phaser_game/node_modules/
 
 # Environment
 backend/.env
@@ -18,4 +21,6 @@ Thumbs.db
 
 # AI ajent
 .kiro/specs/ilgi-yebo/.config.kiro
+backend/src/main/java/com/ilgiyebo/domain/chat/.kiro/*
 .kiro/specs/ai-service-separation/.config.kiro
+backend/src/main/resources/mock-data.sql

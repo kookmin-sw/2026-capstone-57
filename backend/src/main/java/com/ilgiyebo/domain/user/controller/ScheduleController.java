@@ -1,7 +1,8 @@
-package com.ilgiyebo.controller;
+package com.ilgiyebo.domain.user.controller;
 
-import com.ilgiyebo.dto.ScheduleResponse;
-import com.ilgiyebo.service.ScheduleService;
+import com.ilgiyebo.domain.user.dto.ScheduleResponse;
+import com.ilgiyebo.domain.user.dto.ScheduleUpsertResponse;
+import com.ilgiyebo.domain.user.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,7 @@ public class ScheduleController {
     @Operation(summary = "에브리타임 시간표 등록", description = "에브리타임 identifier로 시간표를 가져와 등록한다")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{identifier}")
-    public ResponseEntity<ScheduleResponse> upsertMySchedule(
+    public ResponseEntity<ScheduleUpsertResponse> upsertMySchedule(
             @AuthenticationPrincipal UUID userId,
             @PathVariable String identifier
     ) {

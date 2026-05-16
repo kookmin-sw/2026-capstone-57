@@ -37,12 +37,12 @@ dependencies {
 
     // Database
     runtimeOnly 'com.mysql:mysql-connector-j'
-    implementation 'org.flywaydb:flyway-core'
-    implementation 'org.flywaydb:flyway-mysql'
 
     // AWS SDK v2 - Bedrock Runtime
     implementation 'software.amazon.awssdk:bedrockruntime'
-
+    // Spring Cloud AWS - SQS
+    implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:3.1.1')
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
     // Jackson (JSON processing)
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
@@ -67,6 +67,9 @@ dependencies {
 
     // Swagger / OpenAPI
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+    // AWS SQS (Spring Cloud AWS 3.x)
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs:3.1.1'
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

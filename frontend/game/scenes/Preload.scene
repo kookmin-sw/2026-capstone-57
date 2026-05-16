@@ -1,0 +1,90 @@
+{
+    "id": "04331fb6-ed91-4d74-b6e9-4bfe0fcfb457",
+    "sceneType": "SCENE",
+    "settings": {
+        "snapEnabled": true,
+        "exportClass": true,
+        "autoImport": true,
+        "preloadMethodName": "editorPreload",
+        "preloadPackFiles": [],
+        "createMethodName": "editorCreate",
+        "sceneKey": "Preload",
+        "compilerOutputLanguage": "TYPE_SCRIPT",
+        "borderWidth": 390,
+        "borderHeight": 844
+    },
+    "displayList": [
+        {
+            "type": "Image",
+            "id": "9ba447fa-04d0-40d1-98be-56ce17d65b2f",
+            "label": "pl_background",
+            "texture": {
+                "key": "pl_background"
+            },
+            "x": 194,
+            "y": 412,
+            "scaleX": 0.48,
+            "scaleY": 0.47
+        },
+        {
+            "type": "Text",
+            "id": "c4092661-6339-47cf-9fea-8abff3a46e0c",
+            "label": "loadingText",
+            "x": 140,
+            "y": 458,
+            "text": "상대방을 기다리고 있어요!!!",
+            "align": "center",
+            "fontFamily": "arial",
+            "fontSize": "15",
+            "color": "#000000ff",
+            "stroke": "#000000ff",
+            "shadow.color": "#000000ff"
+        },
+        {
+            "type": "Rectangle",
+            "id": "845d4ca6-7417-44fc-97e3-a3bb2fbbdd03",
+            "label": "progressBar",
+            "scope": "CLASS",
+            "x": 75,
+            "y": 430,
+            "originX": 0,
+            "originY": 0,
+            "isFilled": true,
+            "fillColor": "#e0e0e0",
+            "width": 256,
+            "height": 20
+        },
+        {
+            "type": "Rectangle",
+            "id": "10e175a4-81b6-449e-9561-6d8ba54d3812",
+            "label": "progressBarBg",
+            "x": 75,
+            "y": 430,
+            "originX": 0,
+            "originY": 0,
+            "fillColor": "#e0e0e0",
+            "isStroked": true,
+            "width": 256,
+            "height": 20
+        },
+        {
+            "type": "Image",
+            "id": "d88184ae-be6e-4d38-b73a-b70fb66b22d3",
+            "label": "pl_logo",
+            "texture": {
+                "key": "pl_logo"
+            },
+            "x": 197,
+            "y": 276,
+            "scaleX": 0.2062755467640674,
+            "scaleY": 0.20223052603679498
+        }
+    ],
+    "plainObjects": [],
+    "meta": {
+        "app": "Phaser Editor - Scene Editor",
+        "url": "https://phaser.io/editor",
+        "contentType": "phasereditor2d.core.scene.SceneContentType",
+        "version": 5
+    }
+}

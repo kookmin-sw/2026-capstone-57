@@ -6,11 +6,23 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Turbopack 호환 (빈 설정으로 경고 제거)
+  turbopack: {},
   async rewrites() {
     return [
       {
         source: "/backend/:path*",
-        destination: "http://54.174.25.221:8080/:path*",
+        destination: "http://localhost:8080/:path*",
+      },
+      // Game API proxy (development)
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:8080/api/:path*",
+      },
+      // Game WebSocket proxy
+      {
+        source: "/ws/:path*",
+        destination: "http://localhost:8080/ws/:path*",
       },
     ]
   },

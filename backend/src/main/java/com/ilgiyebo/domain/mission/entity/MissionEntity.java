@@ -1,17 +1,17 @@
-package com.ilgiyebo.domain;
+package com.ilgiyebo.domain.mission.entity;
 
 import com.ilgiyebo.common.entity.BaseSchema;
-import com.ilgiyebo.config.JsonStringListConverter;
+import com.ilgiyebo.common.config.JsonStringListConverter;
+import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
-@Table(name = "MISSION")
+@Table(name = "mission")
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
@@ -20,8 +20,9 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = true)
 public class MissionEntity extends BaseSchema {
 
-    @Column(name = "match_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID matchId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "match_id", nullable = false)
+    private MatchEntity match;
 
     @Column(nullable = false)
     private String location;
@@ -40,11 +41,14 @@ public class MissionEntity extends BaseSchema {
     private List<String> confirmedBy;
 
     @Builder.Default
-    @Column(nullable = false)
-    private boolean extended = false;
-
-    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MissionStatus status = MissionStatus.PENDING;
+
+    /**
+     * AI가 선택한 서브 노드 ID (추적용).
+     * RAG 기반 미션 생성 시 AI 서버가 선택한 장소의 ChromaDB 노드 ID.
+     */
+    @Column(name = "selected_node_id")
+    private String selectedNodeId;
 }

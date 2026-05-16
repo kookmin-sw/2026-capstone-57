@@ -1,4 +1,4 @@
-package com.ilgiyebo.dto;
+package com.ilgiyebo.domain.matching.dto;
 
 import java.util.List;
 

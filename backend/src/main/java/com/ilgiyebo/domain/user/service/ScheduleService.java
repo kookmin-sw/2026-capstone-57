@@ -1,15 +1,20 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.user.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.ilgiyebo.domain.ScheduleEntity;
+import com.ilgiyebo.domain.planner.service.PlannerService;
+import com.ilgiyebo.domain.user.entity.ScheduleEntity;
+import com.ilgiyebo.domain.user.entity.SemesterEntity;
+import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.campus.entity.CampusBuildingEntity;
 import com.ilgiyebo.domain.campus.repository.CampusBuildingRepository;
 import com.ilgiyebo.domain.user.exception.UserException;
-import com.ilgiyebo.dto.ScheduleResponse;
-import com.ilgiyebo.repository.ScheduleRepository;
-import com.ilgiyebo.repository.UserRepository;
+import com.ilgiyebo.domain.user.dto.ScheduleResponse;
+import com.ilgiyebo.domain.user.dto.ScheduleUpsertResponse;
+import com.ilgiyebo.domain.user.repository.ScheduleRepository;
+import com.ilgiyebo.domain.user.repository.SemesterRepository;
+import com.ilgiyebo.domain.user.repository.UserRepository;
 import kong.unirest.core.ContentType;
 import kong.unirest.core.Unirest;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,7 +38,9 @@ public class ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
+    private final SemesterRepository semesterRepository;
     private final CampusBuildingRepository campusBuildingRepository;
+    private final PlannerService plannerService;
 
     @Value("${everytime.user-agent:EverytimeApp}")
     private String userAgent;
@@ -40,20 +48,28 @@ public class ScheduleService {
     @Transactional(readOnly = true)
     public ScheduleResponse getMySchedule(UUID userId) {
         validateUserExists(userId);
-        List<ScheduleEntity> schedules = scheduleRepository.findAllByUserId(userId);
+        SemesterEntity currentSemester = getCurrentSemester();
+        List<ScheduleEntity> schedules = scheduleRepository.findAllByUserIdAndSemesterId(
+                userId, currentSemester.getId());
         return ScheduleResponse.from(schedules);
     }
 
+    /**
+     * 에브리타임 시간표를 등록/재등록한다.
+     *
+     * <p>정책: 외부 API 응답 파싱이 성공한 뒤에만 기존 데이터를 삭제한다.
+     * identifier가 잘못되었거나 API 실패 시 기존 시간표/일정을 보존한다.</p>
+     */
     @Transactional
     @SneakyThrows(IOException.class)
-    public ScheduleResponse upsertMySchedule(UUID userId, String identifier) {
-        validateUserExists(userId);
-        scheduleRepository.deleteByUserId(userId);
+    public ScheduleUpsertResponse upsertMySchedule(UUID userId, String identifier) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(UserException.USER_NOT_FOUND::toException);
 
-        // 건물 이름 목록 조회 (이름 길이 내림차순 정렬)
-        List<CampusBuildingEntity> buildings = campusBuildingRepository.findAll();
-        buildings.sort(Comparator.comparingInt((CampusBuildingEntity b) -> b.getName().length()).reversed());
+        // 현재 활성 학기 조회
+        SemesterEntity currentSemester = getCurrentSemester();
 
+        // 1. 외부 API 호출 + 파싱 (기존 데이터 삭제 전에 수행)
         byte[] response = Unirest.post("https://api.everytime.kr/find/timetable/table/friend")
                 .contentType(ContentType.APPLICATION_FORM_URLENCODED.getMimeType())
                 .header("User-Agent", userAgent)
@@ -65,10 +81,23 @@ public class ScheduleService {
         JsonNode table = root.get("table");
         JsonNode subjects = table != null ? table.get("subject") : null;
 
+        // 파싱 실패 시 기존 데이터 유지하고 예외 발생
         if (subjects == null) {
-            return ScheduleResponse.from(List.of());
+            throw UserException.SCHEDULE_FETCH_FAILED.toException();
         }
 
+        // 2. 파싱 성공 확인 후 기존 데이터 삭제
+        // 건물 이름 목록 조회 (이름 길이 내림차순 정렬)
+        List<CampusBuildingEntity> buildings = campusBuildingRepository.findAll();
+        buildings.sort(Comparator.comparingInt((CampusBuildingEntity b) -> b.getName().length()).reversed());
+
+        // 해당 학기의 연관된 plan_entry 먼저 정리 (FK 제약 해소)
+        plannerService.deleteScheduleLinkedEntries(userId, currentSemester.getId());
+
+        // 해당 user + semester 기존 시간표 전체 삭제
+        scheduleRepository.deleteByUserIdAndSemesterId(userId, currentSemester.getId());
+
+        // 3. 새 시간표 저장
         List<ScheduleEntity> schedules = new ArrayList<>();
         for (JsonNode subject : subjects) {
             JsonNode name = subject.get("name");
@@ -80,30 +109,35 @@ public class ScheduleService {
 
             if (data.getNodeType().equals(JsonNodeType.ARRAY)) {
                 for (JsonNode item : data) {
-                    ScheduleEntity entity = ScheduleEntity.fromEverytime(name, item, userId);
+                    ScheduleEntity entity = ScheduleEntity.fromEverytime(name, item, user, currentSemester);
                     parsePlaceAndSet(entity, buildings);
                     scheduleRepository.save(entity);
                     schedules.add(entity);
                 }
             } else {
-                ScheduleEntity entity = ScheduleEntity.fromEverytime(name, data, userId);
+                ScheduleEntity entity = ScheduleEntity.fromEverytime(name, data, user, currentSemester);
                 parsePlaceAndSet(entity, buildings);
                 scheduleRepository.save(entity);
                 schedules.add(entity);
             }
         }
 
-        return ScheduleResponse.from(schedules);
+        // 4. 시간표 등록 후 SCHEDULE_AUTO PLAN_ENTRY 재생성
+        var plannerResult = plannerService.regenerateScheduleAutoEntries(userId);
+
+        return ScheduleUpsertResponse.from(schedules, plannerResult);
+    }
+
+    /**
+     * 현재 날짜 기준 활성 학기를 조회한다.
+     */
+    private SemesterEntity getCurrentSemester() {
+        return semesterRepository.findCurrentByDate(LocalDate.now())
+                .orElseThrow(UserException.SEMESTER_NOT_FOUND::toException);
     }
 
     /**
      * place 원본 문자열을 파싱하여 campus_building_id와 floor를 설정한다.
-     *
-     * 알고리즘:
-     * 1. 건물 이름 목록을 길이 내림차순으로 정렬 (이미 정렬됨)
-     * 2. place가 건물 이름으로 시작하는지 확인 (startsWith)
-     * 3. 나머지 문자열에서 regex로 층 추출
-     * 4. "지하"가 붙으면 음수 층으로 변환
      */
     private void parsePlaceAndSet(ScheduleEntity entity, List<CampusBuildingEntity> buildings) {
         String place = entity.getPlace();
@@ -120,7 +154,6 @@ public class ScheduleService {
                 if (matcher.find()) {
                     int floorNumber = Integer.parseInt(matcher.group(2));
                     if (matcher.group(1) != null) {
-                        // "지하" → 음수
                         floorNumber = -floorNumber;
                     }
                     entity.setFloor(floorNumber);

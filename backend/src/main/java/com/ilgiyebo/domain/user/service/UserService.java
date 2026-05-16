@@ -1,7 +1,7 @@
-package com.ilgiyebo.service;
+package com.ilgiyebo.domain.user.service;
 
-import com.ilgiyebo.dto.ProfileSetup;
-import com.ilgiyebo.dto.UserProfileDto;
+import com.ilgiyebo.domain.user.dto.ProfileSetup;
+import com.ilgiyebo.domain.user.dto.UserProfileDto;
 
 import java.util.UUID;
 
