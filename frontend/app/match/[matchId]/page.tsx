@@ -209,6 +209,21 @@ export default function MatchDetailPage() {
     }
   }
 
+  /** 채팅 단계 완료 → 다음 단계로 전환 */
+  const handleChatCompleted = async () => {
+    try {
+      const state = await getInteractionState(matchId)
+      setInteraction(state)
+      const nextStage = STAGE_MAP[state.currentStage] || "GAME"
+      setActiveStage(nextStage)
+      await loadStageData(nextStage)
+    } catch (err) {
+      console.error("채팅 완료 후 상태 갱신 실패:", err)
+      // fallback: 게임 단계로 전환
+      setActiveStage("GAME")
+    }
+  }
+
   /** WebSocket(STOMP) 연결 초기화 */
   const initChatSocket = (sessionId: string) => {
     const userId = localStorage.getItem("userId") || ""
@@ -240,6 +255,11 @@ export default function MatchDetailPage() {
         setChatEnded(true)
         disconnectChatSocket()
         setIsStompConnected(false)
+        // 다음 단계로 자동 전환
+        handleChatCompleted()
+      },
+      onChatError: (error) => {
+        console.warn("채팅 에러:", error.code, error.message)
       },
       onError: (err) => {
         console.error("채팅 소켓 에러:", err)
