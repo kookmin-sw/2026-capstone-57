@@ -28,8 +28,10 @@ export function ChatStage({
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const remainingTokens = Math.max(0, tokenLimit - usedTokens)
-  const usagePercent = tokenLimit > 0 ? Math.min(100, (usedTokens / tokenLimit) * 100) : 0
+  const safeTokenLimit = tokenLimit ?? 0
+  const safeUsedTokens = usedTokens ?? 0
+  const remainingTokens = Math.max(0, safeTokenLimit - safeUsedTokens)
+  const usagePercent = safeTokenLimit > 0 ? Math.min(100, (safeUsedTokens / safeTokenLimit) * 100) : 0
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -71,7 +73,7 @@ export function ChatStage({
           />
         </div>
         <p className="text-[10px] text-muted-foreground mt-0.5 text-right">
-          {usedTokens.toLocaleString()} / {tokenLimit.toLocaleString()}자 사용
+          {safeUsedTokens.toLocaleString()} / {safeTokenLimit.toLocaleString()}자 사용
         </p>
       </div>
 
