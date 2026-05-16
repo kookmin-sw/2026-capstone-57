@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Flag } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
@@ -11,6 +11,7 @@ import { ChatStage } from "@/components/match/stages/chat-stage"
 import { GameStage } from "@/components/match/stages/game-stage"
 import { MissionStage } from "@/components/match/stages/mission-stage"
 import { ReviewStage } from "@/components/match/stages/review-stage"
+import { useChatSocket } from "@/hooks/use-chat-socket"
 import {
   getInteractionState,
   getQuiz,
@@ -20,6 +21,7 @@ import {
   confirmMission,
   getChatSession,
   getChatMessages,
+  createChatSession,
   sendHint,
   type InteractionStateDto,
   type QuizQuestionResponse,
@@ -118,7 +120,13 @@ export default function MatchDetailPage() {
         }
         case "CHAT": {
           try {
-            const session = await getChatSession(matchId)
+            let session;
+            try {
+              session = await getChatSession(matchId)
+            } catch {
+              // 세션이 없으면 생성
+              session = await createChatSession(matchId)
+            }
             setChatSessionId(session.sessionId)
             const messages = await getChatMessages(session.sessionId)
             const userId = localStorage.getItem("userId") || ""
@@ -184,20 +192,36 @@ export default function MatchDetailPage() {
     }
   }
 
+  // Chat WebSocket
+  const handleChatMessage = useCallback((msg: ChatMessage) => {
+    setChatMessages((prev) => [...prev, msg])
+  }, [])
+
+  const { connected: chatConnected, sendMessage: sendChatMessage } = useChatSocket({
+    sessionId: chatSessionId,
+    onMessage: handleChatMessage,
+  })
+
   const handleSendMessage = (content: string) => {
-    // 채팅은 WebSocket 기반이므로 여기서는 UI만 업데이트
-    const newMessage: ChatMessage = {
-      id: `m${Date.now()}`,
-      senderId: "me",
-      content,
-      timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
-      isMe: true,
-    }
-    setChatMessages((prev) => [...prev, newMessage])
+    sendChatMessage(content)
   }
 
-  const handleGameSelect = (gameId: string) => {
-    console.log("게임 시작:", gameId)
+  const handleGameSelect = async (gameId: string) => {
+    try {
+      const token = localStorage.getItem("token") || ""
+      const res = await fetch(`/backend/api/v1/matches/${matchId}/game-sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (!res.ok) throw new Error("세션 생성 실패")
+      const data = await res.json()
+      router.push(`/game?sessionId=${data.id}&token=${token}`)
+    } catch (err) {
+      console.error("게임 시작 실패:", err)
+    }
   }
 
   const handleMissionComplete = async () => {

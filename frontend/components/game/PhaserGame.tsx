@@ -59,7 +59,6 @@ export default function PhaserGame({ sessionId, token, onGameCleared, onGameOver
       class Boot extends Phaser.Scene {
         constructor() { super('Boot'); }
         preload() {
-          this.load.path = '/game/';
           this.load.pack('pack', '/game/assets/preload-asset-pack.json');
         }
         create() { this.scene.start('Preload'); }

@@ -558,8 +558,7 @@ export default class Level extends Phaser.Scene {
 				// 뒤로가기 버튼에 클리어 데이터 전달 로직 추가
 				this.backButton.removeAllListeners('pointerdown');
 				this.backButton.on('pointerdown', () => {
-					// TODO: React 임베딩 시 CustomEvent 대신 props 콜백으로 변경
-					// React에서 window.addEventListener('game-cleared', (e) => { e.detail로 결과 모달 표시 })
+					// React 앱에 클리어 데이터 전달 → 모달 표시
 					window.dispatchEvent(new CustomEvent('game-cleared', {
 						detail: {
 							score: data.score,
@@ -567,7 +566,7 @@ export default class Level extends Phaser.Scene {
 							intimacyPoints: data.intimacyPoints,
 						}
 					}));
-					window.history.back();
+					// history.back()은 React 모달의 "돌아가기" 버튼에서 처리
 				});
 			});
 

@@ -2,22 +2,22 @@
     "section1": {
         "files": [
             {
-                "url": "assets/guapen.png",
+                "url": "/game/assets/guapen.png",
                 "type": "image",
                 "key": "guapen"
             },
             {
-                "url": "assets/pl_background.png",
+                "url": "/game/assets/pl_background.png",
                 "type": "image",
                 "key": "pl_background"
             },
             {
-                "url": "assets/pl_logo.png",
+                "url": "/game/assets/pl_logo.png",
                 "type": "image",
                 "key": "pl_logo"
             },
             {
-                "url": "assets/preload_background.png",
+                "url": "/game/assets/preload_background.png",
                 "type": "image",
                 "key": "preload_background"
             }

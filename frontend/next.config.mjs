@@ -6,20 +6,13 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Phaser uses 'self' and 'global' which need to be handled
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-    };
-    return config;
-  },
+  // Turbopack 호환 (빈 설정으로 경고 제거)
+  turbopack: {},
   async rewrites() {
     return [
       {
         source: "/backend/:path*",
-        destination: "http://54.80.10.143:8080/:path*",
+        destination: "http://localhost:8080/:path*",
       },
       // Game API proxy (development)
       {
