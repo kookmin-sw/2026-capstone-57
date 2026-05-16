@@ -6,8 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record DirectReviewInputDto(
-    @NotNull @Min(1) @Max(5) Integer satisfaction,
+public record EditReviewRequest(
     @NotBlank @Size(max = 5000) String reflection,
+    @NotNull @Min(1) @Max(5) Integer satisfaction,
     @NotNull Boolean wantToMeetAgain
 ) {}

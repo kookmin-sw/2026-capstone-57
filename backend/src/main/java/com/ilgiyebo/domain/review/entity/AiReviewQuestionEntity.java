@@ -9,7 +9,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ai_review_question")
+@Table(name = "ai_review_question",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"session_id", "question_order"}))
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
