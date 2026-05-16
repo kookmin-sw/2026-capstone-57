@@ -103,7 +103,7 @@ export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, o
 
   return (
     // ✅ h-full 제거 → 내용물 높이에 맞게 자연스럽게 늘어남
-    <div className="flex flex-col bg-card rounded-2xl p-4 shadow-sm border border-border/30">
+    <div className="flex flex-col bg-card rounded-2xl p-4 shadow-sm border border-border/30 pb-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-sm font-semibold text-foreground">1단계 · 퀴즈</h3>
