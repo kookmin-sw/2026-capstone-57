@@ -44,6 +44,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewAiClient reviewAiClient;
     private final ExperienceGrantPort experienceGrantPort;
     private final TransactionTemplate transactionTemplate;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @Override
     @Transactional
@@ -410,39 +411,46 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     /**
-     * 회고 완료 기록. 비관적 락(PESSIMISTIC_WRITE)으로 Lost Update 방지.
+     * 회고 완료 기록. 새 트랜잭션(REQUIRES_NEW)에서 실행하여
+     * 호출자의 1L 캐시에 있는 stale interaction 객체와 격리한다.
+     * 새 PersistenceContext + PESSIMISTIC_WRITE 락으로 최신 데이터를 읽어 Lost Update 방지.
      */
     private void markReviewCompleted(UUID matchId, UUID userId) {
-        InteractionEntity interaction = interactionRepository.findByMatchIdForUpdate(matchId)
-                .orElseThrow(ReviewException.INTERACTION_NOT_FOUND::toException);
+        TransactionTemplate requiresNewTx = new TransactionTemplate(transactionManager);
+        requiresNewTx.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
-        List<String> completedBy = interaction.getReviewCompletedBy();
-        if (completedBy == null) {
-            completedBy = new ArrayList<>();
-        }
-        String userIdStr = userId.toString();
-        if (!completedBy.contains(userIdStr)) {
-            completedBy = new ArrayList<>(completedBy);
-            completedBy.add(userIdStr);
-            interaction.setReviewCompletedBy(completedBy);
+        requiresNewTx.executeWithoutResult(status -> {
+            InteractionEntity interaction = interactionRepository.findByMatchIdForUpdate(matchId)
+                    .orElseThrow(ReviewException.INTERACTION_NOT_FOUND::toException);
 
-            experienceGrantPort.grantReviewWriteExp(userId);
-        }
+            List<String> completedBy = interaction.getReviewCompletedBy();
+            if (completedBy == null) {
+                completedBy = new ArrayList<>();
+            }
+            String userIdStr = userId.toString();
+            if (!completedBy.contains(userIdStr)) {
+                completedBy = new ArrayList<>(completedBy);
+                completedBy.add(userIdStr);
+                interaction.setReviewCompletedBy(completedBy);
 
-        // 양쪽 모두 회고 완료 시 상호작용 + 매칭 완료 처리
-        if (completedBy.size() >= 2) {
-            interaction.setStageStatus(StageStatus.COMPLETED);
+                experienceGrantPort.grantReviewWriteExp(userId);
+            }
 
-            MatchEntity match = interaction.getMatch();
-            match.setStatus(MatchStatus.COMPLETED);
-            matchRepository.save(match);
+            // 양쪽 모두 회고 완료 시 상호작용 + 매칭 완료 처리
+            if (completedBy.size() >= 2) {
+                interaction.setStageStatus(StageStatus.COMPLETED);
 
-            log.info("양쪽 회고 모두 완료 - 상호작용 및 매칭 완료 처리: interactionId={}, matchId={}",
-                    interaction.getId(), match.getId());
-        }
+                MatchEntity match = interaction.getMatch();
+                match.setStatus(MatchStatus.COMPLETED);
+                matchRepository.save(match);
 
-        interactionRepository.save(interaction);
-        log.debug("회고 완료 기록: interactionId={}, userId={}, 완료 인원={}",
-                interaction.getId(), userId, completedBy.size());
+                log.info("양쪽 회고 모두 완료 - 상호작용 및 매칭 완료 처리: interactionId={}, matchId={}",
+                        interaction.getId(), match.getId());
+            }
+
+            interactionRepository.save(interaction);
+            log.debug("회고 완료 기록: interactionId={}, userId={}, 완료 인원={}",
+                    interaction.getId(), userId, completedBy.size());
+        });
     }
 }
