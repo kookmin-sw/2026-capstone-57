@@ -81,7 +81,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     @Override
     @Transactional(readOnly = true)
     public ChatSessionEntity getSessionByMatchId(UUID matchId) {
-        return chatSessionRepository.findByMatchId(matchId)
+        return chatSessionRepository.findTopByMatchIdOrderByCreatedAtDesc(matchId)
                 .orElseThrow(ChatException.SESSION_NOT_FOUND::toException);
     }
 
