@@ -20,11 +20,13 @@ interface HintItem {
   answer: string | null
   status: "PENDING" | "ANSWERED"
   quizIndex: number
+  senderId: string
 }
 
 interface QuizStageProps {
   questions: QuizQuestion[]
   hints?: HintItem[]
+  currentUserId: string
   onComplete: () => void
   onSubmitAnswer?: (quizIndex: number, answer: number) => Promise<{ correctAnswer: number; isCorrect: boolean } | null>
   onSendHint?: (question: string) => void
@@ -33,7 +35,7 @@ interface QuizStageProps {
   initialIndex?: number
 }
 
-export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, onSendHint, onHintsUpdate, matchId, initialIndex }: QuizStageProps) {
+export function QuizStage({ questions, hints = [], currentUserId, onComplete, onSubmitAnswer, onSendHint, onHintsUpdate, matchId, initialIndex }: QuizStageProps) {
   const STORAGE_KEY = `quiz_progress_${matchId}`
 
   const [currentIndex, setCurrentIndex] = useState(() => {
@@ -216,11 +218,12 @@ export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, o
         </Button>
       </div>
 
-      {/* Hint Q&A List */}
-      {hints.filter((h) => h.quizIndex === currentIndex).length > 0 && (
+      {/* Hint Q&A List — Sender: 내가 보낸 질문 */}
+      {hints.filter((h) => h.quizIndex === currentIndex && h.senderId === currentUserId).length > 0 && (
         <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-border/30">
+          <p className="text-[10px] font-medium text-muted-foreground">내가 보낸 질문</p>
           {hints
-            .filter((h) => h.quizIndex === currentIndex)
+            .filter((h) => h.quizIndex === currentIndex && h.senderId === currentUserId)
             .map((hint) => (
               <div
                 key={hint.id}
@@ -231,7 +234,7 @@ export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, o
                 </p>
                 {hint.answer ? (
                   <p className="text-xs text-foreground mt-1">
-                    {hint.answer}
+                    A. {hint.answer}
                   </p>
                 ) : (
                   <p className="text-[11px] text-muted-foreground mt-1">
@@ -242,6 +245,8 @@ export function QuizStage({ questions, hints = [], onComplete, onSubmitAnswer, o
             ))}
         </div>
       )}
+
+
 
       {/* Hint Drawer */}
       <Drawer open={showHintInput} onOpenChange={setShowHintInput}>

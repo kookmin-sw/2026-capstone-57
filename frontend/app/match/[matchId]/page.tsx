@@ -369,7 +369,8 @@ export default function MatchDetailPage() {
         return (
           <QuizStage
             questions={quizQuestions.length > 0 ? quizQuestions : [{ id: "loading", question: "로딩 중...", options: [], correctIndex: -1 }]}
-            hints={quizHints.map((h) => ({ id: h.id, question: h.question, answer: h.answer, status: h.status, quizIndex: h.quizIndex }))}
+            hints={quizHints.map((h) => ({ id: h.id, question: h.question, answer: h.answer, status: h.status, quizIndex: h.quizIndex, senderId: h.senderId }))}
+            currentUserId={localStorage.getItem("userId") || ""}
             matchId={matchId}
             onComplete={handleQuizComplete}
             onSubmitAnswer={handleSubmitAnswer}
