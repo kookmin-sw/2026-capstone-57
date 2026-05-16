@@ -35,7 +35,6 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
     if (showResult) return
     setSelectedOption(optionIndex)
 
-    // 서버에 답안 제출
     if (onSubmitAnswer) {
       try {
         const result = await onSubmitAnswer(currentIndex, optionIndex)
@@ -44,7 +43,6 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
         }
       } catch (err) {
         console.error("퀴즈 제출 실패:", err)
-        // 서버 실패 시 로컬 correctIndex 사용
         setCorrectAnswer(currentQuestion.correctIndex)
       }
     } else {
@@ -74,16 +72,17 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
 
   if (!currentQuestion || currentQuestion.options.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center bg-card rounded-2xl p-4 shadow-sm border border-border/30">
+      <div className="flex items-center justify-center bg-card rounded-2xl p-4 shadow-sm border border-border/30">
         <p className="text-sm text-muted-foreground">퀴즈를 불러오는 중...</p>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col bg-card rounded-2xl p-4 shadow-sm border border-border/30">
+    // ✅ h-full 제거 → 내용물 높이에 맞게 자연스럽게 늘어남
+    <div className="flex flex-col bg-card rounded-2xl p-4 shadow-sm border border-border/30">
       {/* Header */}
-      <div className="flex justify-between items-center mb-2 shrink-0">
+      <div className="flex justify-between items-center mb-2">
         <h3 className="text-sm font-semibold text-foreground">1단계 · 퀴즈</h3>
         <span className="text-[11px] text-muted-foreground">
           {currentIndex + 1} / {questions.length}
@@ -91,12 +90,13 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
       </div>
 
       {/* Question */}
-      <p className="text-sm font-semibold text-foreground mb-3 shrink-0">
+      <p className="text-sm font-semibold text-foreground mb-3">
         {currentQuestion.question}
       </p>
 
       {/* Options */}
-      <div className="flex-1 flex flex-col justify-center gap-2 min-h-0 overflow-hidden">
+      {/* ✅ flex-1, justify-center, min-h-0, overflow-hidden 모두 제거 */}
+      <div className="flex flex-col gap-2 mt-1">
         {currentQuestion.options.map((option, index) => {
           const isSelected = selectedOption === index
           const isCorrectOption = correctAnswer !== null && index === correctAnswer
@@ -108,7 +108,7 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
               onClick={() => handleSelect(index)}
               disabled={showResult}
               className={cn(
-                "w-full py-2 px-3 rounded-xl text-left text-sm transition-all shrink-0",
+                "w-full py-2 px-3 rounded-xl text-left text-sm transition-all",
                 "border bg-secondary/40",
                 !showResult && "hover:bg-secondary/60 active:scale-[0.98]",
                 showResult && isCorrectOption && "border-green-400 bg-green-50 text-green-700",
@@ -133,7 +133,7 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
       {/* Result message */}
       {showResult && selectedOption !== null && correctAnswer !== null && (
         <div className={cn(
-          "text-center text-xs py-1.5 rounded-lg mt-2 shrink-0",
+          "text-center text-xs py-1.5 rounded-lg mt-2",
           selectedOption === correctAnswer
             ? "bg-green-50 text-green-700"
             : "bg-destructive/10 text-destructive"
@@ -143,7 +143,7 @@ export function QuizStage({ questions, onComplete, onSubmitAnswer, onSendHint }:
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between gap-2 mt-3 shrink-0">
+      <div className="flex items-center justify-between gap-2 mt-3">
         <Button
           type="button"
           variant="outline"
