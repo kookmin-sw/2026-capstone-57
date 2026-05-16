@@ -14,8 +14,6 @@ public interface ChatSessionService {
 
     void endSession(UUID sessionId);
 
-    void endExpiredSessions();
-
     void validateParticipant(UUID userId, UUID matchId);
 
     /**
