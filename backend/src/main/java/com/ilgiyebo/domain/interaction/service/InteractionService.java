@@ -18,4 +18,7 @@ public interface InteractionService {
 
     /** 채팅 완료 처리 (토큰 한도 도달 시 호출) */
     InteractionStateDto completeChat(UUID matchId);
+
+    /** 게임 완료 처리 (3단계 → 4단계 진행) */
+    void completeGame(UUID matchId, String gameType);
 }

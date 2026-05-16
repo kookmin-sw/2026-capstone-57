@@ -1,0 +1,232 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "/game/assets/blue_cloud_idle.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 0,
+                    "endFrame": 3,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "blue_cloud_idle"
+            },
+            {
+                "url": "/game/assets/blue_cloud_jump.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 8,
+                    "endFrame": 11,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "blue_cloud_jump"
+            },
+            {
+                "url": "/game/assets/blue_cloud_walk.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 4,
+                    "endFrame": 7,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "blue_cloud_walk"
+            },
+            {
+                "url": "/game/assets/clear_back_button.png",
+                "type": "image",
+                "key": "clear_back_button"
+            },
+            {
+                "url": "/game/assets/clear_logo.png",
+                "type": "image",
+                "key": "clear_logo"
+            },
+            {
+                "url": "/game/assets/closed_door.png",
+                "type": "image",
+                "key": "closed_door"
+            },
+            {
+                "url": "/game/assets/door.png",
+                "type": "image",
+                "key": "door"
+            },
+            {
+                "url": "/game/assets/FufuSuperDino.png",
+                "type": "image",
+                "key": "FufuSuperDino"
+            },
+            {
+                "url": "/game/assets/game_bg.png",
+                "type": "image",
+                "key": "game_bg"
+            },
+            {
+                "url": "/game/assets/ui/game_bg_390x844.png",
+                "type": "image",
+                "key": "game_bg_390x844"
+            },
+            {
+                "url": "/game/assets/game_bg2.png",
+                "type": "image",
+                "key": "game_bg2"
+            },
+            {
+                "url": "/game/assets/game_bg4.png",
+                "type": "image",
+                "key": "game_bg4"
+            },
+            {
+                "url": "/game/assets/jump_button.png",
+                "type": "image",
+                "key": "jump_button"
+            },
+            {
+                "url": "/game/assets/left_button.png",
+                "type": "image",
+                "key": "left_button"
+            },
+            {
+                "url": "/game/assets/maps/level01.json",
+                "type": "tilemapTiledJSON",
+                "key": "level01"
+            },
+            {
+                "url": "/game/assets/maps/level02.json",
+                "type": "tilemapTiledJSON",
+                "key": "level02"
+            },
+            {
+                "url": "/game/assets/moon_32x32_optimized.png",
+                "type": "image",
+                "key": "moon_32x32_optimized"
+            },
+            {
+                "url": "/game/assets/moon_coin.png",
+                "type": "image",
+                "key": "moon_coin"
+            },
+            {
+                "url": "/game/assets/moon2.svg",
+                "svgConfig": {
+                    "width": 0,
+                    "height": 0,
+                    "scale": 0
+                },
+                "type": "svg",
+                "key": "moon2"
+            },
+            {
+                "url": "/game/assets/moon2 (1).svg",
+                "svgConfig": {
+                    "width": 0,
+                    "height": 0,
+                    "scale": 0
+                },
+                "type": "svg",
+                "key": "moon2 (1)"
+            },
+            {
+                "url": "/game/assets/moon2 (2).svg",
+                "svgConfig": {
+                    "width": 0,
+                    "height": 0,
+                    "scale": 0
+                },
+                "type": "svg",
+                "key": "moon2 (2)"
+            },
+            {
+                "url": "/game/assets/moonlight_tileset_32x32.png",
+                "frameConfig": {
+                    "frameWidth": 32,
+                    "frameHeight": 32,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "moonlight_tileset_32x32"
+            },
+            {
+                "url": "/game/assets/MoonlightScene.js",
+                "systemKey": "MoonlightScene",
+                "sceneKey": "MoonlightScene",
+                "type": "scenePlugin",
+                "key": "MoonlightScene"
+            },
+            {
+                "url": "/game/assets/pink_cloud_idle.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 0,
+                    "endFrame": 3,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "pink_cloud_idle"
+            },
+            {
+                "url": "/game/assets/pink_cloud_jump.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 8,
+                    "endFrame": 11,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "pink_cloud_jump"
+            },
+            {
+                "url": "/game/assets/pink_cloud_walk.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 4,
+                    "endFrame": 7,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "pink_cloud_walk"
+            },
+            {
+                "url": "/game/assets/pl_background.png",
+                "type": "image",
+                "key": "pl_background"
+            },
+            {
+                "url": "/game/assets/preload_background.png",
+                "type": "image",
+                "key": "preload_background"
+            },
+            {
+                "url": "/game/assets/tutorial.png",
+                "type": "image",
+                "key": "tutorial"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}
