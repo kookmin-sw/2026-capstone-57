@@ -42,6 +42,7 @@ export interface HintQuestionDto {
   question: string
   answer: string | null
   status: "PENDING" | "ANSWERED"
+  quizIndex: number
   createdAt: string
 }
 

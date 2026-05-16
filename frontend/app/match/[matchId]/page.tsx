@@ -21,10 +21,12 @@ import {
   getChatSession,
   getChatMessages,
   sendHint,
+  getHints,
   type InteractionStateDto,
   type QuizQuestionResponse,
   type MissionDto,
   type ChatMessageDto,
+  type HintQuestionDto,
 } from "@/lib/api/interaction"
 import { getSlots } from "@/lib/api/slots"
 import type { InteractionStage } from "@/types/slot"
@@ -59,6 +61,7 @@ export default function MatchDetailPage() {
 
   // Stage data
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
+  const [quizHints, setQuizHints] = useState<HintQuestionDto[]>([])
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatSessionId, setChatSessionId] = useState<string | null>(null)
   const [mission, setMission] = useState<MissionInfo | null>(null)
@@ -114,6 +117,13 @@ export default function MatchDetailPage() {
               correctIndex: -1, // 서버가 정답을 안 줌
             }))
           )
+          // 힌트 목록 로드
+          try {
+            const hints = await getHints(matchId)
+            setQuizHints(hints)
+          } catch {
+            setQuizHints([])
+          }
           break
         }
         case "CHAT": {
@@ -228,6 +238,7 @@ export default function MatchDetailPage() {
         return (
           <QuizStage
             questions={quizQuestions.length > 0 ? quizQuestions : [{ id: "loading", question: "로딩 중...", options: [], correctIndex: -1 }]}
+            hints={quizHints.map((h) => ({ id: h.id, question: h.question, answer: h.answer, status: h.status, quizIndex: h.quizIndex }))}
             onComplete={handleQuizComplete}
             onSubmitAnswer={async (quizIndex, answer) => {
               try {
@@ -243,7 +254,8 @@ export default function MatchDetailPage() {
             }}
             onSendHint={async (question) => {
               try {
-                await sendHint(matchId, question)
+                const newHint = await sendHint(matchId, question)
+                setQuizHints((prev) => [...prev, newHint])
               } catch (err) {
                 console.error("힌트 전송 실패:", err)
               }
