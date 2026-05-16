@@ -6,6 +6,7 @@ import com.ilgiyebo.domain.chat.entity.ChatSessionStatus;
 import com.ilgiyebo.domain.chat.exception.ChatException;
 import com.ilgiyebo.domain.chat.repository.ChatMessageRepository;
 import com.ilgiyebo.domain.chat.repository.ChatSessionRepository;
+import com.ilgiyebo.common.exception.BusinessException;
 import com.ilgiyebo.domain.interaction.service.InteractionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final InteractionService interactionService;
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public ChatMessageEntity saveMessage(UUID sessionId, UUID senderId, String content) {
         // Validate content is not blank
         if (content == null || content.isBlank()) {
