@@ -1,10 +1,8 @@
 package com.ilgiyebo.domain.interaction.service;
 
 import com.ilgiyebo.domain.interaction.dto.InteractionStateDto;
-import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import com.ilgiyebo.domain.interaction.entity.TerminationReason;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface InteractionService {
@@ -17,9 +15,6 @@ public interface InteractionService {
 
     /** 퀴즈 완료 처리 (AIService에서 호출) */
     InteractionStateDto completeQuiz(UUID matchId, UUID userId);
-
-    /** 퀴즈 데이터 저장 (요청자 기준으로 해당 유저의 퀴즈 슬롯에 저장) */
-    void storeQuizData(UUID matchId, UUID requesterId, List<QuizQuestionDto> quizData);
 
     /** 채팅 완료 처리 (토큰 한도 도달 시 호출) */
     InteractionStateDto completeChat(UUID matchId);

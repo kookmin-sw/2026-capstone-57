@@ -5,8 +5,6 @@ import com.ilgiyebo.domain.campus.repository.CampusPathRepository;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
-import com.ilgiyebo.domain.interaction.dto.QuizGenerateRequestMessage;
-import com.ilgiyebo.domain.interaction.service.QuizRequestPublisher;
 import com.ilgiyebo.domain.matching.dto.OverlapLocationDto;
 import com.ilgiyebo.domain.matching.dto.RouteOverlapDto;
 import com.ilgiyebo.domain.matching.entity.MatchEntity;
@@ -55,7 +53,6 @@ public class MatchingTransactionHelper {
     private final CampusPathRepository campusPathRepository;
     private final MatchRepository matchRepository;
     private final InteractionRepository interactionRepository;
-    private final QuizRequestPublisher quizRequestPublisher;
     private final MissionService missionService;
 
     /**
@@ -206,12 +203,11 @@ public class MatchingTransactionHelper {
     }
 
     /**
-     * 매칭 성사 후 외부 서비스(SQS)에 미션/퀴즈 생성을 요청한다.
+     * 매칭 성사 후 외부 서비스(SQS)에 미션 생성을 요청한다.
      * 트랜잭션 밖에서 호출되므로 실패해도 DB에 영향 없음.
      */
     public void publishPostMatchEvents(UUID matchId, UUID userAId, UUID userBId) {
         requestMissionGenerationSafe(matchId);
-        preGenerateQuiz(matchId, userAId, userBId);
     }
 
     private void requestMissionGenerationSafe(UUID matchId) {
@@ -219,42 +215,6 @@ public class MatchingTransactionHelper {
             missionService.requestMissionGeneration(matchId);
         } catch (Exception e) {
             log.warn("미션 생성 요청 실패 (매칭은 유지): matchId={}", matchId, e);
-        }
-    }
-
-    private void preGenerateQuiz(UUID matchId, UUID userAId, UUID userBId) {
-        try {
-            UserEntity partnerB = userRepository.findById(userBId).orElse(null);
-            if (partnerB != null) {
-                QuizGenerateRequestMessage.TargetProfile profileB = QuizGenerateRequestMessage.TargetProfile.builder()
-                        .name(partnerB.getName())
-                        .nickname(partnerB.getNickname())
-                        .university(partnerB.getUniversity())
-                        .major(partnerB.getMajor())
-                        .hobbies(partnerB.getHobbies())
-                        .interests(partnerB.getInterests())
-                        .personalityType(partnerB.getPersonalityType() != null ? partnerB.getPersonalityType().name() : null)
-                        .build();
-                quizRequestPublisher.requestQuizGeneration(matchId, userAId, userBId, profileB);
-            }
-
-            UserEntity partnerA = userRepository.findById(userAId).orElse(null);
-            if (partnerA != null) {
-                QuizGenerateRequestMessage.TargetProfile profileA = QuizGenerateRequestMessage.TargetProfile.builder()
-                        .name(partnerA.getName())
-                        .nickname(partnerA.getNickname())
-                        .university(partnerA.getUniversity())
-                        .major(partnerA.getMajor())
-                        .hobbies(partnerA.getHobbies())
-                        .interests(partnerA.getInterests())
-                        .personalityType(partnerA.getPersonalityType() != null ? partnerA.getPersonalityType().name() : null)
-                        .build();
-                quizRequestPublisher.requestQuizGeneration(matchId, userBId, userAId, profileA);
-            }
-
-            log.info("퀴즈 사전 생성 요청 완료: matchId={}, userA={}, userB={}", matchId, userAId, userBId);
-        } catch (Exception e) {
-            log.warn("퀴즈 사전 생성 요청 실패 (매칭은 유지): matchId={}", matchId, e);
         }
     }
 }

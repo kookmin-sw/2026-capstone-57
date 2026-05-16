@@ -1,7 +1,6 @@
 package com.ilgiyebo.domain.interaction.service;
 
 import com.ilgiyebo.domain.interaction.dto.InteractionStateDto;
-import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.exception.InteractionException;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
@@ -112,35 +111,6 @@ public class InteractionServiceImpl implements InteractionService {
 
         // DTO의 from 메서드 사용
         return InteractionStateDto.from(interaction, match);
-    }
-
-    @Override
-    @Transactional
-    public void storeQuizData(UUID matchId, UUID requesterId, List<QuizQuestionDto> quizData) {
-        MatchEntity match = findMatch(matchId);
-        InteractionEntity interaction = findInteraction(matchId);
-
-        if (interaction.getCurrentStage() != 1) {
-            throw InteractionException.NOT_IN_QUIZ_STAGE.toException();
-        }
-
-        boolean isUserA = match.getUserA().getId().equals(requesterId);
-        boolean isUserB = match.getUserB().getId().equals(requesterId);
-
-        if (!isUserA && !isUserB) {
-            log.warn("퀴즈 저장 거부: requesterId={}가 매칭ID={}의 참여자가 아님", requesterId, matchId);
-            return;
-        }
-
-        if (isUserA) {
-            interaction.setQuizDataA(quizData);
-        } else {
-            interaction.setQuizDataB(quizData);
-        }
-
-        interactionRepository.save(interaction);
-        log.info("SQS를 통해 퀴즈 데이터 저장 완료: 매칭ID={}, 요청유저ID={}, 문항수={}",
-                matchId, requesterId, quizData.size());
     }
 
     @Override

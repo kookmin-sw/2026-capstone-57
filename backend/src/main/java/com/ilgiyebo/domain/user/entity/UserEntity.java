@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -84,4 +85,11 @@ public class UserEntity extends BaseSchema {
     @Builder.Default
     @Column(name = "is_suspended", nullable = false)
     private boolean isSuspended = false;
+
+    /**
+     * 퀴즈 생성 요청 시각.
+     * 일정 시간이 지나도 퀴즈가 없으면 재요청 트리거로 사용한다.
+     */
+    @Column(name = "quiz_requested_at")
+    private Instant quizRequestedAt;
 }

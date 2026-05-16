@@ -7,24 +7,21 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-
 /**
- * AI quiz generation request SQS message.
- * Published from interaction to AI direction.
+ * AI 퀴즈 생성 요청 SQS 메시지.
+ * 회원가입 시 유저 프로필 기반으로 퀴즈를 생성 요청한다.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record QuizGenerateRequestMessage(
     String action,
-    UUID matchId,
-    UUID requesterId,
-    UUID targetUserId,
+    UUID userId,
     Instant requestedAt,
-    TargetProfile targetProfile
+    UserProfile userProfile
 ) {
 
-    @Builder // TargetProfile 객체 생성을 위한 빌더 패턴 적용
+    @Builder
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record TargetProfile(
+    public record UserProfile(
             String name,
             String nickname,
             String university,
@@ -34,15 +31,12 @@ public record QuizGenerateRequestMessage(
             String personalityType
     ) {}
 
-    public static QuizGenerateRequestMessage of(
-            UUID matchId, UUID requesterId, UUID targetUserId, TargetProfile targetProfile) {
+    public static QuizGenerateRequestMessage of(UUID userId, UserProfile userProfile) {
         return new QuizGenerateRequestMessage(
             "GENERATE_QUIZ",
-            matchId,
-            requesterId,
-            targetUserId,
+            userId,
             Instant.now(),
-            targetProfile
+            userProfile
         );
     }
 }
