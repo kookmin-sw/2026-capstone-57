@@ -115,32 +115,10 @@ export function useGameStage({
         const token = localStorage.getItem("token") || ""
         router.push(`/game?sessionId=${session.id}&token=${token}`)
       } else if (session.status === "WAITING") {
-        setGameWaiting(true)
-        // 재연결: 구독 + READY 재전송
-        connectGameSocket(session.id, {
-          onConnect: () => {
-            console.log("게임 소켓 재연결 완료")
-          },
-          onEvent: (event: GameEvent) => {
-            if (event.type === "GAME_STARTED") {
-              setGameWaiting(false)
-              const token = localStorage.getItem("token") || ""
-              router.push(`/game?sessionId=${session.id}&token=${token}`)
-            }
-            if (event.type === "GAME_CLEARED") {
-              handleGameCleared()
-            }
-          },
-          onGameError: (message: string) => {
-            if (message.includes("찾을 수 없") || message.includes("완료된")) {
-              disconnectGameSocket()
-              handleGameCleared()
-            }
-          },
-          onError: (err) => {
-            console.error("게임 소켓 에러:", err)
-          },
-        })
+        // WAITING 세션이 있지만 자동 복원하지 않음 — 사용자가 게임 시작 버튼을 눌러야 함
+        // sessionId만 저장해두고 게임 선택 화면 유지
+        setGameSessionId(session.id)
+        setGameWaiting(false)
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err)
