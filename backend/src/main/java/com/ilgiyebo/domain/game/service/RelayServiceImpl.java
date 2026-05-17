@@ -5,6 +5,7 @@ import com.ilgiyebo.domain.game.dto.response.*;
 import com.ilgiyebo.domain.game.engine.*;
 import com.ilgiyebo.domain.game.entity.GameFailReason;
 import com.ilgiyebo.domain.game.exception.GameException;
+import com.ilgiyebo.domain.interaction.service.InteractionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -26,6 +27,7 @@ public class RelayServiceImpl implements RelayService {
     private final GameRoomStore roomStore;
     private final SimpMessagingTemplate messagingTemplate;
     private final GameSessionService gameSessionService;
+    private final InteractionService interactionService;
 
     /**
      * 릴레이 모드 게임 상태 저장소.
@@ -170,6 +172,13 @@ public class RelayServiceImpl implements RelayService {
                 gameSessionService.completeGame(sessionId, score, clearTimeMs, "{}");
             } catch (Exception e) {
                 log.error("게임 완료 저장 실패: sessionId={}", sessionId, e);
+            }
+
+            // 상호작용 단계 진행 (3 → 4)
+            try {
+                interactionService.completeGame(room.getMatchId(), "COOP_SWITCH");
+            } catch (Exception e) {
+                log.error("상호작용 단계 진행 실패: matchId={}", room.getMatchId(), e);
             }
 
             // 양쪽에 브로드캐스트
