@@ -39,4 +39,14 @@ public class GameSessionController {
         GameSessionResponse response = gameSessionService.getSession(gameSessionId, userId);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "매칭의 활성 게임 세션 조회")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/matches/{matchId}/game-sessions/active")
+    public ResponseEntity<GameSessionResponse> getActiveSession(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable UUID matchId) {
+        GameSessionResponse response = gameSessionService.getActiveSession(matchId, userId);
+        return ResponseEntity.ok(response);
+    }
 }

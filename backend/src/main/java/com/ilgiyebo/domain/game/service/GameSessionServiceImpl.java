@@ -92,6 +92,21 @@ public class GameSessionServiceImpl implements GameSessionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public GameSessionResponse getActiveSession(UUID matchId, UUID requesterId) {
+        MatchEntity match = matchRepository.findById(matchId)
+                .orElseThrow(GameException.MATCH_NOT_FOUND::toException);
+        validateParticipant(match, requesterId);
+
+        List<GameSessionStatus> activeStatuses = List.of(
+                GameSessionStatus.WAITING, GameSessionStatus.PLAYING);
+        var session = gameSessionRepository.findTopByMatchIdAndStatusInOrderByCreatedAtDesc(matchId, activeStatuses)
+                .orElseThrow(GameException.GAME_SESSION_NOT_FOUND::toException);
+
+        return GameSessionResponse.from(session);
+    }
+
+    @Override
     @Transactional
     public void startGame(UUID gameSessionId) {
         GameSessionEntity session = findById(gameSessionId);
