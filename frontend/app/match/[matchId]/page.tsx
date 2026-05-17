@@ -202,7 +202,10 @@ export default function MatchDetailPage() {
             const session = await getGameSession(matchId)
             setGameSessionId(session.id)
 
-            if (session.status === "PLAYING") {
+            if (session.status === "FINISHED") {
+              // 이미 게임 완료 → 상태 조회 후 해당 단계로 이동
+              await handleGameCleared()
+            } else if (session.status === "PLAYING") {
               // 이미 게임 진행 중 → 게임 페이지로 이동
               const token = localStorage.getItem("token") || ""
               router.push(`/game?sessionId=${session.id}&token=${token}`)
@@ -219,16 +222,30 @@ export default function MatchDetailPage() {
                     const token = localStorage.getItem("token") || ""
                     router.push(`/game?sessionId=${session.id}&token=${token}`)
                   }
+                  if (event.type === "GAME_CLEARED") {
+                    handleGameCleared()
+                  }
+                },
+                onGameError: (message: string) => {
+                  if (message.includes("찾을 수 없") || message.includes("완료된")) {
+                    disconnectGameSocket()
+                    handleGameCleared()
+                  }
                 },
                 onError: (err) => {
                   console.error("게임 소켓 에러:", err)
                 },
               })
             }
-          } catch {
-            // 게임 세션이 아직 없음 — 선택 화면 유지
-            setGameSessionId(null)
-            setGameWaiting(false)
+          } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : String(err)
+            if (errorMessage.includes("400") || errorMessage.includes("완료된")) {
+              await handleGameCleared()
+            } else {
+              // 게임 세션이 아직 없음 — 선택 화면 유지
+              setGameSessionId(null)
+              setGameWaiting(false)
+            }
           }
           break
         }
@@ -432,17 +449,49 @@ export default function MatchDetailPage() {
             const token = localStorage.getItem("token") || ""
             router.push(`/game?sessionId=${session.id}&token=${token}`)
           }
+          if (event.type === "GAME_CLEARED") {
+            // 게임 클리어 → WebSocket 해제 후 상태 조회
+            handleGameCleared()
+          }
         },
         onDisconnect: () => {
           console.log("게임 소켓 연결 해제")
+        },
+        onGameError: (message: string) => {
+          // "게임 방을 찾을 수 없습니다" 또는 "이미 게임이 완료된 매칭입니다"
+          if (message.includes("찾을 수 없") || message.includes("완료된")) {
+            disconnectGameSocket()
+            handleGameCleared()
+          }
         },
         onError: (err) => {
           console.error("게임 소켓 에러:", err)
         },
       })
-    } catch (err) {
-      console.error("게임 세션 생성 실패:", err)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      // 400 "이미 게임이 완료된 매칭입니다" → 현재 상태 조회 후 해당 단계로 이동
+      if (errorMessage.includes("400") || errorMessage.includes("완료된")) {
+        await handleGameCleared()
+      } else {
+        console.error("게임 세션 생성 실패:", err)
+      }
       setGameWaiting(false)
+    }
+  }
+
+  /** 게임 클리어 후 처리: WebSocket 해제 → 상태 조회 → 해당 단계로 이동 */
+  const handleGameCleared = async () => {
+    disconnectGameSocket()
+    setGameWaiting(false)
+    try {
+      const state = await getInteractionState(matchId)
+      setInteraction(state)
+      const nextStage = STAGE_MAP[state.currentStage] || "MISSION"
+      setActiveStage(nextStage)
+      await loadStageData(nextStage)
+    } catch (err) {
+      console.error("게임 클리어 후 상태 조회 실패:", err)
     }
   }
 
