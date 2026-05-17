@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -55,13 +56,23 @@ public class UserEntity extends BaseSchema {
     @Column(columnDefinition = "JSON")
     private List<String> interests;
 
-    @Convert(converter = JsonStringListConverter.class)
-    @Column(name = "personality_type", columnDefinition = "JSON")
-    private List<String> personalityTypes;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "personality_type", length = 4)
+    private PersonalityType personalityType;
 
     @Convert(converter = JsonStringListConverter.class)
     @Column(name = "ideal_type_preferences", columnDefinition = "JSON")
     private List<String> idealTypes;
+
+    @Builder.Default
+    @Convert(converter = JsonStringListConverter.class)
+    @Column(name = "ai_inferred_hobbies", columnDefinition = "JSON")
+    private List<String> aiInferredHobbies = new java.util.ArrayList<>();
+
+    @Builder.Default
+    @Convert(converter = JsonStringListConverter.class)
+    @Column(name = "ai_inferred_interests", columnDefinition = "JSON")
+    private List<String> aiInferredInterests = new java.util.ArrayList<>();
 
     @Builder.Default
     @Column(name = "total_exp", nullable = false)
@@ -74,4 +85,11 @@ public class UserEntity extends BaseSchema {
     @Builder.Default
     @Column(name = "is_suspended", nullable = false)
     private boolean isSuspended = false;
+
+    /**
+     * 퀴즈 생성 요청 시각.
+     * 일정 시간이 지나도 퀴즈가 없으면 재요청 트리거로 사용한다.
+     */
+    @Column(name = "quiz_requested_at")
+    private Instant quizRequestedAt;
 }

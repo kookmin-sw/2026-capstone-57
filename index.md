@@ -431,16 +431,9 @@ title: 일기예보
         <div class="iy-arch-box client">React Native 모바일 앱</div>
       </div>
     </div>
-    <div class="iy-arch-divider">↓ HTTPS</div>
-    <div class="iy-arch-layer">
-      <div class="layer-label">API Gateway</div>
-      <div class="iy-arch-boxes">
-        <div class="iy-arch-box gateway">AWS ALB (Application Load Balancer)</div>
-      </div>
-    </div>
     <div class="iy-arch-divider">↓</div>
     <div class="iy-arch-layer">
-      <div class="layer-label">Backend · ECS Fargate</div>
+      <div class="layer-label">Backend · Spring Boot (AWS)</div>
       <div class="iy-arch-boxes">
         <div class="iy-arch-box service">인증 / 사용자</div>
         <div class="iy-arch-box service">매칭 엔진</div>
@@ -456,7 +449,7 @@ title: 일기예보
       <div class="layer-label">Data Layer</div>
       <div class="iy-arch-boxes">
         <div class="iy-arch-box data">MySQL Aurora</div>
-        <div class="iy-arch-box data">Redis ElastiCache</div>
+        <div class="iy-arch-box data">Redis</div>
         <div class="iy-arch-box data">Amazon SQS</div>
         <div class="iy-arch-box data">Amazon S3</div>
       </div>
@@ -493,11 +486,7 @@ title: 일기예보
     <div class="iy-chips">
       <span class="iy-chip amber">Amazon Bedrock</span>
       <span class="iy-chip amber">Amazon SQS</span>
-      <span class="iy-chip amber">ECS Fargate</span>
-      <span class="iy-chip amber">ALB</span>
-      <span class="iy-chip amber">RDS Aurora</span>
-      <span class="iy-chip amber">ElastiCache</span>
-      <span class="iy-chip amber">S3</span>
+      <span class="iy-chip amber">Amazon S3</span>
       <span class="iy-chip amber">AWS SDK v2</span>
     </div>
   </div>
@@ -556,7 +545,7 @@ title: 일기예보
       <div class="t-avatar">🤖</div>
       <div class="t-name">황찬우</div>
       <div class="t-role">AI & 공간 데이터</div>
-      <div class="t-desc">Bedrock LLM 연동 · 프롬프트 엔지니어링 · 캠퍼스 동선 추론 설계</div>
+      <div class="t-desc">Bedrock LLM 연동 · 프롬프트 엔지니어링 · 캠퍼스 공간 데이터 기반 AI 미션 생성 로직 설계</div>
     </div>
   </div>
 </div>

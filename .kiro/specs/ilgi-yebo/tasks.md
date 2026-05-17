@@ -85,31 +85,75 @@
     - **Property 45: 이메일 서비스 추상화 불변식** (Mailtrap/SES 구현체 동작 검증)
     - **검증 대상: 요구사항 1.3, 1.4, 1.5, 1.6, 1.8**
 
-- [ ] 3. 플래너 및 일기 서비스 구현 [MVP 후순위]
-  - [ ] 3.1 PlannerService 구현 [MVP 후순위]
-    - `createDailyPlan`: 일일 플래너 작성 (JPA upsert 방식)
-    - `registerTimetable`: 시간표 일괄 등록
-    - `getDailyPlan`: 특정 날짜 플래너 조회
-    - `extractRouteInfo`: 동선 정보 추출 (AIService.inferRoute 연동, 캠퍼스 공간 데이터 기반 이동 경로 추론)
-    - 플래너 미작성 시 시간표 기반 대체 (AIService에 시간표 데이터 전달)
-    - 3일 이상 미작성 시 알림 트리거 로직
-    - _요구사항: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
+- [ ] 3. 플래너 및 일기 서비스 구현
+  - [x] 3.1 PlannerService 구현
+    - `createPlanEntry`: 날짜 기반 단일 일정 생성 (source=MANUAL)
+    - `updatePlanEntry`: 일정 수정 (MANUAL, SCHEDULE_AUTO 모두 수정 가능)
+    - `deletePlanEntry`: 일정 삭제
+    - `getPlanEntries`: 특정 날짜 일정 목록 조회 (본인만 조회 가능)
+    - 시간표 등록 시 학기 범위 내 PLAN_ENTRY 자동 생성 (ScheduleService.upsertMySchedule 연동)
+    - 자동 생성 일정: source=SCHEDULE_AUTO, sourceScheduleId로 원본 시간표 참조
+    - 직접 작성 일정: source=MANUAL
+    - SCHEDULE 재등록 시 기존 SCHEDULE_AUTO 소스의 미래 PLAN_ENTRY 삭제 후 재생성
+    - PLAN_ENTRY bulk insert 최적화 (학기 전체 × 주 5일 × 과목 수 대량 생성 대응)
+    - 30분 단위 입력 검증 (startTime, endTime이 30분 단위인지)
+    - 일정 시간 충돌 검증 (겹치는 시간대 등록 불가, 단 종료시간=시작시간 맞닿는 경우 허용)
+    - 종료 시간이 시작 시간보다 이후인지 검증
+    - 사용자는 본인 플래너만 조회/수정/삭제 가능
+    - 3일 이상 source=MANUAL 플래너 미작성 시 오전 9시 알림 트리거
+    - 플래너 작성 경험치 하루 1회만 지급
+    - 현재 매칭은 SCHEDULE 기반으로만 수행 (AI 동선 분석 MVP 제외)
+    - _요구사항: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13, 2.14, 2.15, 2.16_
 
-  - [ ]* 3.2 Property 4, 5, 6 속성 테스트: 플래너 관련 [MVP 후순위]
+  - [ ]* 3.2 Property 4, 5, 6, 11 속성 테스트: 플래너 관련
     - **Property 4: 플래너 데이터 라운드트립**
-    - **Property 5: 플래너 미작성 시 알림 트리거**
-    - **Property 6: 플래너 미작성 시 시간표 기반 동선 대체 (AIService 연동)**
-    - **검증 대상: 요구사항 2.2, 2.3, 2.4, 2.5, 2.6**
+      - 저장 후 조회 시 동일 데이터 보장
+    - **Property 5: 플래너 미작성 알림 트리거**
+      - 최근 3일간 source=MANUAL 일정이 없으면 알림 발생
+    - **Property 6: 시간표 기반 플래너 자동 생성**
+      - 시간표 등록 시 PLAN_ENTRY 자동 생성 검증
+      - source=SCHEDULE_AUTO 검증
+      - sourceScheduleId 참조 정확성 검증
+    - **Property 11: 일정 충돌 검증**
+      - 겹치는 시간대 등록 실패
+      - 종료시간=시작시간 경계 접촉 허용
+      - 30분 단위 입력 검증
+    - **검증 대상: 요구사항 2.2, 2.4, 2.9, 2.10, 2.11**
 
-  - [ ] 3.3 DiaryService 구현 [MVP 후순위]
+  - [x] 3.3 DiaryService 구현
     - `createEntry`: 일기 작성 (upsert, 빈 내용 검증, 감정 태그 선택)
+    - DiaryEntry 엔티티에 source (MANUAL/AI_GENERATED) 필드 추가
+    - DiaryEntry 엔티티에 aiSessionId (nullable, DiarySession FK) 필드 추가
     - `getEntries`: 일기 목록 조회 (본인만 접근 가능, Spring Data JPA Pageable)
     - `getStreak`: 연속 작성 일수 계산
     - `getEmotionTrend`: 감정 변화 추이 조회
     - 일기 작성 시 경험치 부여 연동, 연속 작성 보너스 경험치 로직
+    - AI 생성 일기와 일반 일기 공존 지원 (source 필드로 구분)
     - _요구사항: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-  - [ ]* 3.4 Property 7, 8, 9, 10 속성 테스트: 일기 관련 [MVP 후순위]
+  - [x] 3.4 DiarySessionService 구현 (AI 일기 멀티턴 대화)
+    - DiarySession 엔티티 생성 (id, userId, targetDate, status, generatedContent, suggestedEmotion, maxTurns, currentTurn)
+    - DiaryConversationTurn 엔티티 생성 (id, sessionId, turnNumber, question, answer, askedAt, answeredAt)
+    - DiarySessionRepository, DiaryConversationTurnRepository 정의
+    - `startAISession`: AI 일기 세션 시작, 당일 플래너 데이터를 컨텍스트로 AIService에 첫 질문 생성 요청
+    - `answerQuestion`: 답변 저장 후 AIService에 다음 질문 생성 요청 (또는 대화 완료 판단)
+    - `generateDiary`: 모든 답변 기반 AIService에 일기 내용 생성 요청, 세션 상태 GENERATED로 전환
+    - `confirmDiary`: 사용자 확정 (선택적 수정 포함), DiaryService.createEntry 호출하여 DiaryEntry 저장, 세션 상태 COMPLETED로 전환
+    - `getActiveSession`: 사용자별 날짜별 진행 중 세션 조회
+    - `cancelSession`: 세션 취소 처리
+    - 동일 날짜에 이미 완료된 세션이 있으면 새 세션 생성 방지
+    - maxTurns 기본값 5, AI 조기 종료 지원
+    - _요구사항: 3.1 (AI 일기 확장)_
+
+  - [x] 3.5 AI 서버 일기 HTTP 클라이언트 연동
+    - DiarySessionService에서 AIServiceClient의 일기 관련 HTTP 메서드 호출
+    - `generateDiaryFirstQuestion`: 당일 플래너 + 전날 일기를 입력값으로 AI 서버에 전달
+    - `generateDiaryNextQuestion`: 이전 대화 히스토리를 입력값으로 AI 서버에 전달, 다음 질문 또는 대화 완료 응답 수신
+    - `generateDiaryContent`: 전체 대화 내용을 입력값으로 AI 서버에 전달, 생성된 일기 + 감정 태그 추천 응답 수신
+    - AI 서버 엔드포인트: POST /api/diary/first-question, /next-question, /generate
+    - _요구사항: 3.1 (AI 일기 확장)_
+
+  - [ ]* 3.6 Property 7, 8, 9, 10 속성 테스트: 일기 관련
     - **Property 7: 개인 기록 접근 제어**
     - **Property 8: 감정 추이 데이터 정확성**
     - **Property 9: 활동별 경험치 부여**
@@ -166,8 +210,8 @@
 - [ ] 6. 체크포인트 - 매칭 엔진 검증
   - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
 
-- [ ] 7. 단계별 상호작용 서비스 구현 (1~2단계)
-  - [ ] 7.1 InteractionService 핵심 로직 구현
+- [x] 7. 단계별 상호작용 서비스 구현 (1~2단계)
+  - [x] 7.1 InteractionService 핵심 로직 구현
     - `getInteractionState`: 현재 상호작용 상태 조회
     - `respondToStageAdvance`: 단계 진행 동의/거부 처리
     - `terminateMatch`: 매칭 종료 (거부, 기한 만료, 신고 등)
@@ -179,7 +223,7 @@
     - **Property 19: 거부 시 매칭 종료**
     - **검증 대상: 요구사항 5.4, 6.3, 6.4, 7.3, 8.3**
 
-  - [ ] 7.3 퀴즈 단계 (1단계) 구현
+  - [x] 7.3 퀴즈 단계 (1단계) 구현
     - AI 기반 상대방 프로필 퀴즈 생성 (AIService.generateQuiz 연동, 최소 5문항)
     - 퀴즈 완료 시 정답률 및 상대방 요약 정보 제공
     - 양쪽 퀴즈 완료 시 2단계 해금
@@ -189,7 +233,7 @@
     - **Property 16: 퀴즈 불변식**
     - **검증 대상: 요구사항 5.2, 5.3**
 
-  - [ ] 7.5 힌트 질문 기능 구현
+  - [x] 7.5 힌트 질문 기능 구현
     - `sendHintQuestion`: 퀴즈 단계에서만 힌트 질문 전송 가능
     - `answerHintQuestion`: 힌트 질문 답변 처리
     - `getHintQuestions`: 힌트 질문/답변 목록 조회
@@ -202,7 +246,7 @@
     - **Property 34: 힌트 질문은 퀴즈 단계에서만 가능**
     - **검증 대상: 요구사항 5.5, 5.6, 5.7, 5.8**
 
-  - [ ] 7.7 채팅 단계 (2단계) 구현
+  - [x] 7.7 채팅 단계 (2단계) 구현
     - `startChatSession`: 30분 제한 채팅 세션 생성
     - `sendMessage`: 메시지 전송 (Spring WebSocket + Redis 기반 실시간 처리)
     - `getIcebreakerQuestion`: 아이스브레이킹 질문 제안
@@ -227,11 +271,24 @@
     - **Property 20: 게임 완료 시 친밀도 부여**
     - **검증 대상: 요구사항 7.2**
 
-  - [ ] 8.3 미션 단계 (4단계) 구현
-    - `generateMission`: MVP에서는 동선 겹침 장소 기반 단순 미션 생성 (AI 미사용). 캠퍼스 공간 데이터에서 겹침 장소 인근 거점을 조회하여 미션 제안
+  - [x] 8.2.1 캠퍼스 공간 데이터 모델 리팩토링 (RAG 미션 생성 준비)
+    - `PlaceType` enum을 `TypeActivity`로 rename (CAFE, CONVENIENCE_STORE, RESTAURANT, LECTURE_ROOM, STUDY_ROOM, MEETING_ROOM, ELEVATOR, BENCH, OTHER)
+    - `CampusVenueEntity`에 필드 추가: `typeActivity` (List<TypeActivity> — JSON 문자열 컬럼 또는 별도 테이블), `description` (String), `operatingHours` (String)
+    - `CampusBuildingPlaceEntity`의 기존 `type` (PlaceType 단일) → `typeActivity` (List<TypeActivity>)로 변경, `description` (String), `operatingHours` (String) 추가
+    - `CampusPathEntity`의 `venue` (단일 ManyToOne) → `List<CampusVenueEntity> venues` (OneToMany 또는 ManyToMany)로 변경. 순서 보장을 위해 `@OrderColumn` 또는 venue 측에 `orderIndex` 필드 추가
+    - 기존 `CampusPathEntity`를 참조하는 코드(`MatchingServiceImpl.createMissionFromOverlap` 등) 수정
+    - _요구사항: 14.1, 14.3, 14.4_
+
+  - [x] 8.3 미션 단계 (4단계) 구현
+    - `requestMissionGeneration`: 매칭 성사 시 SQS 미션 요청 발행. 각 유저의 시간표에서 이동 구간을 파악하고, 캠퍼스 그래프에서 동선(출발 건물 → venue ID 리스트 → 도착 건물)을 선택하여 미션 요청 큐에 발행. 메시지에는 양쪽 유저의 `fromBuilding`, `toBuilding`, `subNodeIds` (동선 venue ID + 출발/도착 건물 place ID), `timeSlot`을 포함
+    - timeSlot 계산: 시간표 상 수업 종료 시간에서 15분을 빼서 실제 종료 시간을 구하고, 그 시점부터 다음 수업 시작까지를 이동 시간으로 산정 (예: 시간표 13:30~15:00 → 실제 종료 14:45, 다음 수업 15:00 시작 → timeSlot = "14:45~15:00")
+    - AI 서버 처리 흐름 (RAG): 양쪽 `subNodeIds` 비교 → 겹치는 노드 ID 추출 (없으면 도착 건물 place 활용) → ChromaDB `campus_nodes` 컬렉션에서 상세 정보 검색(Retrieval) → typeActivity/description/operatingHours 기반으로 LLM 프롬프트 구성(Augmented Generation) → Bedrock Claude 호출 → 미션 생성 결과 SQS 응답
+    - SQS 응답 리스너: `MISSION_GENERATED` 응답 수신 시 Mission 엔티티 생성 및 저장
     - `confirmMission`: 양쪽 미션 수행 확인 시 5단계 해금
     - `extendMissionDeadline`: 미션 기한 1회 연장 (이미 연장된 경우 거부)
     - 미션 기한 만료 처리 (연장 미사용 시 연장 옵션, 연장 후 만료 시 매칭 종료)
+    - 캠퍼스 노드 인덱싱: 장소 등록/수정 시 AI 서버 `POST /api/campus-nodes/index` 호출하여 ChromaDB 동기화
+    - 기존 `createMissionFromOverlap` 로직을 SQS 발행 방식으로 리팩토링 (직접 미션 생성 → AI 서버 위임)
     - _요구사항: 8.1, 8.2, 8.3, 8.4_
 
   - [ ]* 8.4 Property 21, 22 속성 테스트: 미션 관련
@@ -257,12 +314,12 @@
   - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
 
 - [ ] 10. 경험치 및 성장 시스템 구현
-  - [ ] 10.1 ExperienceService 구현
-    - `grantExperience`: 활동별 경험치 부여 (퀴즈, 채팅, 게임, 미션, 회고. 일기/플래너는 MVP 후순위)
+  - [x] 10.1 ExperienceService 구현
+    - `grantExperience`: 활동별 경험치 부여
     - `getExperienceInfo`: 누적 경험치, 현재 레벨, 다음 레벨까지 필요 경험치 조회
     - `getExpHistory`: 경험치 획득 내역 조회 (Spring Data JPA Pageable)
     - `checkAndProcessLevelUp`: 레벨업 조건 확인 및 보상 처리 (슬롯 해금 등)
-    - 레벨업 시 알림 전송 (NotificationService 연동)
+    - 레벨업 시 알림 전송 (NotificationService 연동) [MVP 후순위]
     - _요구사항: 10.1, 10.2, 10.3, 10.4_
 
   - [ ]* 10.2 Property 9, 13, 24 속성 테스트: 경험치 시스템
@@ -299,8 +356,8 @@
 - [ ] 13. 체크포인트 - 보조 서비스 검증
   - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
 
-- [ ] 14. 캠퍼스 공간 데이터 서비스 구현
-  - [ ] 14.1 CampusDataService 구현
+- [x] 14. 캠퍼스 공간 데이터 서비스 구현
+  - [x] 14.1 CampusDataService 구현
     - `createBuilding`, `updateBuilding`, `getBuildings`, `getBuildingById`: 건물 CRUD (Spring Data JPA)
     - `createPath`, `updatePath`, `getPathBetween`, `getAllPaths`: 경로 CRUD
     - `createVenue`, `updateVenue`, `getVenues`, `getVenueById`: 거점(만남 장소) CRUD
@@ -308,7 +365,7 @@
     - 관리자 권한 검증 로직 (Spring Security @PreAuthorize)
     - _요구사항: 14.1, 14.2, 14.3, 14.4, 14.5_
 
-  - [ ] 14.2 캠퍼스 시드 데이터 작성
+  - [x] 14.2 캠퍼스 시드 데이터 작성
     - Flyway 시드 마이그레이션 또는 ApplicationRunner로 테스트용 캠퍼스 건물 데이터 (최소 10개 건물)
     - 건물 간 경로 데이터 (주요 이동 경로)
     - 주요 거점 데이터 (카페, 매점, 벤치, 광장 등)
@@ -320,81 +377,7 @@
     - jqwik로 임의의 건물/경로/거점 데이터에 대해 등록 후 조회 시 동일 데이터 반환 검증
     - **검증 대상: 요구사항 14.1, 14.2, 14.3, 14.4, 14.5**
 
-- [ ] 15. AI/LLM 서비스 구현 (Amazon Bedrock)
-  - [ ] 15.1 AIService 기본 구조 구현
-    - AWS SDK for Java v2의 BedrockRuntimeClient 설정 및 Spring Bean 등록
-    - 프롬프트 템플릿 관리 모듈 (캠퍼스 데이터를 프롬프트 컨텍스트로 주입)
-    - 응답 파싱 및 검증 유틸리티 (Jackson ObjectMapper)
-    - 에러 핸들링 (API 타임아웃, ThrottlingException, 잘못된 응답 형식) - Spring Retry 활용
-    - _요구사항: 5.1, 9.2, 9.3_
-
-  - [ ] 15.2 AI 동선 추론 구현 [MVP 후순위]
-    - `inferRoute`: 시간표/플래너 + 캠퍼스 공간 데이터 기반 이동 경로 추론
-    - MVP에서는 시간표 기반 단순 동선 계산으로 대체. 출시 후 데이터 축적 시 AI 기반으로 확장
-    - _요구사항: 2.6_
-
-  - [ ] 15.3 AI 매칭 점수 계산 구현 [MVP 후순위]
-    - `calculateRouteMatchScore`: 두 사용자의 추론된 동선이 자연스럽게 겹치는 정도 판단
-    - MVP에서는 시간대 겹침 기반 단순 점수로 대체. 출시 후 데이터 축적 시 AI 기반으로 확장
-    - _요구사항: 4.10_
-
-  - [ ] 15.4 AI 미션 생성 구현 [MVP 후순위]
-    - `generateMission`: 동선 교집합 장소 + 캠퍼스 공간 데이터(장소 특성, 운영시간) 기반 미션 생성
-    - MVP에서는 동선 겹침 장소 인근 거점 기반 단순 미션 생성으로 대체
-    - _요구사항: 8.1, 14.6_
-
-  - [ ] 15.5 AI 퀴즈 생성 구현
-    - `generateQuiz`: 프로필(취미, 관심사, 성격 유형) 기반 자연스러운 퀴즈 문항 생성
-    - 최소 5문항, 객관식 형태, 정답 포함 검증
-    - BedrockRuntimeClient.invokeModel 호출
-    - _요구사항: 5.1_
-
-  - [ ] 15.6 AI 회고 질문/글 생성 구현
-    - `generateReviewQuestions`: 만남 컨텍스트 기반 회고 질문 생성
-    - `generateReviewContent`: 답변 기반 회고 글 자동 생성
-    - BedrockRuntimeClient.invokeModel 호출
-    - _요구사항: 9.2, 9.3_
-
-  - [ ]* 15.7 Property 37, 38, 40 속성 테스트: AI 서비스 관련
-    - **Property 37: AI 동선 추론 - 캠퍼스 공간 데이터 활용**
-    - **Property 38: AI 미션 생성 - 운영시간 준수**
-    - **Property 40: AI 퀴즈 생성 - 프로필 기반 관련성**
-    - BedrockRuntimeClient를 Mockito로 모킹하여 테스트
-    - **검증 대상: 요구사항 2.6, 5.1, 8.1, 14.6**
-
-- [ ] 16. 체크포인트 - AI/캠퍼스 서비스 검증
-  - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
-
-- [ ] 17. 서비스 간 통합 및 배치 스케줄러 연결
-  - [ ] 17.1 배치 매칭 스케줄러 구현
-    - Spring @Scheduled(cron = "0 0 0 * * MON") 월요일 자정 실행 크론 작업 설정
-    - MatchingService.executeBatchMatching 호출
-    - 배치 실행 결과 로깅 (SLF4J)
-    - _요구사항: 4.1_
-
-  - [ ] 17.2 리마인더 스케줄러 구현
-    - 미션 기한 24시간 전 리마인더 자동 스케줄링
-    - _요구사항: 12.4_
-
-  - [ ] 17.3 서비스 간 이벤트 연동 통합
-    - Spring ApplicationEvent 또는 Spring AMQP를 활용한 이벤트 기반 연동
-    - 매칭 성사 → 상호작용 생성 → AI 퀴즈 생성 흐름 연결
-    - 신고 접수 → 매칭 종료 → 차단 처리 흐름 연결
-    - 회고 완료 → 경험치 부여 → 매칭 완료 처리 흐름 연결
-    - 시간표 기반 동선 겹침 계산 → 배치 매칭 흐름 연결
-    - _요구사항: 전체_
-
-  - [ ]* 17.4 통합 테스트 작성
-    - Spring Boot Test + Testcontainers (MySQL, Redis) 기반 통합 테스트
-    - 배치 매칭 전체 흐름 (시간표 기반 동선 겹침 → 매칭 → 알림 전송)
-    - 매칭 주기 연장 흐름 (연장 요청 → 상대방 알림 → 동의/거부 → 주기 연장 또는 유지)
-    - 단계별 상호작용 전체 흐름 (1단계 → 5단계)
-    - 신고 → 매칭 중단 → 차단 → 재매칭 방지 흐름
-    - 경험치 부여 → 레벨업 → 슬롯 해금 흐름
-    - 캠퍼스 공간 데이터 CRUD → 미션 장소 조회 흐름
-    - _요구사항: 전체_
-
-- [ ] 18. 최종 체크포인트 - 전체 시스템 검증
+- [ ] 15. 최종 체크포인트 - 전체 시스템 검증
   - 모든 테스트가 통과하는지 확인하고, 질문이 있으면 사용자에게 문의한다.
 
 ## 참고 사항

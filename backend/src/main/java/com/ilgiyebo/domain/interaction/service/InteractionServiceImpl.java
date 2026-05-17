@@ -1,7 +1,6 @@
 package com.ilgiyebo.domain.interaction.service;
 
 import com.ilgiyebo.domain.interaction.dto.InteractionStateDto;
-import com.ilgiyebo.domain.interaction.dto.QuizQuestionDto;
 import com.ilgiyebo.domain.interaction.entity.StageStatus;
 import com.ilgiyebo.domain.interaction.exception.InteractionException;
 import com.ilgiyebo.domain.interaction.entity.InteractionEntity;
@@ -116,31 +115,43 @@ public class InteractionServiceImpl implements InteractionService {
 
     @Override
     @Transactional
-    public void storeQuizData(UUID matchId, UUID requesterId, List<QuizQuestionDto> quizData) {
+    public InteractionStateDto completeChat(UUID matchId) {
         MatchEntity match = findMatch(matchId);
         InteractionEntity interaction = findInteraction(matchId);
 
-        if (interaction.getCurrentStage() != 1) {
-            throw InteractionException.NOT_IN_QUIZ_STAGE.toException();
+        if (interaction.getCurrentStage() != 2) {
+            throw InteractionException.STAGE_NOT_ADVANCEABLE.toException();
         }
 
-        boolean isUserA = match.getUserA().getId().equals(requesterId);
-        boolean isUserB = match.getUserB().getId().equals(requesterId);
+        if (interaction.getStageStatus() == StageStatus.TERMINATED) {
+            throw InteractionException.ALREADY_TERMINATED.toException();
+        }
 
-        if (!isUserA && !isUserB) {
-            log.warn("퀴즈 저장 거부: requesterId={}가 매칭ID={}의 참여자가 아님", requesterId, matchId);
+        interaction.setCurrentStage(3);
+        interaction.setStageStatus(StageStatus.IN_PROGRESS);
+        interactionRepository.save(interaction);
+
+        return InteractionStateDto.from(interaction, match);
+    }
+
+    @Override
+    @Transactional
+    public void completeGame(UUID matchId, String gameType) {
+        InteractionEntity interaction = findInteraction(matchId);
+
+        if (interaction.getCurrentStage() < 3) {
+            log.warn("게임 완료 처리 스킵: matchId={}, currentStage={}", matchId, interaction.getCurrentStage());
             return;
         }
 
-        if (isUserA) {
-            interaction.setQuizDataA(quizData);
-        } else {
-            interaction.setQuizDataB(quizData);
-        }
-
+        // 3단계 완료 → 4단계로 진행
+        interaction.setCurrentStage(4);
+        interaction.setStageStatus(StageStatus.IN_PROGRESS);
+        interaction.setGameType(gameType);
+        interaction.setGameCompleted(true);
         interactionRepository.save(interaction);
-        log.info("SQS를 통해 퀴즈 데이터 저장 완료: 매칭ID={}, 요청유저ID={}, 문항수={}",
-                matchId, requesterId, quizData.size());
+
+        log.info("3단계 게임 완료 → 4단계 진행: matchId={}", matchId);
     }
 
     // --- Private helpers ---

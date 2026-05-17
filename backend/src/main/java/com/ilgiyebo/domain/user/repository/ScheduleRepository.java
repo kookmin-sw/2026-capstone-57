@@ -13,5 +13,9 @@ public interface ScheduleRepository extends JpaRepository<ScheduleEntity, UUID> 
 
     List<ScheduleEntity> findAllByUserIdAndDayOfWeek(UUID userId, DayOfWeek dayOfWeek);
 
+    List<ScheduleEntity> findAllByUserIdAndSemesterId(UUID userId, UUID semesterId);
+
+    void deleteByUserIdAndSemesterId(UUID userId, UUID semesterId);
+
     void deleteByUserId(UUID userId);
 }

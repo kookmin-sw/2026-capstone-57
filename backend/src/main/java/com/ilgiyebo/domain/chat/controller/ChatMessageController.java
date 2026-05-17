@@ -46,6 +46,9 @@ public class ChatMessageController {
         // Save and broadcast
         ChatMessageEntity saved = chatMessageService.saveMessage(sessionId, userId, request.content());
 
+        // Reload session to get updated usedTokens
+        ChatSessionEntity updatedSession = chatSessionService.getSessionById(sessionId);
+
         return ChatMessageDto.builder()
                 .messageId(saved.getId())
                 .sessionId(saved.getSessionId())
@@ -54,6 +57,8 @@ public class ChatMessageController {
                 .createdAt(saved.getCreatedAt() != null
                         ? saved.getCreatedAt().toInstant(ZoneOffset.UTC)
                         : null)
+                .usedTokens(updatedSession.getUsedTokens())
+                .tokenLimit(updatedSession.getTokenLimit())
                 .build();
     }
 

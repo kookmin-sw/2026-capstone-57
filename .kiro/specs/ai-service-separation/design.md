@@ -8,7 +8,7 @@
 
 1. **서비스 독립성**: AI 서비스는 백엔드와 코드/라이브러리 의존성 없이 독립 배포 가능
 2. **비동기 메시징**: SQS 기반 느슨한 결합으로 서비스 간 독립적 확장
-3. **기능별 큐 분리**: 퀴즈, 회고, 일기 각각 전용 요청/응답 큐 사용
+3. **기능별 큐 분리**: 퀴즈, 회고, 일기, 미션 각각 전용 요청/응답 큐 사용
 4. **하위 호환성**: 기존 퀴즈 SQS 메시지 계약 유지
 5. **RAG 파이프라인**: 벡터 DB를 활용한 과거 데이터 검색으로 개인화된 대화 지원
 
@@ -49,6 +49,7 @@ graph TB
             QUIZ[Quiz Handler]
             RETRO[Retrospective Handler]
             DIARY[Diary Handler]
+            MISSION[Mission Handler]
         end
         
         AI_CONV[Conversation Manager]
@@ -65,6 +66,8 @@ graph TB
         SQS_R_RES[Retro Response Queue]
         SQS_D_REQ[Diary Request Queue]
         SQS_D_RES[Diary Response Queue]
+        SQS_M_REQ[Mission Request Queue]
+        SQS_M_RES[Mission Response Queue]
         BEDROCK[AWS Bedrock<br/>Claude]
         TITAN[Amazon Titan<br/>Embeddings]
     end
@@ -77,25 +80,30 @@ graph TB
     BE_SQS_PUB --> SQS_Q_REQ
     BE_SQS_PUB --> SQS_R_REQ
     BE_SQS_PUB --> SQS_D_REQ
+    BE_SQS_PUB --> SQS_M_REQ
     
     SQS_Q_RES --> BE_SQS_SUB
     SQS_R_RES --> BE_SQS_SUB
     SQS_D_RES --> BE_SQS_SUB
+    SQS_M_RES --> BE_SQS_SUB
 
     AI_POLLER --> SQS_Q_REQ
     AI_POLLER --> SQS_R_REQ
     AI_POLLER --> SQS_D_REQ
+    AI_POLLER --> SQS_M_REQ
     
     AI_POLLER --> AI_ROUTER
     AI_ROUTER --> QUIZ
     AI_ROUTER --> RETRO
     AI_ROUTER --> DIARY
+    AI_ROUTER --> MISSION
 
     QUIZ --> AI_PROMPT
     RETRO --> AI_CONV
     RETRO --> AI_RAG
     DIARY --> AI_CONV
     DIARY --> AI_RAG
+    MISSION --> AI_PROMPT
 
     AI_CONV --> AI_PROMPT
     AI_PROMPT --> AI_BEDROCK
@@ -107,10 +115,12 @@ graph TB
     QUIZ --> AI_PUB
     RETRO --> AI_PUB
     DIARY --> AI_PUB
+    MISSION --> AI_PUB
     
     AI_PUB --> SQS_Q_RES
     AI_PUB --> SQS_R_RES
     AI_PUB --> SQS_D_RES
+    AI_PUB --> SQS_M_RES
 ```
 
 ### 퀴즈 생성 데이터 흐름
@@ -522,6 +532,47 @@ class SQSPublisher:
 }
 ```
 
+#### 미션 요청 메시지
+
+```json
+{
+  "action": "GENERATE_MISSION",
+  "matchId": "uuid-string",
+  "userAId": "uuid-string",
+  "userBId": "uuid-string",
+  "timeSlot": "14:45-15:00",
+  "userARoute": {
+    "fromBuilding": { "id": "uuid-string", "name": "string" },
+    "toBuilding": { "id": "uuid-string", "name": "string" },
+    "subNodeIds": ["uuid-string"]
+  },
+  "userBRoute": {
+    "fromBuilding": { "id": "uuid-string", "name": "string" },
+    "toBuilding": { "id": "uuid-string", "name": "string" },
+    "subNodeIds": ["uuid-string"]
+  },
+  "requestedAt": "2024-01-01T00:00:00Z"
+}
+```
+
+#### 미션 응답 메시지
+
+```json
+{
+  "action": "MISSION_GENERATED",
+  "status": "SUCCESS | FAILED",
+  "matchId": "uuid-string",
+  "mission": {
+    "location": "string",
+    "activity": "string",
+    "description": "string",
+    "selectedNodeId": "uuid-string"
+  },
+  "completedAt": "2024-01-01T00:00:00Z",
+  "errorMessage": "string (FAILED 시 에러 설명)"
+}
+```
+
 ### Pydantic 모델 정의
 
 #### 설정 모델 (`app/config.py`)
@@ -548,6 +599,8 @@ class Settings(BaseSettings):
     sqs_retro_response_queue: str = "retro-session-responses"
     sqs_diary_request_queue: str = "diary-session-requests"
     sqs_diary_response_queue: str = "diary-session-responses"
+    sqs_mission_request_queue: str = "mission-generation-requests"
+    sqs_mission_response_queue: str = "mission-generation-responses"
     sqs_max_concurrent_messages: int = 5
     sqs_poll_interval_seconds: float = 1.0
     sqs_publish_max_retries: int = 3
@@ -632,6 +685,7 @@ graph LR
 |---------|------|-----------|
 | `retrospectives` | 과거 회고글 저장 | user_id, created_at, matched_user_id |
 | `diaries` | 과거 일기 저장 | user_id, created_at, day_of_week |
+| `campus_nodes` | 캠퍼스 장소 정보 (venue + buildingPlace 통합) | node_id, source (VENUE/BUILDING_PLACE), typeActivity, operatingHours |
 
 #### 임베딩 전략
 

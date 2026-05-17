@@ -8,7 +8,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "review")
+@Table(name = "review",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"interaction_id", "user_id"}))
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)

@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -25,7 +27,8 @@ public class CampusPathEntity extends BaseSchema {
     @JoinColumn(name = "to_building_id", nullable = false)
     private CampusBuildingEntity toBuilding;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "venue_id", nullable = false)
-    private CampusVenueEntity venue;
+    @OneToMany(mappedBy = "path", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    @Builder.Default
+    private List<CampusPathVenueEntity> pathVenues = new ArrayList<>();
 }

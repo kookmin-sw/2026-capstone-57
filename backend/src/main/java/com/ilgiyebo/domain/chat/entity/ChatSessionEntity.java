@@ -29,11 +29,19 @@ public class ChatSessionEntity extends BaseSchema {
     @Column(name = "start_time", nullable = false)
     private Instant startTime;
 
-    @Column(name = "end_time", nullable = false)
-    private Instant endTime;
-
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ChatSessionStatus status = ChatSessionStatus.ACTIVE;
+
+    @Builder.Default
+    @Column(name = "token_limit", nullable = false)
+    private int tokenLimit = 150;
+
+    @Builder.Default
+    @Column(name = "used_tokens", nullable = false)
+    private int usedTokens = 0;
+
+    @Column(name = "icebreaker_question")
+    private String icebreakerQuestion;
 }

@@ -1,9 +1,12 @@
 package com.ilgiyebo.domain.campus.entity;
 
+import com.ilgiyebo.common.config.TypeActivityListConverter;
 import com.ilgiyebo.common.entity.BaseSchema;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.List;
 
 @Entity
 @Table(name = "campus_building_place")
@@ -25,7 +28,13 @@ public class CampusBuildingPlaceEntity extends BaseSchema {
     @Column(nullable = false)
     private int floor;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 100)
-    private PlaceType type;
+    @Convert(converter = TypeActivityListConverter.class)
+    @Column(name = "type_activity", nullable = false, columnDefinition = "TEXT")
+    private List<TypeActivity> typeActivity;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "operating_hours")
+    private String operatingHours;
 }

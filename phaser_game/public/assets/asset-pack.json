@@ -1,0 +1,232 @@
+{
+    "section1": {
+        "files": [
+            {
+                "url": "assets/blue_cloud_idle.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 0,
+                    "endFrame": 3,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "blue_cloud_idle"
+            },
+            {
+                "url": "assets/blue_cloud_jump.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 8,
+                    "endFrame": 11,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "blue_cloud_jump"
+            },
+            {
+                "url": "assets/blue_cloud_walk.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 4,
+                    "endFrame": 7,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "blue_cloud_walk"
+            },
+            {
+                "url": "assets/clear_back_button.png",
+                "type": "image",
+                "key": "clear_back_button"
+            },
+            {
+                "url": "assets/clear_logo.png",
+                "type": "image",
+                "key": "clear_logo"
+            },
+            {
+                "url": "assets/closed_door.png",
+                "type": "image",
+                "key": "closed_door"
+            },
+            {
+                "url": "assets/door.png",
+                "type": "image",
+                "key": "door"
+            },
+            {
+                "url": "assets/FufuSuperDino.png",
+                "type": "image",
+                "key": "FufuSuperDino"
+            },
+            {
+                "url": "assets/game_bg.png",
+                "type": "image",
+                "key": "game_bg"
+            },
+            {
+                "url": "assets/ui/game_bg_390x844.png",
+                "type": "image",
+                "key": "game_bg_390x844"
+            },
+            {
+                "url": "assets/game_bg2.png",
+                "type": "image",
+                "key": "game_bg2"
+            },
+            {
+                "url": "assets/game_bg4.png",
+                "type": "image",
+                "key": "game_bg4"
+            },
+            {
+                "url": "assets/jump_button.png",
+                "type": "image",
+                "key": "jump_button"
+            },
+            {
+                "url": "assets/left_button.png",
+                "type": "image",
+                "key": "left_button"
+            },
+            {
+                "url": "assets/maps/level01.json",
+                "type": "tilemapTiledJSON",
+                "key": "level01"
+            },
+            {
+                "url": "assets/maps/level02.json",
+                "type": "tilemapTiledJSON",
+                "key": "level02"
+            },
+            {
+                "url": "assets/moon_32x32_optimized.png",
+                "type": "image",
+                "key": "moon_32x32_optimized"
+            },
+            {
+                "url": "assets/moon_coin.png",
+                "type": "image",
+                "key": "moon_coin"
+            },
+            {
+                "url": "assets/moon2.svg",
+                "svgConfig": {
+                    "width": 0,
+                    "height": 0,
+                    "scale": 0
+                },
+                "type": "svg",
+                "key": "moon2"
+            },
+            {
+                "url": "assets/moon2 (1).svg",
+                "svgConfig": {
+                    "width": 0,
+                    "height": 0,
+                    "scale": 0
+                },
+                "type": "svg",
+                "key": "moon2 (1)"
+            },
+            {
+                "url": "assets/moon2 (2).svg",
+                "svgConfig": {
+                    "width": 0,
+                    "height": 0,
+                    "scale": 0
+                },
+                "type": "svg",
+                "key": "moon2 (2)"
+            },
+            {
+                "url": "assets/moonlight_tileset_32x32.png",
+                "frameConfig": {
+                    "frameWidth": 32,
+                    "frameHeight": 32,
+                    "startFrame": 0,
+                    "endFrame": -1,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "moonlight_tileset_32x32"
+            },
+            {
+                "url": "assets/MoonlightScene.js",
+                "systemKey": "MoonlightScene",
+                "sceneKey": "MoonlightScene",
+                "type": "scenePlugin",
+                "key": "MoonlightScene"
+            },
+            {
+                "url": "assets/pink_cloud_idle.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 0,
+                    "endFrame": 3,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "pink_cloud_idle"
+            },
+            {
+                "url": "assets/pink_cloud_jump.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 8,
+                    "endFrame": 11,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "pink_cloud_jump"
+            },
+            {
+                "url": "assets/pink_cloud_walk.png",
+                "frameConfig": {
+                    "frameWidth": 64,
+                    "frameHeight": 64,
+                    "startFrame": 4,
+                    "endFrame": 7,
+                    "spacing": 0,
+                    "margin": 0
+                },
+                "type": "spritesheet",
+                "key": "pink_cloud_walk"
+            },
+            {
+                "url": "assets/pl_background.png",
+                "type": "image",
+                "key": "pl_background"
+            },
+            {
+                "url": "assets/preload_background.png",
+                "type": "image",
+                "key": "preload_background"
+            },
+            {
+                "url": "assets/tutorial.png",
+                "type": "image",
+                "key": "tutorial"
+            }
+        ]
+    },
+    "meta": {
+        "app": "Phaser Editor 2D - Asset Pack Editor",
+        "contentType": "phasereditor2d.pack.core.AssetContentType",
+        "url": "https://phasereditor2d.com",
+        "version": 2,
+        "showAllFilesInBlocks": false,
+        "visible": true
+    }
+}

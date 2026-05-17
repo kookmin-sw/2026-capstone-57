@@ -11,7 +11,9 @@ public record ChatSessionDto(
         UUID sessionId,
         UUID matchId,
         Instant startTime,
-        Instant endTime,
-        ChatSessionStatus status
+        ChatSessionStatus status,
+        int tokenLimit,
+        int usedTokens,
+        String icebreakerQuestion
 ) {
 }

@@ -1,5 +1,6 @@
 package com.ilgiyebo.common.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -32,6 +33,16 @@ public class GlobalExceptionHandler {
                 "status", HttpStatus.BAD_REQUEST.value(),
                 "error", HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 "message", message,
+                "timestamp", Instant.now().toString()
+        ));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "status", HttpStatus.CONFLICT.value(),
+                "error", HttpStatus.CONFLICT.getReasonPhrase(),
+                "message", "데이터 무결성 위반: 중복된 요청이거나 제약 조건에 위배됩니다",
                 "timestamp", Instant.now().toString()
         ));
     }

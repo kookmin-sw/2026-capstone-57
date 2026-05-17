@@ -53,7 +53,12 @@ public class ScheduleEntity extends BaseSchema {
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
 
-    public static ScheduleEntity fromEverytime(JsonNode name, JsonNode node, UserEntity user) {
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "semester_id", nullable = false)
+    @NotNull
+    private SemesterEntity semester;
+
+    public static ScheduleEntity fromEverytime(JsonNode name, JsonNode node, UserEntity user, SemesterEntity semester) {
 
         Function<Integer, LocalTime> fromEverytimeTime = time -> {
             int minute = time * 5;
@@ -69,6 +74,7 @@ public class ScheduleEntity extends BaseSchema {
                 .endedAt(fromEverytimeTime.apply(Integer.parseInt(node.get("endtime").asText())))
                 .place(node.get("place").asText())
                 .user(user)
+                .semester(semester)
                 .build();
     }
 }

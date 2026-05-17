@@ -11,6 +11,5 @@ public record SessionEndedEvent(
         Instant endedAt,
         String reason
 ) {
-    public static final String TIME_EXPIRED = "TIME_EXPIRED";
-    public static final String MANUAL = "MANUAL";
+    public static final String TOKEN_LIMIT_REACHED = "TOKEN_LIMIT_REACHED";
 }

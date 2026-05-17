@@ -13,10 +13,10 @@ public record HintQuestionDto(
     UUID responderId,
     String question,
     String answer,
+    int quizIndex,
     HintQuestionStatus status,
     LocalDateTime createdAt
 ) {
-    // from 메서드 추가
     public static HintQuestionDto from(HintQuestionEntity entity) {
         return new HintQuestionDto(
                 entity.getId(),
@@ -25,6 +25,7 @@ public record HintQuestionDto(
                 entity.getResponder().getId(),
                 entity.getQuestion(),
                 entity.getAnswer(),
+                entity.getQuizIndex(),
                 entity.getStatus(),
                 entity.getCreatedAt()
         );

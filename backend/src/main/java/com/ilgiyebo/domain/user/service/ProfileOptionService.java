@@ -25,9 +25,15 @@ public class ProfileOptionService {
         return new ProfileOptionsResponse(
                 pickRandom(Hobby.values(), count),
                 pickRandom(Interest.values(), count),
-                pickRandom(PersonalityType.values(), count),
+                allOptions(PersonalityType.values()),
                 pickRandom(IdealType.values(), count)
         );
+    }
+
+    private <E extends Enum<E>> List<ProfileOptionDto> allOptions(E[] values) {
+        return Arrays.stream(values)
+                .map(e -> new ProfileOptionDto(e.name(), getLabel(e)))
+                .toList();
     }
 
     private <E extends Enum<E>> List<ProfileOptionDto> pickRandom(E[] values, int count) {
