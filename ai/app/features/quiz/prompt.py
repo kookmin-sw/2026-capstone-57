@@ -8,7 +8,7 @@ Requirements: 4.2
 
 from __future__ import annotations
 
-from app.features.quiz.models import TargetProfile
+from app.features.quiz.models import UserProfile
 
 DEFAULT_QUIZ_PROMPT_TEMPLATE = """
       당신은 센스 있는 '아이스브레이킹 퀴즈' 출제 위원입니다.
@@ -48,7 +48,7 @@ DEFAULT_QUIZ_PROMPT_TEMPLATE = """
 """
 
 
-def build_profile_section(profile: TargetProfile) -> str:
+def build_profile_section(profile: UserProfile) -> str:
     """프로필의 비어있지 않은 필드를 텍스트 섹션으로 구성한다.
 
     Args:
@@ -84,7 +84,7 @@ def build_profile_section(profile: TargetProfile) -> str:
 
 
 def build_quiz_prompt(
-    profile: TargetProfile,
+    profile: UserProfile,
     template: str | None = None,
 ) -> str:
     """프로필 기반 퀴즈 생성 프롬프트를 구성한다.

@@ -1,0 +1,212 @@
+"""미션 생성 핸들러.
+
+서브 노드 기반 미션 생성 흐름:
+1. 요청 파싱
+2. 겹치는 노드 ID 추출
+3. ChromaDB에서 노드 상세 정보 검색 (RAG - Retrieval)
+4. 프롬프트 증강 (RAG - Augmented)
+5. Bedrock 호출 (RAG - Generation)
+6. 응답 파싱 → SQS 발행
+"""
+
+from __future__ import annotations
+
+import asyncio
+from datetime import datetime, timezone
+
+from app.bedrock.client import BedrockClient
+from app.common.exceptions import BedrockInvocationError
+from app.common.logging import get_logger, logging_context
+from app.config import Settings
+from app.features.mission.models import (
+    Mission,
+    MissionRequestMessage,
+    MissionResponseAction,
+    MissionResponseMessage,
+    MissionStatus,
+)
+from app.features.mission.parser import parse_mission_response
+from app.features.mission.prompt import build_mission_prompt
+from app.features.mission.search import MissionSearch
+from app.sqs.publisher import SQSPublisher
+
+logger = get_logger(__name__)
+
+
+class MissionHandler:
+    """미션 생성 핸들러."""
+
+    def __init__(
+        self,
+        bedrock_client: BedrockClient,
+        publisher: SQSPublisher,
+        mission_search: MissionSearch,
+        settings: Settings,
+    ) -> None:
+        self._bedrock = bedrock_client
+        self._publisher = publisher
+        self._mission_search = mission_search
+        self._settings = settings
+        self._response_queue_url = settings.sqs_mission_response_queue
+
+    async def handle(self, message: dict) -> None:
+        """미션 생성 요청을 처리한다."""
+        request = MissionRequestMessage(**message)
+
+        with logging_context(correlation_id=request.matchId, feature="mission"):
+            logger.info(
+                "미션 생성 요청 수신",
+                extra={
+                    "match_id": request.matchId,
+                    "user_a": request.userAId,
+                    "user_b": request.userBId,
+                    "time_slot": request.timeSlot,
+                },
+            )
+
+            try:
+                response = await asyncio.wait_for(
+                    self._generate_mission(request),
+                    timeout=self._settings.request_timeout_seconds,
+                )
+            except asyncio.TimeoutError:
+                logger.error("미션 생성 타임아웃")
+                response = self._build_failed_response(
+                    request, f"요청 타임아웃 ({self._settings.request_timeout_seconds}초 초과)"
+                )
+            except Exception:
+                logger.exception("미션 생성 중 예상치 못한 예외 발생")
+                response = self._build_failed_response(request, "내부 서버 에러")
+
+            await self._publish_response(response)
+
+    async def _generate_mission(
+        self, request: MissionRequestMessage
+    ) -> MissionResponseMessage:
+        """미션 생성 핵심 로직.
+
+        우선순위:
+        1. 공통 건물(도착지/출발지 동일) → 해당 건물 place 추천
+        2. place 없으면 → 겹치는 서브 노드(venue) 추천
+        3. 둘 다 없으면 → FAILED
+        """
+
+        # 1. 공통 건물 확인 (출발지/도착지 비교)
+        common_building = self._find_common_building(request)
+        nodes = []
+
+        if common_building:
+            logger.info(f"공통 건물 발견: '{common_building}', place 검색")
+            nodes = await self._mission_search.search_by_building_name(common_building)
+
+        # 2. place 없으면 겹치는 서브 노드(venue) 검색
+        if not nodes:
+            overlapping_ids = self._mission_search.find_overlapping_nodes(
+                request.userARoute.subNodeIds,
+                request.userBRoute.subNodeIds,
+            )
+            if overlapping_ids:
+                logger.info("공통 건물 place 없음, 겹치는 서브 노드로 폴백")
+                all_nodes = await self._mission_search.search_by_node_ids(overlapping_ids)
+                # 미션 장소로 부적합한 노드 제외 (입구, 계단, 삼거리)
+                excluded_types = {"ENTRANCE", "STAIRWAY", "INTERSECTION"}
+                nodes = [
+                    n for n in all_nodes
+                    if n.type_activity not in excluded_types
+                ]
+                # 적합한 노드가 없으면 전체 포함 (AI가 판단)
+                if not nodes:
+                    nodes = all_nodes
+
+        # 3. 둘 다 없으면 실패
+        if not nodes:
+            return self._build_failed_response(request, "미션 장소를 찾을 수 없습니다")
+
+        # 4. 프롬프트 증강
+        prompt = build_mission_prompt(nodes=nodes, request=request)
+
+        # 5. Bedrock 호출 (1회 재시도)
+        raw_response = await self._invoke_bedrock(prompt)
+        if raw_response is None:
+            logger.info("미션 생성 재시도 (1회)")
+            raw_response = await self._invoke_bedrock(prompt)
+
+        if raw_response is None:
+            return self._build_failed_response(request, "Bedrock 호출 실패")
+
+        # 6. 응답 파싱
+        mission = self._try_parse(raw_response)
+        if mission is None:
+            return self._build_failed_response(request, "미션 응답 파싱 실패")
+
+        return MissionResponseMessage(
+            action=MissionResponseAction.MISSION_GENERATED,
+            status=MissionStatus.SUCCESS,
+            matchId=request.matchId,
+            mission=mission,
+            completedAt=datetime.now(timezone.utc),
+        )
+
+    def _find_common_building(self, request: MissionRequestMessage) -> str | None:
+        """두 사용자의 공통 건물(출발지/도착지)을 찾는다.
+
+        우선순위: 도착지 동일 > 출발지 동일 > 한쪽 도착지 = 다른쪽 출발지
+        """
+        a_from = request.userARoute.fromBuilding.name
+        a_to = request.userARoute.toBuilding.name
+        b_from = request.userBRoute.fromBuilding.name
+        b_to = request.userBRoute.toBuilding.name
+
+        # 도착지 동일
+        if a_to == b_to:
+            return a_to
+        # 출발지 동일
+        if a_from == b_from:
+            return a_from
+        # 교차 (A 도착 = B 출발 또는 반대)
+        if a_to == b_from:
+            return a_to
+        if b_to == a_from:
+            return b_to
+
+        return None
+
+    async def _invoke_bedrock(self, prompt: str) -> str | None:
+        """Bedrock API 호출. 실패 시 None 반환."""
+        try:
+            return await self._bedrock.invoke(prompt)
+        except BedrockInvocationError as e:
+            logger.warning(f"Bedrock 호출 실패: {e.detail}")
+            return None
+
+    def _try_parse(self, raw_response: str) -> Mission | None:
+        """응답 파싱 시도. 실패 시 None 반환."""
+        try:
+            return parse_mission_response(raw_response)
+        except (ValueError, Exception) as e:
+            logger.warning(f"미션 응답 파싱 실패: {e}")
+            return None
+
+    def _build_failed_response(
+        self, request: MissionRequestMessage, error_message: str
+    ) -> MissionResponseMessage:
+        """실패 응답 생성."""
+        logger.error(f"미션 생성 실패: {error_message}")
+        return MissionResponseMessage(
+            action=MissionResponseAction.MISSION_GENERATED,
+            status=MissionStatus.FAILED,
+            matchId=request.matchId,
+            mission=None,
+            completedAt=datetime.now(timezone.utc),
+            errorMessage=error_message,
+        )
+
+    async def _publish_response(self, response: MissionResponseMessage) -> None:
+        """응답을 SQS로 발행."""
+        success = await self._publisher.publish_with_retry(
+            self._response_queue_url, response
+        )
+        if success:
+            logger.info(f"미션 응답 발행 완료: status={response.status.value}")
+        else:
+            logger.error("미션 응답 발행 실패 (재시도 소진)")

@@ -11,7 +11,7 @@ import random
 from typing import Any
 
 from app.common.logging import get_logger
-from app.features.quiz.models import QuizQuestion, TargetProfile
+from app.features.quiz.models import QuizQuestion, UserProfile
 
 logger = get_logger(__name__)
 
@@ -43,7 +43,7 @@ def parse_quiz_response(raw_response: str) -> list[QuizQuestion]:
     return questions
 
 
-def generate_fallback_quiz(profile: TargetProfile) -> list[QuizQuestion]:
+def generate_fallback_quiz(profile: UserProfile) -> list[QuizQuestion]:
     """프로필 기반 폴백 퀴즈를 생성한다.
 
     파싱 실패 시 대상 프로필 정보를 활용하여 5문제, 각 4선택지,
@@ -222,7 +222,7 @@ def _validate_and_build_questions(questions_data: list[dict]) -> list[QuizQuesti
     return questions
 
 
-def _get_fallback_templates(profile: TargetProfile) -> list[dict]:
+def _get_fallback_templates(profile: UserProfile) -> list[dict]:
     """프로필 기반 폴백 퀴즈 템플릿을 생성한다.
 
     프로필의 비어있지 않은 필드를 활용하여 기본 퀴즈 문제를 구성한다.

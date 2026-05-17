@@ -43,14 +43,14 @@ def receive_from_queue(queue_url: str, queue_name: str, delete: bool = False):
 
 # 요청 큐 확인 (수신 후 삭제)
 receive_from_queue(
-    settings.sqs_quiz_request_queue,
-    "Quiz Request Queue",
+    settings.sqs_mission_request_queue,
+    "Mission Request Queue",
     delete=True,
 )
 
 # 응답 큐 확인 (수신 후 삭제)
 receive_from_queue(
-    settings.sqs_quiz_response_queue,
-    "Quiz Response Queue",
+    settings.sqs_mission_response_queue,
+    "Mission Response Queue",
     delete=True,
 )
