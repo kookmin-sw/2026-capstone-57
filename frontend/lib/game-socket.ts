@@ -16,6 +16,7 @@ export interface GameSocketCallbacks {
   onConnect?: () => void
   onDisconnect?: () => void
   onError?: (error: unknown) => void
+  onGameError?: (message: string) => void
 }
 
 let gameStompClient: Client | null = null
@@ -73,6 +74,17 @@ export function connectGameSocket(
         destination: `/app/game/${gameSessionId}/action`,
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: JSON.stringify({ type: "READY" }),
+      })
+
+      // 에러 큐 구독
+      client.subscribe(`/user/queue/errors`, (frame: IMessage) => {
+        try {
+          const body = frame.body || ""
+          console.warn("[Game WS] 에러 수신:", body)
+          callbacks.onGameError?.(body)
+        } catch (err) {
+          callbacks.onError?.(err)
+        }
       })
     },
     onDisconnect: () => {

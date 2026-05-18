@@ -162,15 +162,13 @@ export interface GameSessionDto {
   status: "WAITING" | "PLAYING" | "FINISHED"
 }
 
-/** 게임 세션 생성 */
-export function createGameSession(matchId: string) {
-  return apiFetch<GameSessionDto>(`/api/v1/matches/${matchId}/game-sessions`, {
-    method: "POST",
-  })
+/** 게임 세션 조회 (활성 세션이 없으면 404) */
+export function getGameSession(matchId: string) {
+  return apiFetch<GameSessionDto>(`/api/v1/matches/${matchId}/game-sessions/active`)
 }
 
-/** 게임 세션 조회 또는 생성 (재진입 시에도 POST 사용) */
-export function getGameSession(matchId: string) {
+/** 게임 세션 생성 */
+export function createGameSession(matchId: string) {
   return apiFetch<GameSessionDto>(`/api/v1/matches/${matchId}/game-sessions`, {
     method: "POST",
   })

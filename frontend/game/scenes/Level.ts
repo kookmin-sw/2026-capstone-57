@@ -570,9 +570,7 @@ export default class Level extends Phaser.Scene {
 				});
 			});
 
-			// Skip tutorial overlay in online mode
-			this.tutorialOverlay.setVisible(false);
-			this.tutorialShown = false;
+			// 온라인 모드에서도 튜토리얼 표시 (터치하면 사라짐)
 		}
 		
 	}

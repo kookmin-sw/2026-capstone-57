@@ -7,6 +7,7 @@ import com.ilgiyebo.domain.game.entity.GameSessionEntity;
 import com.ilgiyebo.domain.game.entity.GameSessionStatus;
 import com.ilgiyebo.domain.game.exception.GameException;
 import com.ilgiyebo.domain.game.repository.GameSessionRepository;
+import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import com.ilgiyebo.domain.matching.repository.MatchRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class GameRoomServiceImpl implements GameRoomService {
     private final GameRoomStore roomStore;
     private final GameSessionRepository gameSessionRepository;
     private final MatchRepository matchRepository;
+    private final InteractionRepository interactionRepository;
     private final GameSessionService gameSessionService;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -40,6 +42,13 @@ public class GameRoomServiceImpl implements GameRoomService {
         }
 
         MatchEntity match = findMatch(session.getMatchId());
+
+        // Validate interaction is still in game stage
+        interactionRepository.findByMatchId(session.getMatchId()).ifPresent(interaction -> {
+            if (interaction.getCurrentStage() > 3) {
+                throw GameException.GAME_ALREADY_COMPLETED.toException();
+            }
+        });
 
         // Validate userId is userA or userB
         UUID userAId = match.getUserA().getId();

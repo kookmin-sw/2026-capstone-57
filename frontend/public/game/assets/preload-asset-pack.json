@@ -2,11 +2,6 @@
     "section1": {
         "files": [
             {
-                "url": "/game/assets/guapen.png",
-                "type": "image",
-                "key": "guapen"
-            },
-            {
                 "url": "/game/assets/pl_background.png",
                 "type": "image",
                 "key": "pl_background"

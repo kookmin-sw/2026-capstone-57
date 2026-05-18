@@ -11,6 +11,8 @@ public interface GameSessionService {
 
     GameSessionResponse getSession(UUID gameSessionId, UUID requesterId);
 
+    GameSessionResponse getActiveSession(UUID matchId, UUID requesterId);
+
     void startGame(UUID gameSessionId);
 
     void completeGame(UUID gameSessionId, int score, long clearTimeMs, String finalStateJson);

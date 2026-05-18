@@ -8,6 +8,7 @@ import com.ilgiyebo.domain.game.entity.GameSessionStatus;
 import com.ilgiyebo.domain.game.event.GameCompletedEvent;
 import com.ilgiyebo.domain.game.exception.GameException;
 import com.ilgiyebo.domain.game.repository.GameSessionRepository;
+import com.ilgiyebo.domain.interaction.repository.InteractionRepository;
 import com.ilgiyebo.domain.matching.entity.MatchEntity;
 import com.ilgiyebo.domain.matching.entity.MatchStatus;
 import com.ilgiyebo.domain.matching.repository.MatchRepository;
@@ -30,6 +31,7 @@ public class GameSessionServiceImpl implements GameSessionService {
 
     private final GameSessionRepository gameSessionRepository;
     private final MatchRepository matchRepository;
+    private final InteractionRepository interactionRepository;
     private final ScoreEngine scoreEngine;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -48,15 +50,22 @@ public class GameSessionServiceImpl implements GameSessionService {
         // 3. Validate requester is participant
         validateParticipant(match, requesterId);
 
-        // 4. Idempotent: return existing WAITING or PLAYING session
+        // 4. Validate interaction is in game stage (stage 3)
+        interactionRepository.findByMatchId(matchId).ifPresent(interaction -> {
+            if (interaction.getCurrentStage() > 3) {
+                throw GameException.GAME_ALREADY_COMPLETED.toException();
+            }
+        });
+
+        // 5. Idempotent: return existing WAITING or PLAYING session
         List<GameSessionStatus> activeStatuses = List.of(
                 GameSessionStatus.WAITING, GameSessionStatus.PLAYING);
-        var existingSession = gameSessionRepository.findByMatchIdAndStatusIn(matchId, activeStatuses);
+        var existingSession = gameSessionRepository.findTopByMatchIdAndStatusInOrderByCreatedAtDesc(matchId, activeStatuses);
         if (existingSession.isPresent()) {
             return GameSessionResponse.from(existingSession.get());
         }
 
-        // 5. Create new session with WAITING status
+        // 6. Create new session with WAITING status
         GameSessionEntity session = GameSessionEntity.builder()
                 .matchId(matchId)
                 .gameType(DEFAULT_GAME_TYPE)
@@ -78,6 +87,21 @@ public class GameSessionServiceImpl implements GameSessionService {
         MatchEntity match = matchRepository.findById(session.getMatchId())
                 .orElseThrow(GameException.MATCH_NOT_FOUND::toException);
         validateParticipant(match, requesterId);
+
+        return GameSessionResponse.from(session);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GameSessionResponse getActiveSession(UUID matchId, UUID requesterId) {
+        MatchEntity match = matchRepository.findById(matchId)
+                .orElseThrow(GameException.MATCH_NOT_FOUND::toException);
+        validateParticipant(match, requesterId);
+
+        List<GameSessionStatus> activeStatuses = List.of(
+                GameSessionStatus.WAITING, GameSessionStatus.PLAYING);
+        var session = gameSessionRepository.findTopByMatchIdAndStatusInOrderByCreatedAtDesc(matchId, activeStatuses)
+                .orElseThrow(GameException.GAME_SESSION_NOT_FOUND::toException);
 
         return GameSessionResponse.from(session);
     }

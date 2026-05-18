@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface GameSessionRepository extends JpaRepository<GameSessionEntity, UUID> {
 
-    Optional<GameSessionEntity> findByMatchIdAndStatusIn(UUID matchId, List<GameSessionStatus> statuses);
+    Optional<GameSessionEntity> findTopByMatchIdAndStatusInOrderByCreatedAtDesc(UUID matchId, List<GameSessionStatus> statuses);
 
     List<GameSessionEntity> findByStatusAndCreatedAtBefore(GameSessionStatus status, LocalDateTime before);
 }
