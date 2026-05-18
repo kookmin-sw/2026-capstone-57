@@ -64,9 +64,7 @@ auth:
     access-token-validity-ms: ${JWT_ACCESS_TOKEN_VALIDITY}
     refresh-token-validity-ms: ${JWT_REFRESH_TOKEN_VALIDITY}
   allowed-domains:
-    - ac.kr
-    - edu
-    - university.ac.kr
+    - kookmin.ac.kr
   verification-expiry-minutes: 10
   university-domain-map:
     kookmin.ac.kr: 국민대학교
