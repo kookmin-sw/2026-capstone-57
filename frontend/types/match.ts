@@ -49,10 +49,14 @@ export interface GameOption {
 // 미션 정보
 export interface MissionInfo {
   location: string
-  locationDetail: string
-  recommendedTime: string
+  activity: string
+  description: string
   deadline: string
   daysLeft: number
+  confirmedBy: string[]
+  status: "PENDING" | "CONFIRMED" | "EXPIRED"
+  dayOfWeek: string | null
+  timeSlot: string | null
 }
 
 // 회고 데이터

@@ -91,13 +91,14 @@ public class MissionServiceImpl implements MissionService {
                 matchId.toString(),
                 userAId.toString(),
                 userBId.toString(),
+                result.dayOfWeek().name(),
                 result.timeSlot(),
                 userARoute,
                 userBRoute
         );
 
         missionRequestPublisher.requestMissionGeneration(message);
-        log.info("미션 생성 SQS 요청 발행: matchId={}, timeSlot={}", matchId, result.timeSlot());
+        log.info("미션 생성 SQS 요청 발행: matchId={}, dayOfWeek={}, timeSlot={}", matchId, result.dayOfWeek(), result.timeSlot());
     }
 
     @Override
@@ -196,6 +197,7 @@ public class MissionServiceImpl implements MissionService {
                         return Optional.of(new RouteOverlapResult(
                                 segA.currentSchedule(), segA.nextSchedule(),
                                 segB.currentSchedule(), segB.nextSchedule(),
+                                day,
                                 timeSlot
                         ));
                     }
@@ -349,6 +351,7 @@ public class MissionServiceImpl implements MissionService {
         ScheduleEntity nextScheduleA,
         ScheduleEntity scheduleB,
         ScheduleEntity nextScheduleB,
+        DayOfWeek dayOfWeek,
         String timeSlot
     ) {}
 }

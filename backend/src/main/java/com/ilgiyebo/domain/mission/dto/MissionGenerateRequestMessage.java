@@ -15,6 +15,7 @@ public record MissionGenerateRequestMessage(
     String matchId,
     String userAId,
     String userBId,
+    String dayOfWeek,
     String timeSlot,
     UserRouteInfo userARoute,
     UserRouteInfo userBRoute,
@@ -38,6 +39,7 @@ public record MissionGenerateRequestMessage(
             String matchId,
             String userAId,
             String userBId,
+            String dayOfWeek,
             String timeSlot,
             UserRouteInfo userARoute,
             UserRouteInfo userBRoute) {
@@ -46,6 +48,7 @@ public record MissionGenerateRequestMessage(
             matchId,
             userAId,
             userBId,
+            dayOfWeek,
             timeSlot,
             userARoute,
             userBRoute,

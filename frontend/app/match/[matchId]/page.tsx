@@ -194,6 +194,7 @@ export default function MatchDetailPage() {
         return mission.mission ? (
           <MissionStage
             mission={mission.mission}
+            isWaiting={mission.missionWaiting}
             onExtend={() => {}}
             onComplete={mission.handleMissionComplete}
           />
