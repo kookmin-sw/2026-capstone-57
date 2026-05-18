@@ -3,7 +3,7 @@ import SockJS from "sockjs-client"
 
 const WS_URL =
   typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://98.93.112.251:8080/ws"
+    ? "http://54.87.250.246:8080/ws"
     : "/backend/ws"
 
 export interface GameEvent {

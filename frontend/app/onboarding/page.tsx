@@ -1,0 +1,44 @@
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+
+export default function OnboardingPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace("/login")
+    }, 2500)
+    return () => clearTimeout(timer)
+  }, [router])
+
+  return (
+    <div className="h-screen bg-muted flex justify-center overflow-hidden">
+      <div className="w-full max-w-[430px] h-full bg-background flex flex-col items-center justify-center relative shadow-xl">
+        <div className="flex flex-col items-center gap-6 px-8 text-center animate-fade-in">
+          {/* Logo */}
+          <div className="text-6xl animate-bounce-in">🌤️</div>
+
+          {/* Title */}
+          <h1 className="text-2xl font-bold text-foreground animate-fade-in-delay-1">
+            일기예보
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-sm text-muted-foreground leading-relaxed animate-fade-in-delay-2">
+            일기로 예견하는 보석같은 만남
+            <br />
+            캠퍼스에서 우연히 스친 인연을 발견하세요
+          </p>
+
+          {/* Loading indicator */}
+          <div className="mt-8 flex items-center gap-2 text-xs text-muted-foreground animate-fade-in-delay-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span>로그인 화면으로 이동합니다...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
