@@ -86,6 +86,9 @@ export function useChatStage({
         setIsStompConnected(false)
       },
       onMessage: (msg: IncomingChatMessage) => {
+        // 빈 메시지 무시
+        if (!msg.content || msg.content.trim().length === 0) return
+
         const chatMsg: ChatMessage = {
           id: msg.messageId,
           senderId: msg.senderId,
@@ -137,13 +140,15 @@ export function useChatStage({
       const messages = await getChatMessages(session.sessionId)
       const userId = localStorage.getItem("userId") || ""
       setChatMessages(
-        messages.map((m) => ({
-          id: m.messageId,
-          senderId: m.senderId,
-          content: m.content,
-          timestamp: safeFormatTime(m.createdAt),
-          isMe: m.senderId === userId,
-        }))
+        messages
+          .filter((m) => m.content && m.content.trim().length > 0)
+          .map((m) => ({
+            id: m.messageId,
+            senderId: m.senderId,
+            content: m.content,
+            timestamp: safeFormatTime(m.createdAt),
+            isMe: m.senderId === userId,
+          }))
       )
       // WebSocket 연결
       if (session.status === "ACTIVE") {
