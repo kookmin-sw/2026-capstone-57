@@ -173,33 +173,71 @@ export default function ProfilePage() {
         </div>
 
         {/* Tags */}
-        {(profile.hobbies.length > 0 || profile.personalityType) && (
+        {(profile.hobbies.length > 0 || profile.personalityType || profile.interests.length > 0 || profile.idealTypes.length > 0) && (
           <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
+            <CardContent className="p-5 space-y-5">
               {profile.hobbies.length > 0 && (
-                <>
-                  <h3 className="text-xs font-medium text-muted-foreground mb-2">내 취미</h3>
-                  <div className="flex flex-wrap gap-1.5">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-2.5 flex items-center gap-1.5">
+                    <span className="text-rose-300">♡</span> 내 취미
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
                     {profile.hobbies.map((hobby) => (
                       <span
                         key={hobby.code}
-                        className="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs"
+                        className="px-3 py-1.5 rounded-full bg-[#FDE8EC] text-[#8B4558] text-xs font-medium"
                       >
                         #{hobby.label}
                       </span>
                     ))}
                   </div>
-                </>
+                </div>
+              )}
+              {profile.interests.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-2.5 flex items-center gap-1.5">
+                    <span className="text-emerald-400">☆</span> 관심사
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.interests.map((interest) => (
+                      <span
+                        key={interest.code}
+                        className="px-3 py-1.5 rounded-full bg-[#E6F5EC] text-[#3D7A5A] text-xs font-medium"
+                      >
+                        #{interest.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {profile.idealTypes.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-2.5 flex items-center gap-1.5">
+                    <span className="text-amber-400">♡</span> 이상형
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.idealTypes.map((type) => (
+                      <span
+                        key={type.code}
+                        className="px-3 py-1.5 rounded-full bg-[#FFF5E6] text-[#8A6D3B] text-xs font-medium"
+                      >
+                        #{type.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
               {profile.personalityType && (
-                <>
-                  <h3 className="text-xs font-medium text-muted-foreground mt-3 mb-2">성격 키워드</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-2.5 flex items-center gap-1.5">
+                    <span className="text-amber-300">✧</span> 성격 키워드
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1.5 rounded-full bg-[#EFF8E8] text-[#4A7A3D] text-xs font-medium">
                       {profile.personalityType.label}
                     </span>
                   </div>
-                </>
+                </div>
               )}
             </CardContent>
           </Card>

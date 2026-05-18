@@ -20,6 +20,7 @@ export interface UseQuizStageReturn {
   quizQuestions: QuizQuestion[]
   quizHints: HintQuestionDto[]
   quizWaiting: boolean
+  quizGenerating: boolean
   setQuizHints: React.Dispatch<React.SetStateAction<HintQuestionDto[]>>
   handleSubmitAnswer: (quizIndex: number, answer: number) => Promise<{ correctAnswer: number; isCorrect: boolean } | null>
   handleQuizComplete: () => Promise<void>
@@ -46,6 +47,7 @@ export function useQuizStage({
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
   const [quizHints, setQuizHints] = useState<HintQuestionDto[]>([])
   const [quizWaiting, setQuizWaiting] = useState(false)
+  const [quizGenerating, setQuizGenerating] = useState(false)
   const isTransitioningRef = { current: false }
 
   // 이미 퀴즈 완료 후 대기 중인 경우 감지
@@ -62,9 +64,19 @@ export function useQuizStage({
     try {
       const questions = await getQuiz(matchId)
       if (!Array.isArray(questions)) {
-        console.warn("getQuiz 응답이 배열이 아님:", questions)
+        // 202 퀴즈 생성 중 응답 감지
+        const resp = questions as any
+        if (
+          resp?.status === 202 ||
+          (typeof resp?.message === "string" && resp.message.includes("퀴즈를 생성 중입니다"))
+        ) {
+          setQuizGenerating(true)
+          return
+        }
+        // 기타 비정상 응답은 무시
         return
       }
+      setQuizGenerating(false)
       setQuizQuestions(
         questions.map((q) => ({
           id: `q${q.quizIndex}`,
@@ -79,7 +91,13 @@ export function useQuizStage({
       } catch {
         setQuizHints([])
       }
-    } catch (err) {
+    } catch (err: any) {
+      // 에러 메시지에 202 또는 생성 중 문구가 포함된 경우도 대기 처리
+      const msg = err?.message || ""
+      if (msg.includes("202") || msg.includes("퀴즈를 생성 중입니다")) {
+        setQuizGenerating(true)
+        return
+      }
       console.error("퀴즈 데이터 로드 실패:", err)
     }
   }, [matchId])
@@ -93,16 +111,16 @@ export function useQuizStage({
       // 1. 채팅 세션 생성
       const session = await createChatSession(matchId)
 
-      // 2. 단계 전환
+      // 2. 콜백으로 세션 전달 (채팅 UI가 준비된 후 stage 전환)
+      onChatSessionCreated(session)
+
+      // 3. 단계 전환 (chat session이 이미 세팅된 상태에서 렌더링)
       setActiveStage("CHAT")
       setQuizWaiting(false)
 
-      // 3. 상호작용 상태 갱신
+      // 4. 상호작용 상태 갱신 (stage 상태 용도로만 사용)
       const state = await getInteractionState(matchId)
       setInteraction(state)
-
-      // 4. 콜백으로 세션 전달
-      onChatSessionCreated(session)
 
       return session
     } catch (err) {
@@ -169,6 +187,7 @@ export function useQuizStage({
     quizQuestions,
     quizHints,
     quizWaiting,
+    quizGenerating,
     setQuizHints,
     handleSubmitAnswer,
     handleQuizComplete,

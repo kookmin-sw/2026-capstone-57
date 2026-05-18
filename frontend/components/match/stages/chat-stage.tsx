@@ -105,7 +105,7 @@ export function ChatStage({
                 "text-[9px] mt-0.5",
                 msg.isMe ? "text-white/60" : "text-muted-foreground/60"
               )}>
-                {msg.timestamp}
+                {msg.timestamp || ""}
               </p>
             </div>
           </div>
