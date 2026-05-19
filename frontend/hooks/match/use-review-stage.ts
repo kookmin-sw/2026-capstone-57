@@ -4,42 +4,42 @@ import { useState, useCallback } from "react"
 import {
   getReview,
   selectReviewMode,
-  getReviewQuestions,
-  answerReviewQuestion,
+  submitReviewAnswer,
   generateReview,
   confirmReview,
   submitDirectReview,
-  type ReviewSessionDto,
-  type ReviewQuestionDto,
-  type ReviewResultDto,
   type ReviewMode,
+  type ConversationTurn,
+  type ReviewResultDto,
 } from "@/lib/api/review"
 import { toast } from "@/hooks/use-toast"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type ReviewPhase =
-  | "loading"        // 초기 로딩
-  | "completed"      // 이미 작성 완료 (readonly)
-  | "mode-select"    // 모드 선택 화면
-  | "ai-questions"   // AI 질문 답변 중
-  | "ai-generating"  // AI 회고 생성 중
-  | "ai-confirm"     // AI 생성 결과 확인/수정
-  | "direct-write"   // 직접 작성
+export type ReviewPhase =
+  | "loading"
+  | "completed"
+  | "mode-select"
+  | "ai-conversation"
+  | "ai-generating"
+  | "ai-confirm"
+  | "direct-write"
 
 export interface UseReviewStageReturn {
   phase: ReviewPhase
-  session: ReviewSessionDto | null
-  questions: ReviewQuestionDto[]
-  currentQuestionIndex: number
+  sessionId: string | null
+  currentQuestion: string
+  conversationHistory: ConversationTurn[]
+  currentTurn: number
+  maxTurns: number
+  isConversationComplete: boolean
   generatedContent: string
-  setGeneratedContent: (v: string) => void
+  reflection: string
+  setReflection: (v: string) => void
   rating: number
   setRating: (v: number) => void
   wantToMeetAgain: boolean
   setWantToMeetAgain: (v: boolean) => void
-  reflection: string
-  setReflection: (v: string) => void
   completedReview: ReviewResultDto | null
   isLoading: boolean
   isSubmitting: boolean
@@ -48,7 +48,8 @@ export interface UseReviewStageReturn {
   // Actions
   loadReviewData: () => Promise<void>
   handleModeSelect: (mode: "ai" | "free") => Promise<void>
-  handleAnswerQuestion: (answer: string) => Promise<void>
+  handleSubmitAnswer: (answer: string) => Promise<void>
+  handleGenerate: () => Promise<void>
   handleConfirmReview: () => Promise<void>
   handleDirectSubmit: () => Promise<void>
 }
@@ -63,13 +64,16 @@ export function useReviewStage({
   onComplete,
 }: UseReviewStageOptions): UseReviewStageReturn {
   const [phase, setPhase] = useState<ReviewPhase>("loading")
-  const [session, setSession] = useState<ReviewSessionDto | null>(null)
-  const [questions, setQuestions] = useState<ReviewQuestionDto[]>([])
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [currentQuestion, setCurrentQuestion] = useState("")
+  const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([])
+  const [currentTurn, setCurrentTurn] = useState(1)
+  const [maxTurns, setMaxTurns] = useState(5)
+  const [isConversationComplete, setIsConversationComplete] = useState(false)
   const [generatedContent, setGeneratedContent] = useState("")
+  const [reflection, setReflection] = useState("")
   const [rating, setRating] = useState(0)
   const [wantToMeetAgain, setWantToMeetAgain] = useState(true)
-  const [reflection, setReflection] = useState("")
   const [completedReview, setCompletedReview] = useState<ReviewResultDto | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -88,7 +92,7 @@ export function useReviewStage({
       } else {
         setPhase("mode-select")
       }
-    } catch (err) {
+    } catch {
       // 204 또는 404 → 미작성
       setPhase("mode-select")
     } finally {
@@ -104,28 +108,16 @@ export function useReviewStage({
     const apiMode: ReviewMode = mode === "ai" ? "AI_ASSISTED" : "DIRECT"
 
     try {
-      const sessionData = await selectReviewMode(matchId, apiMode)
-      setSession(sessionData)
+      const res = await selectReviewMode(matchId, apiMode)
+      setSessionId(res.sessionId)
+      setMaxTurns(res.maxTurns)
+      setConversationHistory(res.conversationHistory || [])
 
       if (mode === "ai") {
-        // AI 모드: 질문 조회
-        const qs = await getReviewQuestions(matchId, sessionData.sessionId)
-        const sorted = [...qs].sort((a, b) => a.questionOrder - b.questionOrder)
-        setQuestions(sorted)
-
-        // 이미 답변한 질문 건너뛰기
-        const firstUnanswered = sorted.findIndex((q) => !q.answer)
-        setCurrentQuestionIndex(firstUnanswered >= 0 ? firstUnanswered : sorted.length)
-
-        // 모든 질문에 이미 답변했으면 생성 단계로
-        if (firstUnanswered < 0) {
-          setPhase("ai-generating")
-          await handleGenerate(sessionData.sessionId)
-        } else {
-          setPhase("ai-questions")
-        }
+        setCurrentQuestion(res.currentQuestion || "")
+        setCurrentTurn(1)
+        setPhase("ai-conversation")
       } else {
-        // 직접 작성 모드
         setPhase("direct-write")
       }
     } catch (err) {
@@ -137,34 +129,31 @@ export function useReviewStage({
     }
   }, [matchId])
 
-  // ─── AI 질문 답변 ──────────────────────────────────────────────────────────
+  // ─── 답변 제출 (멀티턴) ────────────────────────────────────────────────────
 
-  const handleAnswerQuestion = useCallback(async (answer: string) => {
-    if (!session || isSubmitting) return
+  const handleSubmitAnswer = useCallback(async (answer: string) => {
+    if (!sessionId || isSubmitting) return
     if (!answer.trim()) return
-
-    const question = questions[currentQuestionIndex]
-    if (!question) return
 
     setIsSubmitting(true)
     setError(null)
 
     try {
-      await answerReviewQuestion(matchId, question.id, session.sessionId, answer)
+      const res = await submitReviewAnswer(matchId, sessionId, answer)
 
-      // 로컬 상태 업데이트
-      setQuestions((prev) =>
-        prev.map((q, i) => (i === currentQuestionIndex ? { ...q, answer } : q))
-      )
+      setConversationHistory(res.conversationHistory)
+      setCurrentTurn(res.currentTurn)
+      setMaxTurns(res.maxTurns)
+      setIsConversationComplete(res.isConversationComplete)
 
-      const nextIndex = currentQuestionIndex + 1
-
-      if (nextIndex >= questions.length) {
-        // 마지막 질문 → 회고 생성
+      if (res.isConversationComplete) {
+        // 대화 완료 → 생성 단계로 전환
+        setCurrentQuestion("")
         setPhase("ai-generating")
-        await handleGenerate(session.sessionId)
+        await doGenerate(sessionId)
       } else {
-        setCurrentQuestionIndex(nextIndex)
+        // 다음 질문 표시
+        setCurrentQuestion(res.question || "")
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "답변 제출에 실패했어요"
@@ -173,48 +162,54 @@ export function useReviewStage({
     } finally {
       setIsSubmitting(false)
     }
-  }, [session, questions, currentQuestionIndex, matchId, isSubmitting])
+  }, [sessionId, matchId, isSubmitting])
 
   // ─── AI 회고 생성 ──────────────────────────────────────────────────────────
 
-  const handleGenerate = async (sessionId: string) => {
+  const doGenerate = async (sid: string) => {
     setIsLoading(true)
     setError(null)
     try {
-      const result = await generateReview(matchId, sessionId)
-      setGeneratedContent(result.generatedContent)
-      setReflection(result.generatedContent)
-      setRating(result.suggestedSatisfaction)
+      const res = await generateReview(matchId, sid)
+      setGeneratedContent(res.generatedContent)
+      setReflection(res.generatedContent)
+      setRating(res.suggestedSatisfaction)
       setPhase("ai-confirm")
     } catch (err) {
       const message = err instanceof Error ? err.message : "회고 생성에 실패했어요"
       setError(message)
       toast({ title: "오류", description: message, variant: "destructive" })
-      // 생성 실패 시 질문 단계로 복귀
-      setPhase("ai-questions")
+      // 생성 실패 시 대화 단계로 복귀
+      setPhase("ai-conversation")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleGenerate = useCallback(async () => {
+    if (!sessionId) return
+    setPhase("ai-generating")
+    await doGenerate(sessionId)
+  }, [sessionId, matchId])
+
   // ─── AI 회고 확정 ──────────────────────────────────────────────────────────
 
   const handleConfirmReview = useCallback(async () => {
-    if (!session || isSubmitting) return
+    if (!sessionId || isSubmitting) return
     if (!reflection.trim() || rating === 0) return
 
     setIsSubmitting(true)
     setError(null)
 
     try {
-      await confirmReview(matchId, session.sessionId, {
+      await confirmReview(matchId, sessionId, {
         reflection,
         satisfaction: rating,
         wantToMeetAgain,
       })
       setPhase("completed")
       setCompletedReview({
-        sessionId: session.sessionId,
+        sessionId,
         mode: "AI_ASSISTED",
         status: "COMPLETED",
         reflection,
@@ -231,7 +226,7 @@ export function useReviewStage({
     } finally {
       setIsSubmitting(false)
     }
-  }, [session, reflection, rating, wantToMeetAgain, matchId, isSubmitting, onComplete])
+  }, [sessionId, reflection, rating, wantToMeetAgain, matchId, isSubmitting, onComplete])
 
   // ─── 직접 작성 제출 ────────────────────────────────────────────────────────
 
@@ -250,7 +245,7 @@ export function useReviewStage({
       })
       setPhase("completed")
       setCompletedReview({
-        sessionId: session?.sessionId || "",
+        sessionId: sessionId || "",
         mode: "DIRECT",
         status: "COMPLETED",
         reflection,
@@ -267,21 +262,23 @@ export function useReviewStage({
     } finally {
       setIsSubmitting(false)
     }
-  }, [reflection, rating, wantToMeetAgain, matchId, session, isSubmitting, onComplete])
+  }, [reflection, rating, wantToMeetAgain, matchId, sessionId, isSubmitting, onComplete])
 
   return {
     phase,
-    session,
-    questions,
-    currentQuestionIndex,
+    sessionId,
+    currentQuestion,
+    conversationHistory,
+    currentTurn,
+    maxTurns,
+    isConversationComplete,
     generatedContent,
-    setGeneratedContent,
+    reflection,
+    setReflection,
     rating,
     setRating,
     wantToMeetAgain,
     setWantToMeetAgain,
-    reflection,
-    setReflection,
     completedReview,
     isLoading,
     isSubmitting,
@@ -289,7 +286,8 @@ export function useReviewStage({
 
     loadReviewData,
     handleModeSelect,
-    handleAnswerQuestion,
+    handleSubmitAnswer,
+    handleGenerate,
     handleConfirmReview,
     handleDirectSubmit,
   }

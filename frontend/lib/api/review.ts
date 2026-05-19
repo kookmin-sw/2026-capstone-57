@@ -5,26 +5,38 @@ import { apiFetch } from "./client"
 export type ReviewMode = "AI_ASSISTED" | "DIRECT"
 export type ReviewStatus = "IN_PROGRESS" | "GENERATED" | "COMPLETED"
 
-export interface ReviewSessionDto {
+export interface ConversationTurn {
+  turnNumber: number
+  question: string
+  answer: string
+}
+
+export interface ReviewSessionResponse {
   sessionId: string
   interactionId: string
   userId: string
   mode: ReviewMode
   status: ReviewStatus
+  currentQuestion: string | null
+  maxTurns: number
+  conversationHistory: ConversationTurn[]
   createdAt: string
 }
 
-export interface ReviewQuestionDto {
-  id: string
-  question: string
-  answer: string | null
-  questionOrder: number
+export interface ReviewAnswerResponse {
+  sessionId: string
+  question: string | null
+  isConversationComplete: boolean
+  currentTurn: number
+  maxTurns: number
+  conversationHistory: ConversationTurn[]
 }
 
-export interface ReviewGenerateDto {
+export interface ReviewGenerateResponse {
   sessionId: string
   generatedContent: string
   suggestedSatisfaction: number
+  generatedAt: string
 }
 
 export interface ReviewConfirmRequest {
@@ -56,30 +68,18 @@ export function getReview(matchId: string) {
   return apiFetch<ReviewResultDto | undefined>(`/api/interactions/${matchId}/review`)
 }
 
-/** 모드 선택 → 세션 생성 */
+/** 모드 선택 → 세션 생성 + 첫 질문 반환 */
 export function selectReviewMode(matchId: string, mode: ReviewMode) {
-  return apiFetch<ReviewSessionDto>(`/api/interactions/${matchId}/review/mode`, {
+  return apiFetch<ReviewSessionResponse>(`/api/interactions/${matchId}/review/mode`, {
     method: "POST",
     body: JSON.stringify({ mode }),
   })
 }
 
-/** AI 질문 목록 조회 */
-export function getReviewQuestions(matchId: string, sessionId: string) {
-  return apiFetch<ReviewQuestionDto[]>(
-    `/api/interactions/${matchId}/review/questions?sessionId=${sessionId}`
-  )
-}
-
-/** AI 질문 답변 제출 */
-export function answerReviewQuestion(
-  matchId: string,
-  questionId: string,
-  sessionId: string,
-  answer: string
-) {
-  return apiFetch<void>(
-    `/api/interactions/${matchId}/review/questions/${questionId}/answer?sessionId=${sessionId}`,
+/** 답변 제출 → 다음 질문 반환 (멀티턴) */
+export function submitReviewAnswer(matchId: string, sessionId: string, answer: string) {
+  return apiFetch<ReviewAnswerResponse>(
+    `/api/interactions/${matchId}/review/answer?sessionId=${sessionId}`,
     {
       method: "POST",
       body: JSON.stringify({ answer }),
@@ -89,7 +89,7 @@ export function answerReviewQuestion(
 
 /** AI 회고 생성 요청 */
 export function generateReview(matchId: string, sessionId: string) {
-  return apiFetch<ReviewGenerateDto>(
+  return apiFetch<ReviewGenerateResponse>(
     `/api/interactions/${matchId}/review/generate?sessionId=${sessionId}`,
     { method: "POST" }
   )

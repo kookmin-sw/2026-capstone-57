@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Star, Sparkles, CheckCircle2, RotateCcw } from "lucide-react"
+import { Star, Sparkles, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
@@ -28,7 +28,7 @@ export function ReviewStage({ matchId, onComplete }: ReviewStageProps) {
       {review.phase === "loading" && <LoadingView />}
       {review.phase === "completed" && <CompletedView review={review} />}
       {review.phase === "mode-select" && <ModeSelectView review={review} />}
-      {review.phase === "ai-questions" && <AIQuestionsView review={review} />}
+      {review.phase === "ai-conversation" && <AIConversationView review={review} />}
       {review.phase === "ai-generating" && <GeneratingView />}
       {review.phase === "ai-confirm" && <AIConfirmView review={review} />}
       {review.phase === "direct-write" && <DirectWriteView review={review} />}
@@ -141,46 +141,60 @@ function ModeSelectView({ review }: { review: UseReviewStageReturn }) {
   )
 }
 
-// ─── AI Questions ────────────────────────────────────────────────────────────
+// ─── AI Conversation (멀티턴) ────────────────────────────────────────────────
 
-function AIQuestionsView({ review }: { review: UseReviewStageReturn }) {
+function AIConversationView({ review }: { review: UseReviewStageReturn }) {
   const [answer, setAnswer] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const question = review.questions[review.currentQuestionIndex]
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   // textarea 자동 높이 조절
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto"
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`
     }
   }, [answer])
 
-  if (!question) return null
+  // 새 질문이 오면 스크롤 하단으로
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [review.conversationHistory, review.currentQuestion])
 
-  const progress = `${review.currentQuestionIndex + 1} / ${review.questions.length}`
   const isOverLimit = answer.length > 5000
 
   const handleSubmit = async () => {
-    if (!answer.trim() || isOverLimit) return
-    await review.handleAnswerQuestion(answer)
+    if (!answer.trim() || isOverLimit || review.isSubmitting) return
+    const submitted = answer
     setAnswer("")
+    await review.handleSubmitAnswer(submitted)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit()
+    }
   }
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Progress */}
       <div className="flex items-center justify-between mb-2 shrink-0">
-        <span className="text-[10px] text-muted-foreground">질문 {progress}</span>
+        <span className="text-[10px] text-muted-foreground">
+          질문 {review.currentTurn} / {review.maxTurns}
+        </span>
         <div className="flex gap-0.5">
-          {review.questions.map((_, i) => (
+          {Array.from({ length: review.maxTurns }).map((_, i) => (
             <div
               key={i}
               className={cn(
                 "w-2 h-2 rounded-full transition-colors",
-                i < review.currentQuestionIndex
+                i < review.currentTurn - 1
                   ? "bg-primary"
-                  : i === review.currentQuestionIndex
+                  : i === review.currentTurn - 1
                   ? "bg-primary/60"
                   : "bg-muted"
               )}
@@ -189,44 +203,67 @@ function AIQuestionsView({ review }: { review: UseReviewStageReturn }) {
         </div>
       </div>
 
-      {/* Question */}
-      <div className="bg-secondary/50 rounded-xl p-3 mb-2 shrink-0">
-        <p className="text-xs text-foreground">{question.question}</p>
+      {/* Conversation history + current question */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-2 mb-2 min-h-0">
+        {review.conversationHistory.map((turn) => (
+          <div key={turn.turnNumber} className="space-y-1.5">
+            {/* AI question */}
+            <div className="bg-secondary/50 rounded-xl p-2.5">
+              <p className="text-[10px] text-muted-foreground mb-0.5">Q{turn.turnNumber}</p>
+              <p className="text-xs text-foreground">{turn.question}</p>
+            </div>
+            {/* User answer */}
+            <div className="bg-primary/5 rounded-xl p-2.5 ml-4">
+              <p className="text-xs text-foreground">{turn.answer}</p>
+            </div>
+          </div>
+        ))}
+
+        {/* Current question */}
+        {review.currentQuestion && (
+          <div className="bg-secondary/50 rounded-xl p-2.5">
+            <p className="text-[10px] text-muted-foreground mb-0.5">Q{review.currentTurn}</p>
+            <p className="text-xs text-foreground">{review.currentQuestion}</p>
+          </div>
+        )}
       </div>
 
       {/* Answer input */}
-      <textarea
-        ref={textareaRef}
-        value={answer}
-        onChange={(e) => setAnswer(e.target.value)}
-        placeholder="자유롭게 답해보세요..."
-        maxLength={5000}
-        className="flex-1 w-full p-3 rounded-xl border border-border/50 bg-background text-xs resize-none outline-none focus:ring-1 focus:ring-primary/30 min-h-[80px]"
-      />
+      <div className="shrink-0">
+        <textarea
+          ref={textareaRef}
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="자유롭게 답해보세요..."
+          maxLength={5000}
+          className="w-full p-3 rounded-xl border border-border/50 bg-background text-xs resize-none outline-none focus:ring-1 focus:ring-primary/30 min-h-[60px] max-h-[160px]"
+        />
 
-      {/* Character count */}
-      <div className="flex justify-end mt-1 shrink-0">
-        <span className={cn("text-[10px]", isOverLimit ? "text-red-500" : "text-muted-foreground")}>
-          {answer.length} / 5,000
-        </span>
+        <div className="flex items-center justify-between mt-1">
+          <span className={cn("text-[10px]", isOverLimit ? "text-red-500" : "text-muted-foreground")}>
+            {answer.length > 0 && `${answer.length} / 5,000`}
+          </span>
+          <span className="text-[10px] text-muted-foreground">Shift+Enter로 줄바꿈</span>
+        </div>
+
+        <Button
+          onClick={handleSubmit}
+          disabled={!answer.trim() || isOverLimit || review.isSubmitting}
+          size="sm"
+          className="w-full mt-2 rounded-full gradient-gem text-white border-0 shadow-gem text-xs h-9"
+        >
+          {review.isSubmitting
+            ? "제출 중..."
+            : review.currentTurn >= review.maxTurns
+            ? "회고 생성하기"
+            : "다음 질문"}
+        </Button>
+
+        {review.error && (
+          <p className="text-[10px] text-red-500 mt-1 text-center">{review.error}</p>
+        )}
       </div>
-
-      <Button
-        onClick={handleSubmit}
-        disabled={!answer.trim() || isOverLimit || review.isSubmitting}
-        size="sm"
-        className="w-full mt-2 rounded-full gradient-gem text-white border-0 shadow-gem text-xs h-9 shrink-0"
-      >
-        {review.isSubmitting
-          ? "제출 중..."
-          : review.currentQuestionIndex < review.questions.length - 1
-          ? "다음 질문"
-          : "회고 생성하기"}
-      </Button>
-
-      {review.error && (
-        <p className="text-[10px] text-red-500 mt-1 text-center">{review.error}</p>
-      )}
     </div>
   )
 }
@@ -248,6 +285,7 @@ function GeneratingView() {
         <div className="h-3 bg-muted/60 rounded-full animate-pulse w-full" />
         <div className="h-3 bg-muted/60 rounded-full animate-pulse w-4/5" />
         <div className="h-3 bg-muted/60 rounded-full animate-pulse w-3/5" />
+        <div className="h-3 bg-muted/60 rounded-full animate-pulse w-4/5" />
       </div>
     </div>
   )
@@ -273,6 +311,7 @@ function AIConfirmView({ review }: { review: UseReviewStageReturn }) {
       <div className="flex items-center gap-1.5 mb-2 shrink-0">
         <Sparkles className="w-3.5 h-3.5 text-primary" />
         <span className="text-[10px] font-medium text-primary">AI가 회고를 정리했어요</span>
+        <span className="text-[10px] text-muted-foreground ml-auto">수정 가능</span>
       </div>
 
       {/* Editable content */}
