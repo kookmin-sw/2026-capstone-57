@@ -11,11 +11,11 @@ const nextConfig = {
     return [
       {
         source: "/backend/:path*",
-        destination: "http://54.87.250.246:8080/:path*",
+        destination: "http://54.89.211.175:8080/:path*",
       },
       {
         source: "/api/:path*",
-        destination: "http://54.87.250.246:8080/api/:path*",
+        destination: "http://54.89.211.175:8080/api/:path*",
       },
     ]
   },
