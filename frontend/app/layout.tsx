@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { AuthGuard } from '@/components/auth-guard'
 import './globals.css'
 
 const notoSansKr = Noto_Sans_KR({ 
@@ -48,7 +49,9 @@ export default function RootLayout({
   return (
     <html lang="ko" className="bg-background h-full">
       <body className={`${notoSansKr.variable} font-sans antialiased h-full`}>
-        {children}
+        <AuthGuard>
+          {children}
+        </AuthGuard>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

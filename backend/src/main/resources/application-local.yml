@@ -5,23 +5,20 @@ spring:
       - io.awspring.cloud.autoconfigure.core.AwsAutoConfiguration
       - io.awspring.cloud.autoconfigure.core.CredentialsProviderAutoConfiguration
       - io.awspring.cloud.autoconfigure.core.RegionProviderAutoConfiguration
+  cloud:
+    aws:
+      region:
+        static: us-east-1
+      sqs:
+        quiz-request-queue: local-quiz-request
+        quiz-response-queue: local-quiz-response
+        mission-request-queue: local-mission-request
+        mission-response-queue: local-mission-response
+      bedrock:
+        model-id: local-model
 
 auth:
   jwt:
     secret: local-dev-secret-key-must-be-at-least-32-bytes-long
     access-token-validity-ms: 3600000
     refresh-token-validity-ms: 604800000
-
-cloud:
-  aws:
-    region:
-      static: ap-northeast-2
-    sqs:
-      quiz-request-queue: local-quiz-request
-      quiz-response-queue: local-quiz-response
-      retro-request-queue: local-retro-request
-      retro-response-queue: local-retro-response
-      diary-request-queue: local-diary-request
-      diary-response-queue: local-diary-response
-    bedrock:
-      model-id: local-model

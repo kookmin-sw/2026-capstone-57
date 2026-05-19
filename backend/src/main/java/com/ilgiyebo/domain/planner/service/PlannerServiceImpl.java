@@ -132,15 +132,12 @@ public class PlannerServiceImpl implements PlannerService {
         LocalDate monday = weekStart.with(DayOfWeek.MONDAY);
         LocalDate friday = monday.plusDays(4);
 
-        // Lazy 생성: 미래 날짜에 SCHEDULE_AUTO가 없으면 해당 날짜만 생성
-        LocalDate today = LocalDate.now();
+        // Lazy 생성: 월~금 중 SCHEDULE_AUTO가 없는 날짜에 대해 시간표 기반 일정 생성
         LocalDate current = monday;
         while (!current.isAfter(friday)) {
-            if (!current.isBefore(today)) {
-                List<PlanEntryEntity> dayEntries = planEntryRepository.findByUserIdAndDateOrderByStartTimeAsc(userId, current);
-                if (dayEntries.stream().noneMatch(e -> e.getSource() == PlanSource.SCHEDULE_AUTO)) {
-                    lazyGenerateForDate(userId, current);
-                }
+            List<PlanEntryEntity> dayEntries = planEntryRepository.findByUserIdAndDateOrderByStartTimeAsc(userId, current);
+            if (dayEntries.stream().noneMatch(e -> e.getSource() == PlanSource.SCHEDULE_AUTO)) {
+                lazyGenerateForDate(userId, current);
             }
             current = current.plusDays(1);
         }

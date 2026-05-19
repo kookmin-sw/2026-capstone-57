@@ -9,9 +9,10 @@ import com.ilgiyebo.domain.matching.repository.MatchRepository;
 import com.ilgiyebo.domain.review.dto.*;
 import com.ilgiyebo.domain.review.entity.*;
 import com.ilgiyebo.domain.review.exception.ReviewException;
-import com.ilgiyebo.domain.review.repository.AiReviewQuestionRepository;
 import com.ilgiyebo.domain.review.repository.ReviewRepository;
 import com.ilgiyebo.domain.review.repository.ReviewSessionRepository;
+import com.ilgiyebo.domain.review.service.ReviewAiClient.ConversationTurn;
+import com.ilgiyebo.domain.review.service.ReviewAiClient.MeetingInfo;
 import com.ilgiyebo.domain.user.entity.UserEntity;
 import com.ilgiyebo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,11 +36,9 @@ import java.util.UUID;
 public class ReviewServiceImpl implements ReviewService {
 
     private static final int REVIEW_STAGE = 5;
-    private static final int MAX_AI_QUESTION_COUNT = 5;
 
     private final ReviewRepository reviewRepository;
     private final ReviewSessionRepository reviewSessionRepository;
-    private final AiReviewQuestionRepository aiReviewQuestionRepository;
     private final MatchRepository matchRepository;
     private final InteractionRepository interactionRepository;
     private final UserRepository userRepository;
@@ -62,8 +60,16 @@ public class ReviewServiceImpl implements ReviewService {
             throw ReviewException.REVIEW_ALREADY_EXISTS.toException();
         }
 
-        if (reviewSessionRepository.findByInteractionIdAndUserId(interaction.getId(), userId).isPresent()) {
-            throw ReviewException.SESSION_ALREADY_EXISTS.toException();
+        // 기존 진행 중(IN_PROGRESS, GENERATED) 세션이 있으면 그대로 반환 (resume 지원)
+        Optional<ReviewSessionEntity> existingSession =
+                reviewSessionRepository.findByInteractionIdAndUserId(interaction.getId(), userId);
+        if (existingSession.isPresent()) {
+            ReviewSessionEntity existing = existingSession.get();
+            if (existing.getStatus() != ReviewSessionStatus.COMPLETED) {
+                log.debug("기존 회고 세션 반환 (resume): matchId={}, userId={}, sessionId={}, status={}",
+                        matchId, userId, existing.getId(), existing.getStatus());
+                return ReviewSessionResponse.from(existing);
+            }
         }
 
         UserEntity user = findUserOrThrow(userId);
@@ -73,128 +79,36 @@ public class ReviewServiceImpl implements ReviewService {
                 .user(user)
                 .mode(mode)
                 .status(ReviewSessionStatus.IN_PROGRESS)
+                .conversationHistory(new ArrayList<>())
                 .build();
+
+        // AI 모드인 경우 첫 질문을 AI 서버에서 받아온다
+        if (mode == ReviewMode.AI_ASSISTED) {
+            MeetingInfo meetingInfo = buildMeetingInfo(interaction, match, userId);
+            ReviewAiClient.FirstQuestionResponse firstQ = reviewAiClient.getFirstQuestion(userId, meetingInfo);
+            session.setCurrentQuestion(firstQ.question());
+            session.setMaxTurns(firstQ.maxTurns());
+        }
+
         session = reviewSessionRepository.save(session);
 
-        // AI 모드: 질문은 getAIQuestions() 호출 시 lazy하게 생성 (트랜잭션 내 AI 호출 방지)
-        log.debug("회고 모드 선택 완료: matchId={}, userId={}, mode={}, sessionId={}",
+        log.debug("회고 모드 선택 완료 (신규): matchId={}, userId={}, mode={}, sessionId={}",
                 matchId, userId, mode, session.getId());
 
         return ReviewSessionResponse.from(session);
     }
 
     @Override
-    public List<AiReviewQuestionDto> getAIQuestions(UUID matchId, UUID sessionId, UUID userId) {
-        // 1단계: DB 검증 + mission 프록시 강제 초기화 (트랜잭션)
-        record MissionContext(String missionDesc, String missionLoc) {}
+    public NextQuestionResponse answerAndGetNextQuestion(UUID matchId, UUID sessionId, UUID userId, String answer) {
+        // 1단계: DB 검증 + 현재 질문/히스토리 로드 (트랜잭션)
+        record SessionContext(
+                ReviewSessionEntity session,
+                String currentQuestion,
+                List<ConversationTurn> history,
+                MeetingInfo meetingInfo
+        ) {}
 
-        MissionContext missionCtx = Objects.requireNonNull(
-                transactionTemplate.execute(status -> {
-                    ReviewSessionEntity s = findSessionOrThrow(sessionId);
-                    validateSessionOwner(s, userId);
-                    validateSessionMatchId(s, matchId);
-                    validateSessionMode(s, ReviewMode.AI_ASSISTED);
-
-                    // mission LAZY 프록시 강제 초기화 (LazyInitializationException 방지)
-                    InteractionEntity interaction = s.getInteraction();
-                    String desc = "만남 미션";
-                    String loc = "캠퍼스";
-                    if (interaction.getMission() != null) {
-                        // activity도 AI 프롬프트에 활용
-                        String activity = interaction.getMission().getActivity();
-                        desc = interaction.getMission().getDescription() != null
-                                ? interaction.getMission().getDescription()
-                                : (activity != null ? activity : desc);
-                        loc = interaction.getMission().getLocation() != null
-                                ? interaction.getMission().getLocation() : loc;
-                    }
-                    return new MissionContext(desc, loc);
-                }),
-                "트랜잭션 실행 결과가 null입니다"
-        );
-
-        // 2단계: 질문 조회 (트랜잭션)
-        List<AiReviewQuestionEntity> existingQuestions = Objects.requireNonNull(
-                transactionTemplate.execute(status ->
-                        aiReviewQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(sessionId)),
-                "트랜잭션 실행 결과가 null입니다"
-        );
-
-        // 3단계: 질문이 없으면 AI 호출 (트랜잭션 밖) + 저장 (별도 트랜잭션)
-        List<AiReviewQuestionEntity> questions;
-        if (existingQuestions.isEmpty()) {
-            List<String> questionTexts = reviewAiClient.generateReviewQuestions(
-                    missionCtx.missionDesc(), missionCtx.missionLoc());
-
-            if (questionTexts.isEmpty()) {
-                throw ReviewException.QUESTION_NOT_FOUND.toException();
-            }
-            if (questionTexts.size() > MAX_AI_QUESTION_COUNT) {
-                questionTexts = questionTexts.subList(0, MAX_AI_QUESTION_COUNT);
-            }
-
-            List<String> finalQuestionTexts = questionTexts;
-            questions = Objects.requireNonNull(
-                    transactionTemplate.execute(status -> {
-                        List<AiReviewQuestionEntity> entities = new ArrayList<>();
-                        for (int i = 0; i < finalQuestionTexts.size(); i++) {
-                            AiReviewQuestionEntity q = AiReviewQuestionEntity.builder()
-                                    .sessionId(sessionId)
-                                    .question(finalQuestionTexts.get(i))
-                                    .questionOrder(i + 1)
-                                    .build();
-                            entities.add(aiReviewQuestionRepository.save(q));
-                        }
-                        return entities;
-                    }),
-                    "트랜잭션 실행 결과가 null입니다"
-            );
-            log.debug("AI 회고 질문 생성 완료: sessionId={}, 질문 수={}", sessionId, questions.size());
-        } else {
-            questions = existingQuestions;
-        }
-
-        log.debug("AI 회고 질문 조회: sessionId={}, 질문 수={}", sessionId, questions.size());
-
-        return questions.stream()
-                .map(AiReviewQuestionDto::from)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public AiReviewQuestionDto answerAIQuestion(UUID matchId, UUID sessionId, UUID questionId, UUID userId, String answer) {
-        ReviewSessionEntity session = findSessionOrThrow(sessionId);
-        validateSessionOwner(session, userId);
-        validateSessionMatchId(session, matchId);
-        validateSessionMode(session, ReviewMode.AI_ASSISTED);
-        validateSessionStatus(session, ReviewSessionStatus.IN_PROGRESS);
-
-        AiReviewQuestionEntity question = aiReviewQuestionRepository.findById(questionId)
-                .orElseThrow(ReviewException.QUESTION_NOT_FOUND::toException);
-
-        if (!question.getSessionId().equals(sessionId)) {
-            throw ReviewException.QUESTION_NOT_FOUND.toException();
-        }
-
-        if (question.getAnswer() != null) {
-            throw ReviewException.QUESTION_ALREADY_ANSWERED.toException();
-        }
-
-        question.setAnswer(answer);
-        question.setAnsweredAt(Instant.now());
-        aiReviewQuestionRepository.save(question);
-
-        log.debug("AI 회고 질문 답변 완료: sessionId={}, questionId={}, order={}",
-                sessionId, questionId, question.getQuestionOrder());
-
-        return AiReviewQuestionDto.from(question);
-    }
-
-    @Override
-    public GeneratedReviewPreview generateReview(UUID matchId, UUID sessionId, UUID userId) {
-        // 1단계: DB 검증만 (상태 변경 없음)
-        List<AiReviewQuestionEntity> questions = Objects.requireNonNull(
+        SessionContext ctx = Objects.requireNonNull(
                 transactionTemplate.execute(status -> {
                     ReviewSessionEntity session = findSessionOrThrow(sessionId);
                     validateSessionOwner(session, userId);
@@ -202,29 +116,99 @@ public class ReviewServiceImpl implements ReviewService {
                     validateSessionMode(session, ReviewMode.AI_ASSISTED);
                     validateSessionStatus(session, ReviewSessionStatus.IN_PROGRESS);
 
-                    List<AiReviewQuestionEntity> qs =
-                            aiReviewQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(sessionId);
-
-                    if (qs.isEmpty()) {
-                        throw ReviewException.NOT_ALL_QUESTIONS_ANSWERED.toException();
+                    if (session.getCurrentQuestion() == null) {
+                        throw ReviewException.QUESTION_NOT_FOUND.toException();
                     }
 
-                    boolean allAnswered = qs.stream().allMatch(q -> q.getAnswer() != null);
-                    if (!allAnswered) {
-                        throw ReviewException.NOT_ALL_QUESTIONS_ANSWERED.toException();
-                    }
+                    InteractionEntity interaction = session.getInteraction();
+                    MatchEntity match = interaction.getMatch();
+                    MeetingInfo meetingInfo = buildMeetingInfo(interaction, match, userId);
 
-                    return qs;
+                    return new SessionContext(
+                            session,
+                            session.getCurrentQuestion(),
+                            new ArrayList<>(session.getConversationHistory()),
+                            meetingInfo
+                    );
                 }),
                 "트랜잭션 실행 결과가 null입니다"
         );
 
-        // 2단계: AI 호출 (트랜잭션 밖 — 실패해도 DB 상태 오염 없음)
-        String generatedContent = generateAiReviewContent(questions);
-        // TODO: AI 연동 시 동적 값으로 교체 예정
-        int suggestedSatisfaction = 4;
+        // 2단계: 대화 히스토리에 현재 턴 추가
+        List<ConversationTurn> updatedHistory = new ArrayList<>(ctx.history());
+        int turnNumber = updatedHistory.size() + 1;
+        updatedHistory.add(new ConversationTurn(turnNumber, ctx.currentQuestion(), answer));
 
-        // 3단계: AI 성공 후에만 상태 변경 (별도 트랜잭션)
+        // 3단계: AI 서버에 다음 질문 요청 (트랜잭션 밖)
+        ReviewAiClient.NextQuestionResponse aiResponse =
+                reviewAiClient.getNextQuestion(userId, ctx.meetingInfo(), updatedHistory);
+
+        // 4단계: 세션 업데이트 (별도 트랜잭션)
+        List<ConversationTurn> finalHistory = updatedHistory;
+        transactionTemplate.executeWithoutResult(status -> {
+            ReviewSessionEntity session = findSessionOrThrow(sessionId);
+            session.setConversationHistory(finalHistory);
+
+            if (aiResponse.isConversationComplete()) {
+                // 대화 완료 — 더 이상 질문 없음
+                session.setCurrentQuestion(null);
+            } else {
+                session.setCurrentQuestion(aiResponse.question());
+            }
+            session.setMaxTurns(aiResponse.maxTurns());
+            reviewSessionRepository.save(session);
+        });
+
+        log.debug("AI 회고 답변 처리 완료: sessionId={}, turn={}, isComplete={}",
+                sessionId, turnNumber, aiResponse.isConversationComplete());
+
+        return new NextQuestionResponse(
+                sessionId,
+                aiResponse.isConversationComplete() ? null : aiResponse.question(),
+                aiResponse.isConversationComplete(),
+                aiResponse.currentTurn(),
+                aiResponse.maxTurns(),
+                updatedHistory
+        );
+    }
+
+    @Override
+    public GeneratedReviewPreview generateReview(UUID matchId, UUID sessionId, UUID userId) {
+        // 1단계: DB 검증 (트랜잭션)
+        record GenerateContext(
+                List<ConversationTurn> history,
+                MeetingInfo meetingInfo
+        ) {}
+
+        GenerateContext ctx = Objects.requireNonNull(
+                transactionTemplate.execute(status -> {
+                    ReviewSessionEntity session = findSessionOrThrow(sessionId);
+                    validateSessionOwner(session, userId);
+                    validateSessionMatchId(session, matchId);
+                    validateSessionMode(session, ReviewMode.AI_ASSISTED);
+                    validateSessionStatus(session, ReviewSessionStatus.IN_PROGRESS);
+
+                    if (session.getConversationHistory() == null || session.getConversationHistory().isEmpty()) {
+                        throw ReviewException.NOT_ALL_QUESTIONS_ANSWERED.toException();
+                    }
+
+                    InteractionEntity interaction = session.getInteraction();
+                    MatchEntity match = interaction.getMatch();
+                    MeetingInfo meetingInfo = buildMeetingInfo(interaction, match, userId);
+
+                    return new GenerateContext(
+                            new ArrayList<>(session.getConversationHistory()),
+                            meetingInfo
+                    );
+                }),
+                "트랜잭션 실행 결과가 null입니다"
+        );
+
+        // 2단계: AI 서버에 회고 생성 요청 (트랜잭션 밖)
+        ReviewAiClient.GenerateResponse aiResponse =
+                reviewAiClient.generateReview(userId, ctx.meetingInfo(), ctx.history());
+
+        // 3단계: 세션 상태 변경 (별도 트랜잭션)
         transactionTemplate.executeWithoutResult(status -> {
             ReviewSessionEntity session = findSessionOrThrow(sessionId);
             session.setStatus(ReviewSessionStatus.GENERATED);
@@ -233,7 +217,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         log.debug("AI 회고 생성 완료: sessionId={}", sessionId);
 
-        return new GeneratedReviewPreview(sessionId, generatedContent, suggestedSatisfaction);
+        return new GeneratedReviewPreview(sessionId, aiResponse.compiledContent(), 4, aiResponse.generatedAt());
     }
 
     @Override
@@ -301,6 +285,7 @@ public class ReviewServiceImpl implements ReviewService {
                             .user(user)
                             .mode(ReviewMode.DIRECT)
                             .status(ReviewSessionStatus.IN_PROGRESS)
+                            .conversationHistory(new ArrayList<>())
                             .build();
                     return reviewSessionRepository.save(newSession);
                 });
@@ -368,14 +353,31 @@ public class ReviewServiceImpl implements ReviewService {
                 .map(ReviewResponse::from);
     }
 
-    private void validateSatisfactionFilter(Integer satisfaction, String paramName) {
-        if (satisfaction != null && (satisfaction < 1 || satisfaction > 5)) {
-            log.warn("잘못된 만족도 필터: {}={}", paramName, satisfaction);
-            throw ReviewException.INVALID_SATISFACTION.toException();
-        }
-    }
-
     // --- Private helpers ---
+
+    private MeetingInfo buildMeetingInfo(InteractionEntity interaction, MatchEntity match, UUID userId) {
+        // 상대방 이름 결정
+        UserEntity opponent = match.getUserA().getId().equals(userId)
+                ? match.getUserB()
+                : match.getUserA();
+        String matchedUserName = opponent.getNickname();
+
+        // 미션 정보
+        String meetingDate = match.getCycleStartDate() != null
+                ? match.getCycleStartDate().toString()
+                : LocalDateTime.now().toLocalDate().toString();
+        String meetingPlace = "캠퍼스";
+        String missionActivity = "만남";
+
+        if (interaction.getMission() != null) {
+            meetingPlace = interaction.getMission().getLocation() != null
+                    ? interaction.getMission().getLocation() : meetingPlace;
+            missionActivity = interaction.getMission().getActivity() != null
+                    ? interaction.getMission().getActivity() : missionActivity;
+        }
+
+        return new MeetingInfo(matchedUserName, meetingDate, meetingPlace, missionActivity);
+    }
 
     private MatchEntity findMatchOrThrow(UUID matchId) {
         return matchRepository.findById(matchId)
@@ -442,17 +444,16 @@ public class ReviewServiceImpl implements ReviewService {
         }
     }
 
-    private String generateAiReviewContent(List<AiReviewQuestionEntity> questions) {
-        List<ReviewAiClient.QuestionAnswer> answers = questions.stream()
-                .map(q -> new ReviewAiClient.QuestionAnswer(q.getQuestion(), q.getAnswer()))
-                .toList();
-        return reviewAiClient.generateReviewContent(answers);
+    private void validateSatisfactionFilter(Integer satisfaction, String paramName) {
+        if (satisfaction != null && (satisfaction < 1 || satisfaction > 5)) {
+            log.warn("잘못된 만족도 필터: {}={}", paramName, satisfaction);
+            throw ReviewException.INVALID_SATISFACTION.toException();
+        }
     }
 
     /**
      * 회고 완료 기록. 새 트랜잭션(REQUIRES_NEW)에서 실행하여
      * 호출자의 1L 캐시에 있는 stale interaction 객체와 격리한다.
-     * 새 PersistenceContext + PESSIMISTIC_WRITE 락으로 최신 데이터를 읽어 Lost Update 방지.
      */
     private void markReviewCompleted(UUID matchId, UUID userId) {
         TransactionTemplate requiresNewTx = new TransactionTemplate(transactionManager);

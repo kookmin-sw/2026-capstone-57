@@ -23,6 +23,8 @@ public record MissionGenerateResponseMessage(
         String location,
         String activity,
         String description,
-        String selectedNodeId
+        String selectedNodeId,
+        String dayOfWeek,
+        String timeSlot
     ) {}
 }

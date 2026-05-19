@@ -18,6 +18,17 @@ import { STAGE_MAP } from "./use-match-state"
 import type { ChatMessage } from "@/types/match"
 import type { InteractionStage } from "@/types/slot"
 
+/** 날짜 문자열을 안전하게 시간 포맷으로 변환. 유효하지 않으면 빈 문자열 반환 */
+function safeFormatTime(dateStr: string | undefined | null): string {
+  if (!dateStr) return ""
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ""
+  return date.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
 export interface UseChatStageReturn {
   chatMessages: ChatMessage[]
   chatSession: ChatSessionDto | null
@@ -75,14 +86,14 @@ export function useChatStage({
         setIsStompConnected(false)
       },
       onMessage: (msg: IncomingChatMessage) => {
+        // 빈 메시지 무시
+        if (!msg.content || msg.content.trim().length === 0) return
+
         const chatMsg: ChatMessage = {
           id: msg.messageId,
           senderId: msg.senderId,
           content: msg.content,
-          timestamp: new Date(msg.createdAt).toLocaleTimeString("ko-KR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          timestamp: safeFormatTime(msg.createdAt),
           isMe: msg.senderId === userId,
         }
         setChatMessages((prev) => [...prev, chatMsg])
@@ -116,8 +127,12 @@ export function useChatStage({
   const loadChatData = useCallback(async () => {
     try {
       const session = await getChatSession(matchId)
+      // 타입 가드: sessionId가 없으면 유효한 ChatSessionDto가 아님
+      if (!session || !session.sessionId) {
+        return
+      }
       setChatSession(session)
-      setUsedTokens(session.usedTokens)
+      setUsedTokens(session.usedTokens ?? 0)
       if (session.status === "ENDED") {
         setChatEnded(true)
       }
@@ -125,30 +140,31 @@ export function useChatStage({
       const messages = await getChatMessages(session.sessionId)
       const userId = localStorage.getItem("userId") || ""
       setChatMessages(
-        messages.map((m) => ({
-          id: m.messageId,
-          senderId: m.senderId,
-          content: m.content,
-          timestamp: new Date(m.createdAt).toLocaleTimeString("ko-KR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          isMe: m.senderId === userId,
-        }))
+        messages
+          .filter((m) => m.content && m.content.trim().length > 0)
+          .map((m) => ({
+            id: m.messageId,
+            senderId: m.senderId,
+            content: m.content,
+            timestamp: safeFormatTime(m.createdAt),
+            isMe: m.senderId === userId,
+          }))
       )
       // WebSocket 연결
       if (session.status === "ACTIVE") {
         initChatSocket(session.sessionId)
       }
     } catch {
-      setChatMessages([])
+      // 채팅 세션이 아직 없는 경우 — 기존 state 유지
     }
   }, [matchId, initChatSocket])
 
   /** 퀴즈→채팅 전환 시 새 세션으로 설정 */
   const setupFromSession = useCallback((session: ChatSessionDto) => {
+    // 타입 가드: sessionId가 없으면 유효한 ChatSessionDto가 아님
+    if (!session || !session.sessionId) return
     setChatSession(session)
-    setUsedTokens(session.usedTokens)
+    setUsedTokens(session.usedTokens ?? 0)
     setChatEnded(false)
     setChatMessages([])
     initChatSocket(session.sessionId)

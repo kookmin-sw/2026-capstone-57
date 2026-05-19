@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 public enum AuthException {
 
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "유효하지 않은 이메일 형식입니다"),
-    INVALID_EMAIL_DOMAIN(HttpStatus.BAD_REQUEST, "허용되지 않은 이메일 도메인입니다"),
+    INVALID_EMAIL_DOMAIN(HttpStatus.BAD_REQUEST, "국민대학교 이메일(@kookmin.ac.kr)만 가입 가능합니다"),
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 이메일입니다"),
     VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "인증 요청을 찾을 수 없습니다"),
     VERIFICATION_EXPIRED(HttpStatus.GONE, "인증 코드가 만료되었습니다"),

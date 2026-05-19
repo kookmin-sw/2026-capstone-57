@@ -68,6 +68,8 @@ public class MissionResponseListener {
                 mission.setActivity(response.mission().activity());
                 mission.setDescription(response.mission().description());
                 mission.setSelectedNodeId(response.mission().selectedNodeId());
+                mission.setDayOfWeek(response.mission().dayOfWeek());
+                mission.setTimeSlot(response.mission().timeSlot());
                 missionRepository.save(mission);
                 log.info("기존 미션 업데이트 완료: 매칭ID={}, location={}", matchId, response.mission().location());
                 return;
@@ -94,6 +96,8 @@ public class MissionResponseListener {
                     .deadline(deadline)
                     .confirmedBy(List.of())
                     .status(MissionStatus.PENDING)
+                    .dayOfWeek(response.mission().dayOfWeek())
+                    .timeSlot(response.mission().timeSlot())
                     .selectedNodeId(response.mission().selectedNodeId())
                     .build();
             missionRepository.save(mission);

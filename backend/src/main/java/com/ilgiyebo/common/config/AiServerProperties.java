@@ -18,9 +18,15 @@ public class AiServerProperties {
     private String baseUrl = "";
 
     /**
-     * HTTP 요청 타임아웃 (밀리초)
+     * HTTP 요청 타임아웃 (밀리초) - 일반 요청 (first-question, next-question)
      */
     private int timeoutMs = 10000;
+
+    /**
+     * 일기 생성(generate) 요청 전용 타임아웃 (밀리초).
+     * LLM 기반 생성은 시간이 오래 걸리므로 별도 분리.
+     */
+    private int generateTimeoutMs = 60000;
 
     /**
      * 최대 재시도 횟수

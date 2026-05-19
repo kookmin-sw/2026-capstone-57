@@ -70,8 +70,19 @@ public class DiarySessionServiceImpl implements DiarySessionService {
         Optional<DiaryEntryEntity> previousDiary = diaryEntryRepository
                 .findByUserIdAndEntryDate(userId, date.minusDays(1));
 
-        // AI에 첫 질문 생성 요청
+        // 세션 생성 (AI 호출 전에 생성하여 sessionId를 확보)
+        DiarySessionEntity session = DiarySessionEntity.builder()
+                .user(user)
+                .targetDate(date)
+                .status(DiarySessionStatus.IN_PROGRESS)
+                .maxTurns(DEFAULT_MAX_TURNS)
+                .currentTurn(1)
+                .build();
+        session = diarySessionRepository.save(session);
+
+        // AI에 첫 질문 생성 요청 (sessionId 포함)
         DiaryAiClient.FirstQuestionInput aiInput = new DiaryAiClient.FirstQuestionInput(
+                session.getId().toString(),
                 userId.toString(),
                 date.toString(),
                 todayPlan.stream()
@@ -85,16 +96,6 @@ public class DiarySessionServiceImpl implements DiarySessionService {
         );
 
         String firstQuestion = diaryAiClient.generateFirstQuestion(aiInput);
-
-        // 세션 생성
-        DiarySessionEntity session = DiarySessionEntity.builder()
-                .user(user)
-                .targetDate(date)
-                .status(DiarySessionStatus.IN_PROGRESS)
-                .maxTurns(DEFAULT_MAX_TURNS)
-                .currentTurn(1)
-                .build();
-        session = diarySessionRepository.save(session);
 
         // 첫 번째 대화 턴 생성 (질문만 저장, 답변 대기)
         DiaryConversationTurnEntity firstTurn = DiaryConversationTurnEntity.builder()
@@ -139,6 +140,7 @@ public class DiarySessionServiceImpl implements DiarySessionService {
         List<PlanEntryResponse> todayPlan = plannerService.getPlanEntries(userId, session.getTargetDate());
 
         DiaryAiClient.NextQuestionInput aiInput = new DiaryAiClient.NextQuestionInput(
+                sessionId.toString(),
                 userId.toString(),
                 session.getTargetDate().toString(),
                 history,
@@ -219,6 +221,8 @@ public class DiarySessionServiceImpl implements DiarySessionService {
 
         DiaryAiClient.GeneratedDiaryResult aiResult = diaryAiClient.generateDiaryContent(aiInput);
 
+        log.info("AI generatedContent={}", aiResult.generatedContent());
+
         // AI 추론 프로필 데이터를 사용자 엔티티에 병합 (중복 제거, 최대 20개 제한)
         if (aiResult.profileUpdate() != null) {
             UserEntity user = findUserOrThrow(userId);
@@ -232,14 +236,20 @@ public class DiarySessionServiceImpl implements DiarySessionService {
         session.setStatus(DiarySessionStatus.GENERATED);
         diarySessionRepository.save(session);
 
+        log.info("session.generatedContent={}", session.getGeneratedContent());
+
         log.debug("AI 일기 생성 완료: sessionId={}", sessionId);
 
-        return new GeneratedDiaryPreview(
+        GeneratedDiaryPreview preview = new GeneratedDiaryPreview(
                 sessionId,
                 aiResult.generatedContent(),
                 aiResult.suggestedEmotion(),
                 LocalDateTime.now()
         );
+
+        log.info("response.generatedContent={}", preview.generatedContent());
+
+        return preview;
     }
 
     @Override

@@ -6,22 +6,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface ReviewService {
 
-    /** 회고 작성 모드 선택 (AI 기반 / 직접 작성) */
+    /** 회고 작성 모드 선택 (AI 기반 / 직접 작성). AI 모드 시 첫 질문도 함께 반환. */
     ReviewSessionResponse selectReviewMode(UUID matchId, UUID userId, ReviewMode mode);
 
-    /** AI 질문 조회 (AI 기반 모드) */
-    List<AiReviewQuestionDto> getAIQuestions(UUID matchId, UUID sessionId, UUID userId);
+    /** AI 질문에 답변 후 다음 질문 수신 (멀티턴) */
+    NextQuestionResponse answerAndGetNextQuestion(UUID matchId, UUID sessionId, UUID userId, String answer);
 
-    /** AI 질문에 답변 */
-    AiReviewQuestionDto answerAIQuestion(UUID matchId, UUID sessionId, UUID questionId, UUID userId, String answer);
-
-    /** AI가 답변 기반으로 회고 글 생성 */
+    /** 대화 히스토리 기반 AI 회고 글 생성 */
     GeneratedReviewPreview generateReview(UUID matchId, UUID sessionId, UUID userId);
 
     /** 생성된 회고 글 수정 및 확정 */
@@ -35,14 +31,6 @@ public interface ReviewService {
 
     /**
      * 본인이 작성한 회고 목록을 필터링 옵션과 함께 페이징 조회한다 (최신순).
-     *
-     * @param userId           조회 대상 사용자 ID
-     * @param mode             회고 모드 필터 (nullable)
-     * @param minSatisfaction  만족도 하한 필터 (nullable, 1~5)
-     * @param maxSatisfaction  만족도 상한 필터 (nullable, 1~5)
-     * @param fromDate         시작 일시 필터 (nullable)
-     * @param toDate           종료 일시 필터 (nullable)
-     * @param pageable         페이지 정보
      */
     Page<ReviewResponse> getMyReviews(
             UUID userId,

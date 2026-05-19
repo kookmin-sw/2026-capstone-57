@@ -102,7 +102,8 @@ export default function MatchDetailPage() {
       hasLoadedInitialStage.current = true
       loadStageData(activeStage)
     }
-  }, [loading, interaction, activeStage, loadStageData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
 
   const handleBack = () => router.push("/")
 
@@ -111,8 +112,7 @@ export default function MatchDetailPage() {
     await loadStageData(stage)
   }
 
-  const handleReviewSave = (content: string, rating: number, mode: "ai" | "free") => {
-    console.log("회고 저장:", { content, rating, mode })
+  const handleReviewComplete = () => {
     router.push("/")
   }
 
@@ -126,6 +126,21 @@ export default function MatchDetailPage() {
               <p className="text-sm font-semibold text-foreground">퀴즈를 모두 풀었어요!</p>
               <p className="text-xs text-muted-foreground">
                 상대방이 퀴즈를 완료하면<br />다음 단계로 넘어갑니다
+              </p>
+            </div>
+          )
+        }
+        if (quiz.quizGenerating) {
+          return (
+            <div className="flex flex-col items-center justify-center bg-card rounded-2xl p-6 shadow-sm border border-border/30 text-center gap-4">
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+                <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+                <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">퀴즈를 준비하고 있어요</p>
+              <p className="text-xs text-muted-foreground">
+                잠시 뒤 다시 들어와주세요
               </p>
             </div>
           )
@@ -178,6 +193,7 @@ export default function MatchDetailPage() {
         return mission.mission ? (
           <MissionStage
             mission={mission.mission}
+            isWaiting={mission.missionWaiting}
             onExtend={() => {}}
             onComplete={mission.handleMissionComplete}
           />
@@ -187,7 +203,7 @@ export default function MatchDetailPage() {
           </div>
         )
       case "REVIEW":
-        return <ReviewStage onSave={handleReviewSave} />
+        return <ReviewStage matchId={matchId} onComplete={handleReviewComplete} />
       default:
         return null
     }

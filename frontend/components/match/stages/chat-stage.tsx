@@ -77,8 +77,8 @@ export function ChatStage({
         </p>
       </div>
 
-      {/* Icebreaker */}
-      {icebreakerQuestion && messages.length === 0 && (
+      {/* Icebreaker — 채팅 종료 전까지 항상 표시 */}
+      {icebreakerQuestion && !isEnded && (
         <div className="mx-3 mt-2 px-3 py-2 rounded-xl bg-secondary/40 shrink-0">
           <div className="flex items-center gap-2">
             <Lightbulb className="w-3.5 h-3.5 text-accent shrink-0" />
@@ -89,7 +89,9 @@ export function ChatStage({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 scrollbar-hide min-h-0">
-        {messages.map((msg, index) => (
+        {messages
+          .filter((msg) => msg.content && msg.content.trim().length > 0)
+          .map((msg, index) => (
           <div
             key={msg.id || `msg-${index}`}
             className={cn("flex", msg.isMe ? "justify-end" : "justify-start")}
@@ -105,7 +107,7 @@ export function ChatStage({
                 "text-[9px] mt-0.5",
                 msg.isMe ? "text-white/60" : "text-muted-foreground/60"
               )}>
-                {msg.timestamp}
+                {msg.timestamp || ""}
               </p>
             </div>
           </div>

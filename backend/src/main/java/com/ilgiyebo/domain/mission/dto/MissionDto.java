@@ -18,6 +18,8 @@ public record MissionDto(
     Instant deadline,
     List<String> confirmedBy,
     MissionStatus status,
+    String dayOfWeek,
+    String timeSlot,
     String selectedNodeId
 ) {
 
@@ -31,6 +33,8 @@ public record MissionDto(
             entity.getDeadline(),
             entity.getConfirmedBy(),
             entity.getStatus(),
+            entity.getDayOfWeek(),
+            entity.getTimeSlot(),
             entity.getSelectedNodeId()
         );
     }

@@ -32,6 +32,7 @@ class HttpDiaryAiClientTest {
     @DisplayName("FirstQuestionInput을 올바른 JSON으로 직렬화한다")
     void serializeFirstQuestionInput() throws Exception {
         DiaryAiClient.FirstQuestionInput input = new DiaryAiClient.FirstQuestionInput(
+                "session-789",
                 "user-123",
                 "2025-05-14",
                 List.of(new DiaryAiClient.ScheduleContext("09:00", "10:30", "공학관", "알고리즘")),
@@ -40,6 +41,7 @@ class HttpDiaryAiClientTest {
 
         String json = objectMapper.writeValueAsString(input);
 
+        assertThat(json).contains("\"sessionId\":\"session-789\"");
         assertThat(json).contains("\"userId\":\"user-123\"");
         assertThat(json).contains("\"targetDate\":\"2025-05-14\"");
         assertThat(json).contains("\"previousDiaryContent\":\"어제는 좋은 하루였다.\"");
@@ -51,6 +53,7 @@ class HttpDiaryAiClientTest {
     @DisplayName("NextQuestionInput을 올바른 JSON으로 직렬화한다")
     void serializeNextQuestionInput() throws Exception {
         DiaryAiClient.NextQuestionInput input = new DiaryAiClient.NextQuestionInput(
+                "session-456",
                 "user-123",
                 "2025-05-14",
                 List.of(new DiaryAiClient.ConversationTurn(1, "오늘 어땠나요?", "좋았어요")),
@@ -59,6 +62,7 @@ class HttpDiaryAiClientTest {
 
         String json = objectMapper.writeValueAsString(input);
 
+        assertThat(json).contains("\"sessionId\":\"session-456\"");
         assertThat(json).contains("\"conversationHistory\"");
         assertThat(json).contains("\"turnNumber\":1");
         assertThat(json).contains("\"question\":\"오늘 어땠나요?\"");
@@ -99,6 +103,7 @@ class HttpDiaryAiClientTest {
     @DisplayName("null todaySchedule을 빈 리스트로 처리한다")
     void handleNullSchedule() throws Exception {
         DiaryAiClient.FirstQuestionInput input = new DiaryAiClient.FirstQuestionInput(
+                "session-null-test",
                 "user-123",
                 "2025-05-14",
                 null,

@@ -46,6 +46,18 @@ public class MissionEntity extends BaseSchema {
     private MissionStatus status = MissionStatus.PENDING;
 
     /**
+     * 미션 수행 요일 (예: MONDAY, TUESDAY 등).
+     */
+    @Column(name = "day_of_week")
+    private String dayOfWeek;
+
+    /**
+     * 미션 수행 시간대 (예: "12:45~13:30").
+     */
+    @Column(name = "time_slot")
+    private String timeSlot;
+
+    /**
      * AI가 선택한 서브 노드 ID (추적용).
      * RAG 기반 미션 생성 시 AI 서버가 선택한 장소의 ChromaDB 노드 ID.
      */

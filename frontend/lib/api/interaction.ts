@@ -55,6 +55,8 @@ export interface MissionDto {
   deadline: string
   confirmedBy: string[]
   status: "PENDING" | "CONFIRMED" | "EXPIRED"
+  dayOfWeek: string | null
+  timeSlot: string | null
   selectedNodeId: string | null
 }
 
