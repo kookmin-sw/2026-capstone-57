@@ -37,7 +37,6 @@ export async function apiFetch<T>(
     // 401/403 → 인증 실패: 토큰 제거 후 온보딩으로 이동
     if (res.status === 401 || res.status === 403) {
       clearToken()
-      fireAuthFailure()
     }
 
     const error = await res.text().catch(() => "Unknown error")
