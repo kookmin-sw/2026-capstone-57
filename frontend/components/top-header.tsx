@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { ChevronLeft, Bell } from "lucide-react"
+import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -47,15 +47,7 @@ export function TopHeader({
 
       {/* Right side */}
       <div className="flex items-center gap-1 min-w-[40px] justify-end">
-        {isHome ? (
-          rightAction || (
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
-              <Bell className="size-5" />
-            </Button>
-          )
-        ) : (
-          <span className="text-sm font-semibold text-foreground">{title}</span>
-        )}
+        {rightAction || null}
       </div>
     </header>
   )
