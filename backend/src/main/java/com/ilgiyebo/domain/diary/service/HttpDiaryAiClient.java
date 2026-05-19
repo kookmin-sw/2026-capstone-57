@@ -46,6 +46,7 @@ public class HttpDiaryAiClient implements DiaryAiClient {
         String url = aiServerProperties.getBaseUrl() + "/api/diary/first-question";
 
         FirstQuestionRequest request = new FirstQuestionRequest(
+                input.sessionId(),
                 input.userId(),
                 input.targetDate(),
                 input.todaySchedule() != null
@@ -57,7 +58,9 @@ public class HttpDiaryAiClient implements DiaryAiClient {
         );
 
         FirstQuestionResponse response = executeWithRetry(url, request, FirstQuestionResponse.class);
-        return response.question();
+        log.info("AI 첫 질문 응답 매핑: sessionId={}, nextQuestion={}, currentTurnNumber={}, maxTurns={}",
+                response.sessionId(), response.nextQuestion(), response.currentTurnNumber(), response.maxTurns());
+        return response.nextQuestion();
     }
 
     @Override
@@ -65,6 +68,7 @@ public class HttpDiaryAiClient implements DiaryAiClient {
         String url = aiServerProperties.getBaseUrl() + "/api/diary/next-question";
 
         NextQuestionRequest request = new NextQuestionRequest(
+                input.sessionId(),
                 input.userId(),
                 input.targetDate(),
                 input.conversationHistory() != null
@@ -107,7 +111,16 @@ public class HttpDiaryAiClient implements DiaryAiClient {
                         : List.of()
         );
 
-        DiaryGenerateResponse response = executeWithRetry(url, request, DiaryGenerateResponse.class);
+        long startTime = System.currentTimeMillis();
+        log.info("AI 일기 생성 요청 시작: sessionId={}, userId={}, conversationTurns={}",
+                input.sessionId(), input.userId(),
+                input.conversationHistory() != null ? input.conversationHistory().size() : 0);
+
+        DiaryGenerateResponse response = executeWithRetry(url, request, DiaryGenerateResponse.class,
+                aiServerProperties.getGenerateTimeoutMs());
+
+        long elapsedMs = System.currentTimeMillis() - startTime;
+        log.info("AI 일기 생성 요청 완료: sessionId={}, elapsedMs={}", input.sessionId(), elapsedMs);
 
         EmotionTag suggestedEmotion = null;
         if (response.suggestedEmotion() != null) {
@@ -127,6 +140,10 @@ public class HttpDiaryAiClient implements DiaryAiClient {
     // --- Private helpers ---
 
     private <T> T executeWithRetry(String url, Object requestBody, Class<T> responseType) {
+        return executeWithRetry(url, requestBody, responseType, aiServerProperties.getTimeoutMs());
+    }
+
+    private <T> T executeWithRetry(String url, Object requestBody, Class<T> responseType, int timeoutMs) {
         int maxRetries = aiServerProperties.getMaxRetries();
         Exception lastException = null;
 
@@ -135,13 +152,14 @@ public class HttpDiaryAiClient implements DiaryAiClient {
                 String jsonBody = objectMapper.writeValueAsString(requestBody);
                 byte[] bodyBytes = jsonBody.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
-                log.info("AI 서버 요청: url={}, attempt={}/{}, bodyLength={}, body={}", url, attempt, maxRetries, bodyBytes.length, jsonBody);
+                log.info("AI 서버 요청: url={}, attempt={}/{}, timeoutMs={}, bodyLength={}, body={}",
+                        url, attempt, maxRetries, timeoutMs, bodyBytes.length, jsonBody);
 
                 HttpRequest httpRequest = HttpRequest.newBuilder()
                         .uri(URI.create(url))
                         .header("Content-Type", "application/json; charset=utf-8")
                         .header("Accept", "application/json")
-                        .timeout(Duration.ofMillis(aiServerProperties.getTimeoutMs()))
+                        .timeout(Duration.ofMillis(timeoutMs))
                         .POST(HttpRequest.BodyPublishers.ofByteArray(bodyBytes))
                         .build();
 
@@ -186,6 +204,7 @@ public class HttpDiaryAiClient implements DiaryAiClient {
     // --- Request/Response DTOs for AI server communication ---
 
     private record FirstQuestionRequest(
+            @JsonProperty("sessionId") String sessionId,
             @JsonProperty("userId") String userId,
             @JsonProperty("date") String date,
             @JsonProperty("todaySchedule") List<ScheduleItem> todaySchedule,
@@ -193,6 +212,7 @@ public class HttpDiaryAiClient implements DiaryAiClient {
     ) {}
 
     private record NextQuestionRequest(
+            @JsonProperty("sessionId") String sessionId,
             @JsonProperty("userId") String userId,
             @JsonProperty("date") String date,
             @JsonProperty("conversationHistory") List<ConversationItem> conversationHistory,
@@ -221,17 +241,20 @@ public class HttpDiaryAiClient implements DiaryAiClient {
     ) {}
 
     private record FirstQuestionResponse(
-            @JsonProperty("question") String question
+            @JsonProperty("sessionId") String sessionId,
+            @JsonProperty("nextQuestion") String nextQuestion,
+            @JsonProperty("currentTurnNumber") int currentTurnNumber,
+            @JsonProperty("maxTurns") int maxTurns
     ) {}
 
     private record NextQuestionResponse(
             @JsonProperty("isConversationComplete") boolean isConversationComplete,
-            @JsonProperty("question") String nextQuestion,
+            @JsonProperty("nextQuestion") String nextQuestion,
             @JsonProperty("completionReason") String completionReason
     ) {}
 
     private record DiaryGenerateResponse(
-            @JsonProperty("compiledContent") String generatedContent,
+            @JsonProperty("generatedContent") String generatedContent,
             @JsonProperty("suggestedEmotion") String suggestedEmotion,
             @JsonProperty("profileUpdate") ProfileUpdateResponse profileUpdate
     ) {}

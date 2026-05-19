@@ -79,6 +79,7 @@ ai:
   server:
     base-url: ${AI_SERVER_BASE_URL}
     timeout-ms: ${AI_SERVER_TIMEOUT_MS:10000}
+    generate-timeout-ms: ${AI_SERVER_GENERATE_TIMEOUT_MS:60000}
     max-retries: ${AI_SERVER_MAX_RETRIES:3}
 
 cloud:

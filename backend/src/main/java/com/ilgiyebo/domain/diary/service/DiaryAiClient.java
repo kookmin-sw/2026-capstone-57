@@ -30,6 +30,7 @@ public interface DiaryAiClient {
     // --- Input/Output records ---
 
     record FirstQuestionInput(
+            String sessionId,
             String userId,
             String targetDate,
             List<ScheduleContext> todaySchedule,
@@ -44,6 +45,7 @@ public interface DiaryAiClient {
     ) {}
 
     record NextQuestionInput(
+            String sessionId,
             String userId,
             String targetDate,
             List<ConversationTurn> conversationHistory,
