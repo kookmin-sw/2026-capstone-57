@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"
+
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -11,11 +13,11 @@ const nextConfig = {
     return [
       {
         source: "/backend/:path*",
-        destination: "http://54.89.211.175:8080/:path*",
+        destination: `${API_BASE_URL}/:path*`,
       },
       {
         source: "/api/:path*",
-        destination: "http://54.89.211.175:8080/api/:path*",
+        destination: `${API_BASE_URL}/api/:path*`,
       },
     ]
   },

@@ -136,7 +136,7 @@ export default class Lobby extends Phaser.Scene {
       this.registerNetworkListeners();
 
       const wsUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-        ? 'http://54.89.211.175:8080/ws'
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'}/ws`
         : '/backend/ws';
       const authToken = this.token || '';
 
