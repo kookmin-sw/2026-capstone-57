@@ -1,10 +1,7 @@
 import { Client, IMessage } from "@stomp/stompjs"
 import SockJS from "sockjs-client"
 
-const WS_URL =
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://54.89.211.175:8080/ws"
-    : "/backend/ws"
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "/backend/ws"
 
 export interface GameEvent {
   type: string

@@ -135,9 +135,7 @@ export default class Lobby extends Phaser.Scene {
       this.networkService = new NetworkService();
       this.registerNetworkListeners();
 
-      const wsUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-        ? 'http://98.93.112.251:8080/ws'
-        : '/backend/ws';
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || '/backend/ws';
       const authToken = this.token || '';
 
       await this.networkService.connect(wsUrl, authToken, this.sessionId!);
@@ -155,7 +153,8 @@ export default class Lobby extends Phaser.Scene {
   }
 
   private async fetchSessionInfo(gameSessionId: string): Promise<GameSessionInfo | null> {
-    const url = `/backend/api/v1/game-sessions/${gameSessionId}`;
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '/backend';
+    const url = `${apiBaseUrl}/api/v1/game-sessions/${gameSessionId}`;
 
     try {
       const headers: Record<string, string> = {
