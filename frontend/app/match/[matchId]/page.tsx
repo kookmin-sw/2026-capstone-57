@@ -112,8 +112,7 @@ export default function MatchDetailPage() {
     await loadStageData(stage)
   }
 
-  const handleReviewSave = (content: string, rating: number, mode: "ai" | "free") => {
-    console.log("회고 저장:", { content, rating, mode })
+  const handleReviewComplete = () => {
     router.push("/")
   }
 
@@ -204,7 +203,7 @@ export default function MatchDetailPage() {
           </div>
         )
       case "REVIEW":
-        return <ReviewStage onSave={handleReviewSave} />
+        return <ReviewStage matchId={matchId} onComplete={handleReviewComplete} />
       default:
         return null
     }

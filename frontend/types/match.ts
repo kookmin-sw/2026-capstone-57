@@ -64,4 +64,5 @@ export interface ReflectionData {
   mode: "ai" | "free"
   content: string
   rating?: number
+  wantToMeetAgain?: boolean
 }
