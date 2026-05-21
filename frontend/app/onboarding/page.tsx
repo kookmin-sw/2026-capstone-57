@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -26,7 +27,16 @@ export default function OnboardingPage() {
       <div className="w-full max-w-[430px] h-full bg-background flex flex-col items-center justify-center relative shadow-xl">
         <div className="flex flex-col items-center gap-6 px-8 text-center animate-fade-in">
           {/* Logo */}
-          <div className="text-6xl animate-bounce-in">🌤️</div>
+          <div className="animate-bounce-in">
+            <Image
+              src="/logo.png"
+              alt="일기예보 로고"
+              width={96}
+              height={96}
+              priority
+              className="h-24 w-24 object-contain"
+            />
+          </div>
 
           {/* Title */}
           <h1 className="text-2xl font-bold text-foreground animate-fade-in-delay-1">
