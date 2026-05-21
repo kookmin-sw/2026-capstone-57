@@ -17,7 +17,7 @@ title: 일기예보
   /* ── 헤더 ── */
   .iy-app-header { display: flex; flex-direction: column; align-items: center; padding: 12px 0 24px; position: relative; }
   .iy-app-header .bell { position: absolute; right: 4px; top: 16px; width: 36px; height: 36px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-  .iy-app-logo { width: 140px; height: auto; margin-bottom: 4px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1)); }
+  .iy-app-logo { width: 140px; height: auto; margin-bottom: 4px; mix-blend-mode: multiply; }
 
   /* ── 히어로 ── */
   .iy-hero { background: linear-gradient(135deg, #4696dcd8 0%, #71aee8 100%); border-radius: 22px; padding: 22px 24px; position: relative; color: #fff; box-shadow: 0 6px 20px rgba(91,158,234,0.18); }
@@ -679,7 +679,7 @@ title: 일기예보
 <div id="links" class="iy-card-section">
   <div class="iy-sec-head"><div class="t">링크</div></div>
   <div class="iy-links">
-    <a class="iy-link-btn service" href="https://ilgiyebo.vercel.app/login" target="_blank">
+    <a class="iy-link-btn service" href="https://ilgiyebo.vercel.app" target="_blank">
       <span class="lb-icon">🌤️</span>
       <div>
         <div style="font-size:10px;opacity:.75;font-weight:400;">서비스</div>
