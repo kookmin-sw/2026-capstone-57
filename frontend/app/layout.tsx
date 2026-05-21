@@ -15,8 +15,20 @@ export const metadata: Metadata = {
   description: '캠퍼스에서 우연히 스친 인연을 발견하세요',
   generator: 'v0.app',
   icons: {
-    icon: '/logo.png',
-      
+    icon: [
+      {
+        url: '/logo.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/logo.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.png',
+        type: 'image/png',
+      },
+    ],
     apple: '/logo.png',
   },
 }
