@@ -1,10 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const subtitles = [
+    "일기로 예견하는 보석같은 만남\n캠퍼스에서 우연히 스친 인연을 발견하세요",
+    "같은 시간, 같은 장소를 지나쳤다면\n그 우연을 일기예보가 인연으로 이어줄게요",
+    "오늘의 만남 예보\n캠퍼스에서 스친 인연을 발견하는 특별한 경험",
+    "오늘 일기에 적힐 만남은 누구일까요?\n캠퍼스에서 우연히 스친 인연을 발견하세요",
+    "일기로 찾는 오늘의 인연\n캠퍼스에서 스친 인연을 발견하는 특별한 경험"
+  ]
+  const [subtitle] = useState(() => subtitles[Math.floor(Math.random() * subtitles.length)])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -27,9 +35,12 @@ export default function OnboardingPage() {
 
           {/* Subtitle */}
           <p className="text-sm text-muted-foreground leading-relaxed animate-fade-in-delay-2">
-            일기로 예견하는 보석같은 만남
-            <br />
-            캠퍼스에서 우연히 스친 인연을 발견하세요
+            {subtitle.split("\n").map((line, index) => (
+              <span key={`${line}-${index}`}>
+                {line}
+                <br />
+              </span>
+            ))}
           </p>
 
           {/* Loading indicator */}
