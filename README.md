@@ -6,7 +6,7 @@
 어제의 기록과 오늘의 동선을 바탕으로, 사용자의 일상에 짧고 재밌는 사건을 만들어냅니다. <br>
 그래서 만남은 부담스러운 약속이 아니라, 오늘의 일기에 남길 수 있는 가벼운 장면이 됩니다.
 
-🔗 **Quick Links:** [🏠 팀 페이지](https://kookmin-sw.github.io/2026-capstone-57/) | [🌐 서비스 바로가기](https://ilgiyebo.vercel.app/login) | [💻 팀 GitHub](https://github.com/kookmin-sw/2026-capstone-57)
+🔗 **Quick Links:** [🏠 팀 페이지](https://kookmin-sw.github.io/2026-capstone-57/) | [🌐 서비스 바로가기](https://ilgiyebo.vercel.app) | [💻 팀 GitHub](https://github.com/kookmin-sw/2026-capstone-57)
 
 > 국민대학교 2026 캡스톤 디자인 프로젝트 · 57팀
 
