@@ -139,6 +139,10 @@ class MissionHandler:
         if mission is None:
             return self._build_failed_response(request, "미션 응답 파싱 실패")
 
+        # 요청에서 받은 dayOfWeek/timeSlot을 응답에 패스스루
+        mission.dayOfWeek = request.dayOfWeek
+        mission.timeSlot = request.timeSlot
+
         return MissionResponseMessage(
             action=MissionResponseAction.MISSION_GENERATED,
             status=MissionStatus.SUCCESS,

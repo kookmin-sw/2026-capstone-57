@@ -55,6 +55,8 @@ class Mission(BaseModel):
     activity: str
     description: str
     selectedNodeId: str
+    dayOfWeek: Optional[str] = None
+    timeSlot: Optional[str] = None
 
 
 class MissionRequestMessage(BaseModel):
@@ -64,6 +66,7 @@ class MissionRequestMessage(BaseModel):
     matchId: str
     userAId: str
     userBId: str
+    dayOfWeek: Optional[str] = None
     timeSlot: str
     userARoute: RouteInfo
     userBRoute: RouteInfo
