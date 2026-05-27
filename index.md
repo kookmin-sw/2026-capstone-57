@@ -6,125 +6,51 @@ title: 일기예보
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800;900&display=swap');
 
-  body {
-    background-color: #fef9ef;
-    font-family: 'Noto Sans KR', sans-serif;
-    scroll-behavior: smooth;
-  }
-
+  body { background-color: #fef9ef; font-family: 'Noto Sans KR', sans-serif; scroll-behavior: smooth; }
   [id] { scroll-margin-top: 20px; }
-
-  .markdown-body {
-    background-color: transparent;
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 24px 20px 110px;
-  }
-
-  /* 모든 hr 숨김 */
+  .markdown-body { background-color: transparent; max-width: 720px; margin: 0 auto; padding: 24px 20px 110px; }
   .markdown-body hr { display: none; }
 
-  /* ── 페이드인 ── */
   .iy-card-section, .iy-hero { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
   .iy-card-section.visible, .iy-hero.visible { opacity: 1; transform: translateY(0); }
 
-  /* ════════════════════════════════════════ */
-  /* ── 상단 로고 헤더 ── */
-  /* ════════════════════════════════════════ */
-  .iy-app-header {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 12px 0 24px; position: relative;
-  }
-  .iy-app-header .bell {
-    position: absolute; right: 4px; top: 16px;
-    width: 36px; height: 36px; border-radius: 50%;
-    background: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  }
-  .iy-app-logo {
-    width: 140px; height: auto; margin-bottom: 4px;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1));
-  }
-  .iy-app-logo-emoji { font-size: 56px; margin-bottom: 4px; line-height: 1; }
-  .iy-app-name {
-    font-size: 36px; font-weight: 900; letter-spacing: -0.02em;
-    background: linear-gradient(135deg, #5b9eea 0%, #f4b942 100%);
-    -webkit-background-clip: text; background-clip: text;
-    color: transparent;
-  }
+  /* ── 헤더 ── */
+  .iy-app-header { display: flex; flex-direction: column; align-items: center; padding: 12px 0 24px; position: relative; }
+  .iy-app-header .bell { position: absolute; right: 4px; top: 16px; width: 36px; height: 36px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .iy-app-logo { width: 140px; height: auto; margin-bottom: 4px; mix-blend-mode: multiply; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 인사 카드 (히어로) ── */
-  /* ════════════════════════════════════════ */
-  .iy-hero {
-    background: linear-gradient(135deg,  #4696dcd8 0%, #71aee8 100%);
-    border-radius: 22px; padding: 22px 24px; position: relative;
-    color: #fff; box-shadow: 0 6px 20px rgba(91,158,234,0.18);
-  }
-  .iy-hero .sun {
-    position: absolute; right: 20px; top: 20px;
-    width: 22px; height: 22px; border-radius: 50%;
-    background: #f4a82a; box-shadow: 0 0 14px rgba(244,168,42,0.7);
-  }
+  /* ── 히어로 ── */
+  .iy-hero { background: linear-gradient(135deg, #4696dcd8 0%, #71aee8 100%); border-radius: 22px; padding: 22px 24px; position: relative; color: #fff; box-shadow: 0 6px 20px rgba(91,158,234,0.18); }
+  .iy-hero .sun { position: absolute; right: 20px; top: 20px; width: 22px; height: 22px; border-radius: 50%; background: #f4a82a; box-shadow: 0 0 14px rgba(244,168,42,0.7); }
   .iy-hero .greet-date { font-size: 13px; opacity: 0.95; font-weight: 600; }
-  .iy-hero h1 {
-    font-size: 22px; font-weight: 900; color: #fff;
-    margin: 6px 0 4px; padding: 0; border: none;
-  }
+  .iy-hero h1 { font-size: 22px; font-weight: 900; color: #fff; margin: 6px 0 4px; padding: 0; border: none; }
   .iy-hero .greet-desc { font-size: 13px; opacity: 0.95; line-height: 1.5; }
   .iy-hero .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
-  .iy-hero .badge {
-    background: rgba(255,255,255,0.85); color: #2c6fbd;
-    border-radius: 99px; padding: 5px 12px;
-    font-size: 11px; font-weight: 700;
-  }
+  .iy-hero .badge { background: rgba(255,255,255,0.85); color: #2c6fbd; border-radius: 99px; padding: 5px 12px; font-size: 11px; font-weight: 700; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 섹션 헤더 ── */
-  /* ════════════════════════════════════════ */
+  /* ── 공통 섹션 ── */
   .iy-card-section { margin-top: 28px; }
   .iy-sec-head { padding: 0 4px 12px; display: flex; justify-content: space-between; align-items: baseline; }
   .iy-sec-head .t { font-size: 17px; font-weight: 800; color: #1a1a1a; }
   .iy-sec-head .more { font-size: 12px; color: #999; }
   .iy-sec-sub { padding: 0 4px 8px; font-size: 12px; color: #888; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 슬롯 카드 (오늘의 예보 스타일) ── */
-  /* ════════════════════════════════════════ */
-  .iy-slot {
-    background: #fff; border-radius: 16px; padding: 14px 16px; margin-bottom: 10px;
-    display: flex; align-items: center; gap: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
+  /* ── 슬롯 ── */
+  .iy-slot { background: #fff; border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s ease, box-shadow 0.2s ease; }
   .iy-slot:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
   .iy-slot.pending { border: 1.5px dashed #e0e0e0; box-shadow: none; }
-  .iy-slot-ico {
-    width: 32px; height: 32px; border-radius: 50%; background: #fde9a3;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; color: #fff; flex-shrink: 0; font-weight: 700;
-  }
+  .iy-slot-ico { width: 32px; height: 32px; border-radius: 50%; background: #fde9a3; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; font-weight: 700; }
   .iy-slot-ico.gray { background: #f0f0f0; color: #aaa; }
   .iy-slot-ico.blue { background: #aed4f5; }
   .iy-slot-text { flex: 1; font-size: 14px; color: #333; font-weight: 600; }
   .iy-slot-text.gray { color: #aaa; }
-  .iy-slot-tag { font-size: 11px; color: #888; display: flex; align-items: center; gap: 4px; }
+  .iy-slot-tag { font-size: 11px; color: #888; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 기능 카드 (그리드) ── */
-  /* ════════════════════════════════════════ */
+  /* ── 기능 카드 ── */
   .iy-feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .iy-feature-card {
-    background: #fff; border-radius: 16px; padding: 18px 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
+  .iy-feature-card { background: #fff; border-radius: 16px; padding: 18px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s ease, box-shadow 0.2s ease; }
   .iy-feature-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-  .iy-feature-card .f-ico {
-    width: 40px; height: 40px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; margin-bottom: 12px;
-  }
+  .iy-feature-card .f-ico { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 12px; }
   .iy-feature-card.c1 .f-ico { background: #e6f0fa; }
   .iy-feature-card.c2 .f-ico { background: #fff3e0; }
   .iy-feature-card.c3 .f-ico { background: #f0faf5; }
@@ -132,134 +58,87 @@ title: 일기예보
   .iy-feature-card .f-title { font-size: 14px; font-weight: 800; color: #1a1a1a; margin-bottom: 6px; }
   .iy-feature-card .f-desc { font-size: 12px; color: #888; line-height: 1.6; }
 
-  /* ════════════════════════════════════════ */
   /* ── 5단계 흐름 ── */
-  /* ════════════════════════════════════════ */
-  .iy-flow-card {
-    background: #fff; border-radius: 18px; padding: 20px 18px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-  .iy-stages {
-    display: flex; justify-content: space-between; padding: 0 4px;
-  }
+  .iy-flow-card { background: #fff; border-radius: 18px; padding: 20px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .iy-stages { display: flex; justify-content: space-between; padding: 0 4px; }
   .iy-stage-item { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; position: relative; }
-  .iy-stage-item:not(:last-child)::after {
-    content: ''; position: absolute; top: 18px; right: -50%;
-    width: 100%; height: 2px; background: #eee; z-index: 0;
-  }
+  .iy-stage-item:not(:last-child)::after { content: ''; position: absolute; top: 18px; right: -50%; width: 100%; height: 2px; background: #eee; z-index: 0; }
   .iy-stage-item.done:not(:last-child)::after { background: #aed4f5; }
-  .iy-stage-circle {
-    width: 38px; height: 38px; border-radius: 50%;
-    background: #f5f5f5; color: #ccc;
-    display: flex; align-items: center; justify-content: center; font-size: 16px;
-    position: relative; z-index: 1;
-  }
+  .iy-stage-circle { width: 38px; height: 38px; border-radius: 50%; background: #f5f5f5; color: #ccc; display: flex; align-items: center; justify-content: center; font-size: 16px; position: relative; z-index: 1; }
   .iy-stage-circle.done { background: #d4f0d4; color: #4ab84a; }
   .iy-stage-circle.active { background: linear-gradient(135deg, #aed4f5, #5b9eea); color: #fff; box-shadow: 0 4px 12px rgba(91,158,234,0.4); }
   .iy-stage-label { font-size: 11px; color: #555; font-weight: 700; }
-  .iy-flow-desc {
-    margin-top: 16px; padding-top: 16px; border-top: 1px dashed #f0f0f0;
-    font-size: 13px; color: #888; line-height: 1.7; text-align: center;
-  }
+  .iy-flow-desc { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #f0f0f0; font-size: 13px; color: #888; line-height: 1.7; text-align: center; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 이용 방법 (스텝) ── */
-  /* ════════════════════════════════════════ */
-  .iy-step {
-    background: #fff; border-radius: 16px; padding: 14px 16px; margin-bottom: 10px;
-    display: flex; gap: 14px; align-items: flex-start;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
+  /* ── 이용 방법 ── */
+  .iy-step { background: #fff; border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; display: flex; gap: 14px; align-items: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s ease, box-shadow 0.2s ease; }
   .iy-step:hover { transform: translateX(4px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
-  .iy-step-num {
-    width: 36px; height: 36px; border-radius: 12px;
-    background: linear-gradient(135deg, #aed4f5, #5b9eea);
-    color: #fff; font-weight: 900; font-size: 16px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
+  .iy-step-num { width: 36px; height: 36px; border-radius: 12px; background: linear-gradient(135deg, #aed4f5, #5b9eea); color: #fff; font-weight: 900; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .iy-step-body { flex: 1; }
   .iy-step-title { font-size: 14px; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; }
   .iy-step-desc { font-size: 12px; color: #888; line-height: 1.6; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 일정 카드 (다가오는 일정 스타일) ── */
-  /* ════════════════════════════════════════ */
-  .iy-event {
-    background: #fff; border-radius: 16px; padding: 14px 16px; margin-bottom: 10px;
-    display: flex; align-items: center; gap: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-  .iy-event-ico {
-    width: 40px; height: 40px; border-radius: 12px; background: #e6f0fa;
-    display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
-  }
-  .iy-event-body { flex: 1; }
-  .iy-event-title { font-size: 14px; font-weight: 800; color: #1a1a1a; }
-  .iy-event-title .cnt { background: #fcd34d; color: #fff; font-size: 10px;
-    padding: 2px 7px; border-radius: 8px; margin-left: 6px; font-weight: 700; }
-  .iy-event-sub { font-size: 11px; color: #888; margin-top: 3px; }
-  .iy-event-arrow { color: #ccc; font-size: 18px; }
+  /* ── FAQ ── */
+  .iy-faq-list { display: flex; flex-direction: column; gap: 10px; }
+  .iy-faq-item { background: #fff; border-radius: 16px; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .iy-faq-q { font-size: 13px; font-weight: 800; color: #1a1a1a; margin-bottom: 8px; }
+  .iy-faq-a { font-size: 12px; color: #666; line-height: 1.7; padding-left: 10px; border-left: 3px solid #aed4f5; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 아키텍처 카드 ── */
-  /* ════════════════════════════════════════ */
-  .iy-arch {
-    background: #fff; border-radius: 18px; padding: 18px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
+  /* ── 시연 영상 ── */
+  .iy-video-wrap { border-radius: 18px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  .iy-video-wrap a { display: block; position: relative; }
+  .iy-video-wrap img { width: 100%; display: block; }
+  .iy-video-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%; background: rgba(0,0,0,0.65); display: flex; align-items: center; justify-content: center; font-size: 26px; transition: transform 0.2s ease, background 0.2s ease; }
+  .iy-video-wrap a:hover .iy-video-play { transform: translate(-50%, -50%) scale(1.12); background: rgba(255,0,0,0.8); }
+
+  /* ── 개발 성과 ── */
+  .iy-highlight-list { display: flex; flex-direction: column; gap: 10px; }
+  .iy-highlight-item { background: #fff; border-radius: 16px; padding: 16px; display: flex; gap: 14px; align-items: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .iy-highlight-item:hover { transform: translateX(4px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+  .iy-hl-icon { width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .iy-hl-title { font-size: 13px; font-weight: 800; color: #1a1a1a; margin-bottom: 5px; }
+  .iy-hl-desc { font-size: 12px; color: #888; line-height: 1.7; }
+
+  /* ── 도메인 구조 ── */
+  .iy-domain-list { display: flex; flex-direction: column; gap: 10px; }
+  .iy-domain-item { background: #fff; border-radius: 16px; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s ease; }
+  .iy-domain-item:hover { transform: translateX(4px); }
+  .iy-dm-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .iy-dm-ico { font-size: 18px; }
+  .iy-dm-name { font-size: 14px; font-weight: 900; color: #1a1a1a; flex: 1; }
+  .iy-dm-count { font-size: 10px; font-weight: 700; color: #888; background: #f5f5f5; border-radius: 99px; padding: 3px 10px; }
+  .iy-dm-desc { font-size: 12px; color: #666; line-height: 1.7; margin-bottom: 10px; }
+  .iy-dm-tables { font-size: 11px; color: #aaa; font-weight: 600; background: #fafafa; border-radius: 10px; padding: 8px 12px; line-height: 1.8; }
+
+  /* ── 아키텍처 ── */
+  .iy-arch { background: #fff; border-radius: 18px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
   .iy-arch-layer { margin-bottom: 14px; }
   .iy-arch-layer:last-child { margin-bottom: 0; }
-  .iy-arch-layer .layer-label {
-    font-size: 11px; font-weight: 800; color: #aaa;
-    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
-  }
+  .iy-arch-layer .layer-label { font-size: 11px; font-weight: 800; color: #aaa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
   .iy-arch-boxes { display: flex; flex-wrap: wrap; gap: 6px; }
-  .iy-arch-box {
-    border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 700;
-  }
+  .iy-arch-box { border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 700; }
   .iy-arch-box.client  { background: #e6f0fa; color: #2c6fbd; }
   .iy-arch-box.service { background: #f0faf5; color: #1a7a50; }
   .iy-arch-box.data    { background: #fdf2ff; color: #7a1aaa; }
   .iy-arch-box.ai      { background: #fff8e6; color: #9a6200; }
-  .iy-arch-divider {
-    display: flex; align-items: center; gap: 8px; margin: 8px 0; color: #ddd; font-size: 11px;
-  }
-  .iy-arch-divider::before, .iy-arch-divider::after {
-    content: ''; flex: 1; height: 1px; background: #f0f0f0;
-  }
+  .iy-arch-divider { display: flex; align-items: center; gap: 8px; margin: 8px 0; color: #ddd; font-size: 11px; }
+  .iy-arch-divider::before, .iy-arch-divider::after { content: ''; flex: 1; height: 1px; background: #f0f0f0; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 기술 스택 칩 ── */
-  /* ════════════════════════════════════════ */
+  /* ── 기술 스택 ── */
   .iy-stack-group { background: #fff; border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
   .iy-stack-group .sg-label { font-size: 11px; font-weight: 800; color: #aaa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
   .iy-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .iy-chip {
-    background: #f5f5f5; border-radius: 99px; padding: 5px 12px;
-    font-size: 12px; color: #555; font-weight: 600;
-  }
+  .iy-chip { background: #f5f5f5; border-radius: 99px; padding: 5px 12px; font-size: 12px; color: #555; font-weight: 600; }
   .iy-chip.blue   { background: #e6f0fa; color: #2c6fbd; }
   .iy-chip.amber  { background: #fff3e0; color: #9a6200; }
   .iy-chip.green  { background: #f0faf5; color: #1a7a50; }
   .iy-chip.purple { background: #fdf2ff; color: #7a1aaa; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 팀 카드 ── */
-  /* ════════════════════════════════════════ */
+  /* ── 팀 ── */
   .iy-team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .iy-team-card {
-    background: #fff; border-radius: 16px; padding: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
+  .iy-team-card { background: #fff; border-radius: 16px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s ease, box-shadow 0.2s ease; }
   .iy-team-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-  .iy-team-card .t-avatar {
-    width: 44px; height: 44px; border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; margin-bottom: 10px;
-  }
+  .iy-team-card .t-avatar { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px; }
   .iy-team-card.c1 .t-avatar { background: #fde9a3; }
   .iy-team-card.c2 .t-avatar { background: #aed4f5; }
   .iy-team-card.c3 .t-avatar { background: #d4f0d4; }
@@ -268,67 +147,36 @@ title: 일기예보
   .iy-team-card .t-role { font-size: 11px; color: #5b9eea; font-weight: 700; margin-bottom: 8px; }
   .iy-team-card .t-desc { font-size: 11px; color: #888; line-height: 1.6; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 깃허브 링크 버튼 ── */
-  /* ════════════════════════════════════════ */
+  /* ── 링크 ── */
   .iy-links { display: flex; gap: 10px; }
-  .iy-link-btn {
-    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: #fff; border-radius: 16px; padding: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    text-decoration: none; font-size: 13px; font-weight: 800; color: #1a1a1a;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
+  .iy-link-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); text-decoration: none; font-size: 13px; font-weight: 800; color: #1a1a1a; transition: transform 0.2s ease, box-shadow 0.2s ease; }
   .iy-link-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.1); }
   .iy-link-btn .lb-icon { font-size: 22px; }
-  .iy-link-btn.primary  { background: #1a1a1a; color: #fff; }
+  .iy-link-btn.primary { background: #1a1a1a; color: #fff; }
+  .iy-link-btn.service { background: linear-gradient(135deg, #4696dc, #71aee8); color: #fff; }
 
-  /* ════════════════════════════════════════ */
-  /* ── 하단 네비게이션 (모바일 앱 느낌) ── */
-  /* ════════════════════════════════════════ */
-  .iy-nav {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 720px;
-    background: #fff; border-top: 1px solid #f0f0f0;
-    display: flex; justify-content: space-around;
-    padding: 12px 0 18px;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.06); z-index: 100;
-  }
-  .iy-nav a {
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    text-decoration: none; color: #bbb; font-size: 11px; font-weight: 700;
-    transition: color 0.2s ease, transform 0.2s ease;
-    flex: 1;
-  }
+  /* ── 네비게이션 ── */
+  .iy-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 720px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; justify-content: space-around; padding: 12px 0 18px; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); z-index: 100; }
+  .iy-nav a { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #bbb; font-size: 11px; font-weight: 700; transition: color 0.2s ease, transform 0.2s ease; flex: 1; }
   .iy-nav a:hover { transform: translateY(-2px); color: #5b9eea; }
   .iy-nav a.active { color: #5b9eea; }
   .iy-nav a .nav-icon { font-size: 22px; }
   .iy-nav a.active .nav-icon { transform: scale(1.1); }
 
-  /* ════════════════════════════════════════ */
-  /* ── 반응형 ── */
-  /* ════════════════════════════════════════ */
   @media (max-width: 480px) {
     .iy-feature-grid, .iy-team-grid { grid-template-columns: 1fr; }
-    .iy-app-name { font-size: 30px; }
   }
 </style>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 상단 앱 헤더 (로고) ──                 -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 상단 헤더 ── -->
 <div id="home" class="iy-app-header">
   <img class="iy-app-logo" src="assets/logo.png" alt="일기예보 로고" />
-  <div class="bell">🔔</div>
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 인사 카드 (히어로) ──                   -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 히어로 ── -->
 <div class="iy-hero">
-  <div class="sun"></div>
   <div class="greet-date">캡스톤 디자인 · 57팀</div>
   <h1>일기로 예견하는<br>보석같은 만남</h1>
   <div class="greet-desc">수업 시간표와 캠퍼스 동선 교집합으로<br>자연스러운 만남의 기회를 만들어드려요</div>
@@ -340,28 +188,23 @@ title: 일기예보
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 오늘의 예보 (예시 슬롯) ──              -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 오늘의 예보 ── -->
 <div class="iy-card-section">
   <div class="iy-sec-head">
     <div class="t">오늘의 예보</div>
     <div class="more">더보기 ›</div>
   </div>
   <div class="iy-sec-sub">이렇게 매칭이 진행돼요</div>
-
   <div class="iy-slot">
     <div class="iy-slot-ico">✓</div>
     <div class="iy-slot-text">매칭 완료 · 5단계 진행 중</div>
     <div class="iy-slot-tag">취미 ✨</div>
   </div>
-
   <div class="iy-slot pending">
     <div class="iy-slot-ico gray">🕐</div>
     <div class="iy-slot-text gray">월요일에 새로운 만남</div>
     <div class="iy-slot-tag">관심사 🕐</div>
   </div>
-
   <div class="iy-slot">
     <div class="iy-slot-ico blue">⚡</div>
     <div class="iy-slot-text">퀵매칭 · 즉시 만남</div>
@@ -370,12 +213,9 @@ title: 일기예보
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 핵심 기능 ──                           -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 핵심 기능 ── -->
 <div id="features" class="iy-card-section">
   <div class="iy-sec-head"><div class="t">핵심 기능</div></div>
-
   <div class="iy-feature-grid">
     <div class="iy-feature-card c1">
       <div class="f-ico">🗺️</div>
@@ -401,13 +241,10 @@ title: 일기예보
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 5단계 상호작용 ──                       -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 5단계 상호작용 ── -->
 <div id="flow" class="iy-card-section">
   <div class="iy-sec-head"><div class="t">5단계 상호작용</div></div>
   <div class="iy-sec-sub">한 단계씩 조심스럽게 가까워져요</div>
-
   <div class="iy-flow-card">
     <div class="iy-stages">
       <div class="iy-stage-item done">
@@ -439,12 +276,9 @@ title: 일기예보
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 이용 방법 ──                           -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 이용 방법 ── -->
 <div id="howto" class="iy-card-section">
   <div class="iy-sec-head"><div class="t">이용 방법</div></div>
-
   <div class="iy-step">
     <div class="iy-step-num">1</div>
     <div class="iy-step-body">
@@ -452,15 +286,13 @@ title: 일기예보
       <div class="iy-step-desc">학교 이메일 인증으로 재학생 확인 · 취미·관심사 프로필 설정</div>
     </div>
   </div>
-
   <div class="iy-step">
     <div class="iy-step-num">2</div>
     <div class="iy-step-body">
       <div class="iy-step-title">시간표 등록</div>
-      <div class="iy-step-desc">에브리타임 시간표 연동 · 매일 플래너로 더 정확한 동선 매칭</div>
+      <div class="iy-step-desc">에브리타임 시간표 공유 URL로 연동 · 매일 플래너로 더 정확한 동선 매칭</div>
     </div>
   </div>
-
   <div class="iy-step">
     <div class="iy-step-num">3</div>
     <div class="iy-step-body">
@@ -468,7 +300,6 @@ title: 일기예보
       <div class="iy-step-desc">배치 매칭 시스템이 동선 겹치는 상대를 자동 매칭 (5일 주기)</div>
     </div>
   </div>
-
   <div class="iy-step">
     <div class="iy-step-num">4</div>
     <div class="iy-step-body">
@@ -476,7 +307,6 @@ title: 일기예보
       <div class="iy-step-desc">퀴즈 → 채팅 → 게임 → 미션 → 회고 순으로 점진적 관계 형성</div>
     </div>
   </div>
-
   <div class="iy-step">
     <div class="iy-step-num">5</div>
     <div class="iy-step-body">
@@ -486,25 +316,107 @@ title: 일기예보
   </div>
 </div>
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 핵심 지표 ──                           -->
-<!-- ════════════════════════════════════════ -->
+
+<!-- ── FAQ ── -->
+<div class="iy-card-section">
+  <div class="iy-sec-head"><div class="t">자주 묻는 질문</div></div>
+  <div class="iy-faq-list">
+    <div class="iy-faq-item">
+      <div class="iy-faq-q">Q. 매칭은 언제, 어떻게 이루어지나요?</div>
+      <div class="iy-faq-a">매주 월요일 자정에 배치 매칭이 실행돼요. 시간표에서 도출된 캠퍼스 동선이 겹치는 상대를 자동으로 연결해 드립니다.</div>
+    </div>
+    <div class="iy-faq-item">
+      <div class="iy-faq-q">Q. 어떤 학교 이메일로 가입할 수 있나요?</div>
+      <div class="iy-faq-a">현재는 국민대학교 이메일(@kookmin.ac.kr)로만 가입이 가능해요. 추후 다른 대학으로 확장할 예정입니다.</div>
+    </div>
+    <div class="iy-faq-item">
+      <div class="iy-faq-q">Q. 상대방 정보는 언제 공개되나요?</div>
+      <div class="iy-faq-a">처음엔 퀴즈만 교환해요. 채팅 → 게임 → 미션 → 회고 순으로 단계가 진행되면서 서로를 알아갈 수 있어요. 각 단계는 양쪽 모두 동의해야 진행됩니다.</div>
+    </div>
+    <div class="iy-faq-item">
+      <div class="iy-faq-q">Q. 매칭이 마음에 안 들면 어떻게 하나요?</div>
+      <div class="iy-faq-a">언제든 다음 단계 진행을 거부할 수 있어요. 거부하면 매칭이 안전하게 종료되고, 상대방 차단도 가능합니다.</div>
+    </div>
+    <div class="iy-faq-item">
+      <div class="iy-faq-q">Q. 부적절한 행동을 신고하면 어떻게 되나요?</div>
+      <div class="iy-faq-a">신고가 3회 누적되면 해당 계정이 자동으로 정지돼요. 안전한 캠퍼스 커뮤니티를 위해 엄격하게 운영합니다.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── 시연 영상 ── -->
+<div id="video" class="iy-card-section">
+  <div class="iy-sec-head"><div class="t">시연 영상</div></div>
+  <div class="iy-sec-sub">실제 서비스 동작을 확인해보세요</div>
+  <div class="iy-video-wrap">
+    <a href="https://www.youtube.com/watch?v=zxztzmkYxnc" target="_blank">
+      <img src="https://img.youtube.com/vi/zxztzmkYxnc/maxresdefault.jpg" alt="일기예보 시연영상" />
+      <div class="iy-video-play">▶</div>
+    </a>
+  </div>
+</div>
+
+
+<!-- ── 개발 성과 ── -->
+<div class="iy-card-section">
+  <div class="iy-sec-head"><div class="t">개발 성과</div></div>
+  <div class="iy-sec-sub">학부 수준을 넘어선 엔지니어링 도전들</div>
+  <div class="iy-highlight-list">
+    <div class="iy-highlight-item">
+      <div class="iy-hl-icon" style="background:#e6f0fa;">🧪</div>
+      <div class="iy-hl-body">
+        <div class="iy-hl-title">속성 기반 테스트 (PBT) 45종 검증</div>
+        <div class="iy-hl-desc">jqwik을 활용해 매칭 주기 불변식, 신고 자동 정지, 채팅 토큰 한도 등 핵심 비즈니스 규칙 45개의 무결성을 수학적으로 증명했어요.</div>
+      </div>
+    </div>
+    <div class="iy-highlight-item">
+      <div class="iy-hl-icon" style="background:#f0faf5;">🗄️</div>
+      <div class="iy-hl-body">
+        <div class="iy-hl-title">DDD 기반 22개 테이블 설계</div>
+        <div class="iy-hl-desc">User · Matching · Interaction · Campus · AI 5개의 Bounded Context로 도메인을 분리하고, 단방향 의존성을 강제해 향후 서비스 분리가 가능한 구조를 유지했어요.</div>
+      </div>
+    </div>
+    <div class="iy-highlight-item">
+      <div class="iy-hl-icon" style="background:#fff8e6;">🤖</div>
+      <div class="iy-hl-body">
+        <div class="iy-hl-title">RAG 기반 오프라인 미션 추천</div>
+        <div class="iy-hl-desc">ChromaDB 벡터 검색과 동선 교집합 데이터를 결합한 RAG 파이프라인으로, 두 사람의 동선에 딱 맞는 캠퍼스 미션 장소를 AI가 추천해요.</div>
+      </div>
+    </div>
+    <div class="iy-highlight-item">
+      <div class="iy-hl-icon" style="background:#fdf2ff;">🎮</div>
+      <div class="iy-hl-body">
+        <div class="iy-hl-title">20Hz 실시간 협동 게임</div>
+        <div class="iy-hl-desc">Phaser 3 기반 2인 협동 퍼즐을 WebSocket으로 연결하고, 낙관적 업데이트와 20Hz 위치 동기화로 끊김 없는 실시간 게임 경험을 구현했어요.</div>
+      </div>
+    </div>
+    <div class="iy-highlight-item">
+      <div class="iy-hl-icon" style="background:#fff3e0;">⚡</div>
+      <div class="iy-hl-body">
+        <div class="iy-hl-title">SQS 비동기 AI 퀴즈 사전 생성</div>
+        <div class="iy-hl-desc">회원가입 즉시 Amazon Bedrock이 프로필 기반 퀴즈 5문항을 생성하고, SQS 비동기 큐로 영속화해 매칭 후 즉시 퀴즈를 제공할 수 있어요.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── 핵심 지표 ── -->
 <div class="iy-card-section">
   <div class="iy-sec-head"><div class="t">핵심 지표</div></div>
-  <div class="iy-sec-sub">일기예보가 만들어갈 숫자들</div>
-
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
     <div style="background:#fff; border-radius:16px; padding:18px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); text-align:center;">
-      <div style="font-size:28px; font-weight:900; color:#5b9eea; letter-spacing:-0.03em;">500+</div>
-      <div style="font-size:11px; color:#aaa; font-weight:700; margin-top:4px;">타깃 초기 사용자</div>
-    </div>
-    <div style="background:#fff; border-radius:16px; padding:18px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); text-align:center;">
-      <div style="font-size:28px; font-weight:900; color:#f4b942; letter-spacing:-0.03em;">5단계</div>
+      <div style="font-size:28px; font-weight:900; color:#5b9eea; letter-spacing:-0.03em;">5단계</div>
       <div style="font-size:11px; color:#aaa; font-weight:700; margin-top:4px;">점진적 안전 시스템</div>
     </div>
     <div style="background:#fff; border-radius:16px; padding:18px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); text-align:center;">
-      <div style="font-size:28px; font-weight:900; color:#4ab84a; letter-spacing:-0.03em;">5일</div>
-      <div style="font-size:11px; color:#aaa; font-weight:700; margin-top:4px;">매칭 주기 (월~금)</div>
+      <div style="font-size:28px; font-weight:900; color:#f4b942; letter-spacing:-0.03em;">45종</div>
+      <div style="font-size:11px; color:#aaa; font-weight:700; margin-top:4px;">PBT 속성 무결성 검증</div>
+    </div>
+    <div style="background:#fff; border-radius:16px; padding:18px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); text-align:center;">
+      <div style="font-size:28px; font-weight:900; color:#4ab84a; letter-spacing:-0.03em;">22개</div>
+      <div style="font-size:11px; color:#aaa; font-weight:700; margin-top:4px;">DB 테이블 (DDD 설계)</div>
     </div>
     <div style="background:#fff; border-radius:16px; padding:18px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); text-align:center;">
       <div style="font-size:28px; font-weight:900; color:#b45bd4; letter-spacing:-0.03em;">100%</div>
@@ -514,91 +426,74 @@ title: 일기예보
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 앱 화면 미리보기 ──                    -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 앱 화면 미리보기 ── -->
 <div class="iy-card-section">
   <div class="iy-sec-head"><div class="t">앱 화면 미리보기</div></div>
   <div class="iy-sec-sub">실제 앱 화면이에요</div>
 
-  <div style="display:flex; gap:16px; overflow-x:auto; padding-bottom:8px; -webkit-overflow-scrolling:touch; justify-content:center;">
+  <div style="display:flex; gap:16px; overflow-x:auto; padding-bottom:8px; -webkit-overflow-scrolling:touch;">
     <div style="flex-shrink:0; text-align:center;">
       <img src="assets/screen1.png" alt="홈 화면"
-        style="width:200px; border-radius:22px; box-shadow:0 8px 28px rgba(0,0,0,0.12);" />
+        style="width:180px; border-radius:22px; box-shadow:0 8px 28px rgba(0,0,0,0.12);" />
       <div style="font-size:11px; color:#888; font-weight:700; margin-top:8px;">홈 화면</div>
     </div>
     <div style="flex-shrink:0; text-align:center;">
-      <img src="assets/screen2.png" alt="로그인 화면"
-        style="width:200px; border-radius:22px; box-shadow:0 8px 28px rgba(0,0,0,0.12);" />
-      <div style="font-size:11px; color:#888; font-weight:700; margin-top:8px;">로그인 화면</div>
+      <img src="assets/screen2.png" alt="퀴즈 화면"
+        style="width:180px; border-radius:22px; box-shadow:0 8px 28px rgba(0,0,0,0.12);" />
+      <div style="font-size:11px; color:#888; font-weight:700; margin-top:8px;">1단계 · 퀴즈</div>
+    </div>
+    <div style="flex-shrink:0; text-align:center;">
+      <img src="assets/screen3.png" alt="AI 일기 화면"
+        style="width:180px; border-radius:22px; box-shadow:0 8px 28px rgba(0,0,0,0.12);" />
+      <div style="font-size:11px; color:#888; font-weight:700; margin-top:8px;">AI 일기 쓰기</div>
     </div>
   </div>
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 차별점 비교 ──                         -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 차별점 비교 ── -->
 <div class="iy-card-section">
   <div class="iy-sec-head"><div class="t">기존 앱과의 차별점</div></div>
   <div class="iy-sec-sub">일기예보만의 특별함</div>
-
   <div style="background:#fff; border-radius:18px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-    <!-- 헤더 -->
     <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; background:#f8f8f8; padding:10px 14px; gap:4px;">
       <div style="font-size:11px; font-weight:800; color:#aaa;">항목</div>
       <div style="font-size:11px; font-weight:900; color:#1558a0; text-align:center;">일기예보</div>
       <div style="font-size:11px; font-weight:700; color:#aaa; text-align:center;">소개팅앱</div>
       <div style="font-size:11px; font-weight:700; color:#aaa; text-align:center;">에브리타임</div>
     </div>
-
-    <!-- 행들 -->
     <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:11px 14px; border-top:1px solid #f5f5f5; align-items:center; gap:4px;">
       <div style="font-size:12px; font-weight:700; color:#333;">재학생 인증</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
+      <div style="text-align:center; font-size:16px;">✅</div><div style="text-align:center; font-size:16px;">❌</div><div style="text-align:center; font-size:16px;">✅</div>
     </div>
     <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:11px 14px; border-top:1px solid #f5f5f5; background:#f0f6ff; align-items:center; gap:4px;">
       <div style="font-size:12px; font-weight:700; color:#333;">동선 기반 매칭</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
+      <div style="text-align:center; font-size:16px;">✅</div><div style="text-align:center; font-size:16px;">❌</div><div style="text-align:center; font-size:16px;">❌</div>
     </div>
     <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:11px 14px; border-top:1px solid #f5f5f5; align-items:center; gap:4px;">
       <div style="font-size:12px; font-weight:700; color:#333;">점진적 공개</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
+      <div style="text-align:center; font-size:16px;">✅</div><div style="text-align:center; font-size:16px;">❌</div><div style="text-align:center; font-size:16px;">❌</div>
     </div>
     <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:11px 14px; border-top:1px solid #f5f5f5; background:#f0f6ff; align-items:center; gap:4px;">
       <div style="font-size:12px; font-weight:700; color:#333;">AI 콘텐츠 생성</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
+      <div style="text-align:center; font-size:16px;">✅</div><div style="text-align:center; font-size:16px;">❌</div><div style="text-align:center; font-size:16px;">❌</div>
     </div>
     <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:11px 14px; border-top:1px solid #f5f5f5; align-items:center; gap:4px;">
       <div style="font-size:12px; font-weight:700; color:#333;">성장형 경험치</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
-      <div style="text-align:center; font-size:16px;">❌</div>
+      <div style="text-align:center; font-size:16px;">✅</div><div style="text-align:center; font-size:16px;">❌</div><div style="text-align:center; font-size:16px;">❌</div>
     </div>
     <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:11px 14px; border-top:1px solid #f5f5f5; background:#f0f6ff; align-items:center; gap:4px;">
       <div style="font-size:12px; font-weight:700; color:#333;">신고 · 차단</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
-      <div style="text-align:center; font-size:16px;">✅</div>
+      <div style="text-align:center; font-size:16px;">✅</div><div style="text-align:center; font-size:16px;">✅</div><div style="text-align:center; font-size:16px;">✅</div>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 아키텍처 ──                            -->
-<!-- ════════════════════════════════════════ -->
+
+<!-- ── 아키텍처 ── -->
 <div class="iy-card-section">
   <div class="iy-sec-head"><div class="t">아키텍처</div></div>
   <div class="iy-sec-sub">단일 Spring Boot · AWS 클라우드 네이티브</div>
-
   <div class="iy-arch">
     <div class="iy-arch-layer">
       <div class="layer-label">Client</div>
@@ -608,7 +503,7 @@ title: 일기예보
     </div>
     <div class="iy-arch-divider">↓</div>
     <div class="iy-arch-layer">
-      <div class="layer-label">Backend · Spring Boot</div>
+      <div class="layer-label">Backend · Spring Boot (AWS)</div>
       <div class="iy-arch-boxes">
         <div class="iy-arch-box service">인증 · 사용자</div>
         <div class="iy-arch-box service">매칭 엔진</div>
@@ -624,6 +519,7 @@ title: 일기예보
       <div class="iy-arch-boxes">
         <div class="iy-arch-box data">MySQL Aurora</div>
         <div class="iy-arch-box data">Redis</div>
+        <div class="iy-arch-box data">ChromaDB</div>
         <div class="iy-arch-box data">Amazon SQS</div>
         <div class="iy-arch-box data">Amazon S3</div>
       </div>
@@ -633,48 +529,99 @@ title: 일기예보
       <div class="layer-label">AI</div>
       <div class="iy-arch-boxes">
         <div class="iy-arch-box ai">Amazon Bedrock (LLM)</div>
+        <div class="iy-arch-box ai">Amazon Titan Embeddings</div>
       </div>
     </div>
   </div>
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 기술 스택 ──                           -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 도메인 구조 ── -->
+<div class="iy-card-section">
+  <div class="iy-sec-head"><div class="t">도메인 구조</div></div>
+  <div class="iy-sec-sub">5개 Bounded Context · 22개 테이블</div>
+  <div class="iy-domain-list">
+    <div class="iy-domain-item" style="border-left:4px solid #5b9eea;">
+      <div class="iy-dm-top">
+        <span class="iy-dm-ico">👤</span>
+        <span class="iy-dm-name">User</span>
+        <span class="iy-dm-count">4개 테이블</span>
+      </div>
+      <div class="iy-dm-desc">인증·프로필·경험치·안전 관리. USER를 중심으로 BLOCK, REPORT, EXP_HISTORY가 분기됩니다.</div>
+      <div class="iy-dm-tables">USER · BLOCK · REPORT · EXP_HISTORY</div>
+    </div>
+    <div class="iy-domain-item" style="border-left:4px solid #f4b942;">
+      <div class="iy-dm-top">
+        <span class="iy-dm-ico">🔗</span>
+        <span class="iy-dm-name">Matching</span>
+        <span class="iy-dm-count">3개 테이블</span>
+      </div>
+      <div class="iy-dm-desc">슬롯 관리와 매칭 생성. 매주 월요일 자정 배치로 SLOT에 MATCH를 배정하고, INTERACTION이 종속됩니다.</div>
+      <div class="iy-dm-tables">SLOT · MATCH · INTERACTION</div>
+    </div>
+    <div class="iy-domain-item" style="border-left:4px solid #4ab84a;">
+      <div class="iy-dm-top">
+        <span class="iy-dm-ico">💬</span>
+        <span class="iy-dm-name">Interaction</span>
+        <span class="iy-dm-count">9개 테이블</span>
+      </div>
+      <div class="iy-dm-desc">5단계 상호작용 전체를 담당. 퀴즈·힌트질문·채팅·게임·미션·회고 도메인이 FSM으로 연결됩니다.</div>
+      <div class="iy-dm-tables">QUIZ · QUIZ_ANSWER · HINT_QUESTION · CHAT_SESSION · CHAT_MESSAGE · GAME_SESSION · MISSION · REVIEW_SESSION · REVIEW</div>
+    </div>
+    <div class="iy-domain-item" style="border-left:4px solid #b45bd4;">
+      <div class="iy-dm-top">
+        <span class="iy-dm-ico">🏫</span>
+        <span class="iy-dm-name">Campus</span>
+        <span class="iy-dm-count">5개 테이블</span>
+      </div>
+      <div class="iy-dm-desc">캠퍼스 공간 데이터. 건물 용도·좌표·운영시간과 건물 간 도보 이동 시간을 저장해 AI 미션 추천의 기반이 됩니다.</div>
+      <div class="iy-dm-tables">CAMPUS_BUILDING · CAMPUS_BUILDING_PLACE · CAMPUS_VENUE · CAMPUS_PATH · CAMPUS_PATH_VENUE</div>
+    </div>
+    <div class="iy-domain-item" style="border-left:4px solid #f47242;">
+      <div class="iy-dm-top">
+        <span class="iy-dm-ico">🤖</span>
+        <span class="iy-dm-name">AI</span>
+        <span class="iy-dm-count">1개 테이블</span>
+      </div>
+      <div class="iy-dm-desc">Amazon Bedrock 연동. 회고 세션에서 AI가 생성한 질문을 저장하고, RAG 파이프라인으로 미션 장소를 추천합니다.</div>
+      <div class="iy-dm-tables">AI_REVIEW_QUESTION</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── 기술 스택 ── -->
 <div class="iy-card-section">
   <div class="iy-sec-head"><div class="t">기술 스택</div></div>
-
   <div class="iy-stack-group">
     <div class="sg-label">Backend</div>
     <div class="iy-chips">
       <span class="iy-chip blue">Spring Boot 3</span>
       <span class="iy-chip blue">Spring Security</span>
       <span class="iy-chip blue">Spring Data JPA</span>
-      <span class="iy-chip blue">WebSocket</span>
+      <span class="iy-chip blue">WebSocket (STOMP)</span>
       <span class="iy-chip blue">Spring Batch</span>
     </div>
   </div>
-
   <div class="iy-stack-group">
     <div class="sg-label">AWS & Infra</div>
     <div class="iy-chips">
       <span class="iy-chip amber">Amazon Bedrock</span>
+      <span class="iy-chip amber">Amazon Titan Embeddings</span>
       <span class="iy-chip amber">Amazon SQS</span>
       <span class="iy-chip amber">Amazon S3</span>
       <span class="iy-chip amber">AWS SDK v2</span>
     </div>
   </div>
-
   <div class="iy-stack-group">
     <div class="sg-label">Database</div>
     <div class="iy-chips">
       <span class="iy-chip green">MySQL 8.0</span>
       <span class="iy-chip green">Redis</span>
+      <span class="iy-chip green">ChromaDB</span>
       <span class="iy-chip green">Flyway</span>
     </div>
   </div>
-
   <div class="iy-stack-group">
     <div class="sg-label">Testing</div>
     <div class="iy-chips">
@@ -684,12 +631,11 @@ title: 일기예보
       <span class="iy-chip purple">Testcontainers</span>
     </div>
   </div>
-
   <div class="iy-stack-group">
     <div class="sg-label">Client · Docs</div>
     <div class="iy-chips">
       <span class="iy-chip">React Native</span>
-      <span class="iy-chip">Next.js</span>
+      <span class="iy-chip">Phaser 3</span>
       <span class="iy-chip">Springdoc Swagger</span>
       <span class="iy-chip">JWT</span>
     </div>
@@ -697,12 +643,9 @@ title: 일기예보
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 팀 소개 ──                             -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 팀 소개 ── -->
 <div id="team" class="iy-card-section">
   <div class="iy-sec-head"><div class="t">팀 소개</div></div>
-
   <div class="iy-team-grid">
     <div class="iy-team-card c1">
       <div class="t-avatar">🌸</div>
@@ -726,19 +669,23 @@ title: 일기예보
       <div class="t-avatar">🤖</div>
       <div class="t-name">황찬우</div>
       <div class="t-role">AI · 공간 데이터</div>
-      <div class="t-desc">Bedrock LLM · 프롬프트 엔지니어링 · AI 미션 생성</div>
+      <div class="t-desc">Bedrock LLM · RAG 미션 추천 · ChromaDB · 프롬프트 엔지니어링</div>
     </div>
   </div>
 </div>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 링크 ──                                -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 링크 ── -->
 <div id="links" class="iy-card-section">
   <div class="iy-sec-head"><div class="t">링크</div></div>
-
   <div class="iy-links">
+    <a class="iy-link-btn service" href="https://ilgiyebo.vercel.app" target="_blank">
+      <span class="lb-icon">🌤️</span>
+      <div>
+        <div style="font-size:10px;opacity:.75;font-weight:400;">서비스</div>
+        바로가기
+      </div>
+    </a>
     <a class="iy-link-btn primary" href="https://github.com/kookmin-sw/2026-capstone-57" target="_blank">
       <span class="lb-icon">🐙</span>
       <div>
@@ -746,11 +693,11 @@ title: 일기예보
         GitHub
       </div>
     </a>
-    <a class="iy-link-btn" href="https://kookmin-sw.github.io/2026-capstone-57/" target="_blank">
-      <span class="lb-icon">🏠</span>
+    <a class="iy-link-btn" href="https://www.youtube.com/watch?v=zxztzmkYxnc" target="_blank">
+      <span class="lb-icon">▶️</span>
       <div>
-        <div style="font-size:10px;color:#aaa;font-weight:400;">팀 페이지</div>
-        홈페이지
+        <div style="font-size:10px;color:#aaa;font-weight:400;">데모</div>
+        시연 영상
       </div>
     </a>
   </div>
@@ -761,9 +708,7 @@ title: 일기예보
 </p>
 
 
-<!-- ════════════════════════════════════════ -->
-<!-- ── 하단 네비게이션 ──                      -->
-<!-- ════════════════════════════════════════ -->
+<!-- ── 네비게이션 ── -->
 <nav class="iy-nav">
   <a href="#home" class="active"><span class="nav-icon">🏠</span>홈</a>
   <a href="#features"><span class="nav-icon">💚</span>기능</a>
@@ -774,11 +719,9 @@ title: 일기예보
 
 
 <script>
-// 새로고침 시 맨 위로
 if (history.scrollRestoration) history.scrollRestoration = 'manual';
 window.scrollTo(0, 0);
 
-// 페이드인
 var observer = new IntersectionObserver(function(entries) {
   entries.forEach(function(e) {
     if (e.isIntersecting) e.target.classList.add('visible');
@@ -788,7 +731,6 @@ document.querySelectorAll('.iy-card-section, .iy-hero').forEach(function(el) {
   observer.observe(el);
 });
 
-// 네비 활성화
 var sections = ['home','features','flow','howto','team'];
 function updateNav() {
   var current = 'home';
@@ -801,9 +743,7 @@ function updateNav() {
   }
   document.querySelectorAll('.iy-nav a').forEach(function(a) {
     a.classList.remove('active');
-    if (a.getAttribute('href') === '#' + current) {
-      a.classList.add('active');
-    }
+    if (a.getAttribute('href') === '#' + current) a.classList.add('active');
   });
 }
 window.addEventListener('scroll', updateNav);
